@@ -11,9 +11,29 @@ You can down load ngspice from the official ngspice site. It is a good idea to a
 Install the  ngspice folder named Spice64 where you want. I created a NGSpice folder in the C:\Program Files\ folder and copied the Spice64 folder in it. So for my installation, the path to the ngspice binary is C:\Program Files\NGSpice\Spice64\bin\. Now you can choose any other installation location.
 Then you need to add a few variables to the Windows Environment variables. In order to do this in Windows 10 or Windows 11, open Settings>Sytem>About. On the right panel click Advanced system settings. You will see this dialog box
 
-![Edit system variables.](/img/system_variables.png)
+![System properties.](/img/system_properties.png)
 
+Click in the Environment Variables... button which open this dialog box
 
+![Environment variables.](/img/environment_variables.png)
+
+In order to tell ngspice where to find the osdi model library, you then need to create a new System variable:
+
+Variable name: NGSPICE_OSDI_DIR
+Variable value:<Your ngspice installation path>\Spice64\lib\ngspice\
+
+as shown below:
+
+![ngspice osdi dir.](/img/NGSPICE_OSDI_DIR.png)
+
+In order to tell ngspice where to find the spinit file, you need to create the following System variable:
+
+Variable name: SPICE_SCRIPTS
+Variable value: <Your ngspice installation path>\Spice64\share\ngspice\scripts\
+
+as shown below:
+
+![ngspice osdi dirspice scripts.](/img/SPICE_SCRIPTS.png)
 
 Once you have installed (copied) ngspice, you need to copy the PSP 103.6  osdi file that contains the EKV2.6 MOSFET model that is used for the simulation. Add it to the folder <your ngspice installation path>\Spice64\lib\ngspice\. There are already other default osdi for other models in the same directory.
 

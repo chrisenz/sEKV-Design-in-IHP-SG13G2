@@ -23,6 +23,7 @@ Click in the Environment Variables... button which open this dialog box
 In order to tell ngspice where to find the osdi model library, you then need to create a new System variable:
 
 Variable name: NGSPICE_OSDI_DIR
+
 Variable value:<Your ngspice installation path>\Spice64\lib\ngspice\
 
 as shown below:
@@ -32,6 +33,7 @@ as shown below:
 In order to tell ngspice where to find the spinit file, you need to create the following System variable:
 
 Variable name: SPICE_SCRIPTS
+
 Variable value: <Your ngspice installation path>\Spice64\share\ngspice\scripts\
 
 as shown below:

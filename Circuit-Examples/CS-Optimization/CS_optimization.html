@@ -1,0 +1,3448 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.6.40">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Christian Enz (christian.enz@epfl.ch)">
+
+<title>Common-source Gain Stage Optimization</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+  margin-bottom: 0em;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
+
+
+<script src="CS_optimization_files/libs/clipboard/clipboard.min.js"></script>
+<script src="CS_optimization_files/libs/quarto-html/quarto.js"></script>
+<script src="CS_optimization_files/libs/quarto-html/popper.min.js"></script>
+<script src="CS_optimization_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="CS_optimization_files/libs/quarto-html/anchor.min.js"></script>
+<link href="CS_optimization_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="CS_optimization_files/libs/quarto-html/quarto-syntax-highlighting-1092c56c6cadf2eb47b1bc8063ab382a.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="CS_optimization_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="CS_optimization_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="CS_optimization_files/libs/bootstrap/bootstrap-702031831562ce241c7b2b72fc53a41f.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script>
+
+  MathJax = {
+
+    tex: {
+
+      tags: 'ams'  // should be 'ams', 'none', or 'all'
+
+    }
+
+  };
+
+</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN") {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+<div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+  <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction"><span class="header-section-number">1</span> Introduction</a></li>
+  <li><a href="#small-signal-analysis" id="toc-small-signal-analysis" class="nav-link" data-scroll-target="#small-signal-analysis"><span class="header-section-number">2</span> Small-signal analysis</a></li>
+  <li><a href="#minimum-current-for-a-given-transconductance" id="toc-minimum-current-for-a-given-transconductance" class="nav-link" data-scroll-target="#minimum-current-for-a-given-transconductance"><span class="header-section-number">3</span> Minimum current for a given transconductance</a></li>
+  <li><a href="#minimum-current-for-a-given-gain-bandwidth-product-no-self-loading" id="toc-minimum-current-for-a-given-gain-bandwidth-product-no-self-loading" class="nav-link" data-scroll-target="#minimum-current-for-a-given-gain-bandwidth-product-no-self-loading"><span class="header-section-number">4</span> Minimum current for a given gain-bandwidth product (no self-loading)</a></li>
+  <li><a href="#minimum-current-for-a-given-gain-bandwidth-product-including-self-loading" id="toc-minimum-current-for-a-given-gain-bandwidth-product-including-self-loading" class="nav-link" data-scroll-target="#minimum-current-for-a-given-gain-bandwidth-product-including-self-loading"><span class="header-section-number">5</span> Minimum current for a given gain-bandwidth product including self-loading</a>
+  <ul class="collapse">
+  <li><a href="#analysis" id="toc-analysis" class="nav-link" data-scroll-target="#analysis"><span class="header-section-number">5.1</span> Analysis</a></li>
+  <li><a href="#examples" id="toc-examples" class="nav-link" data-scroll-target="#examples"><span class="header-section-number">5.2</span> Examples</a>
+  <ul class="collapse">
+  <li><a href="#process" id="toc-process" class="nav-link" data-scroll-target="#process"><span class="header-section-number">5.2.1</span> Process</a></li>
+  <li><a href="#nmos" id="toc-nmos" class="nav-link" data-scroll-target="#nmos"><span class="header-section-number">5.2.2</span> nMOS</a></li>
+  <li><a href="#pmos" id="toc-pmos" class="nav-link" data-scroll-target="#pmos"><span class="header-section-number">5.2.3</span> pMOS</a></li>
+  </ul></li>
+  </ul></li>
+  <li><a href="#minimum-current-for-given-gbw-and-dc-gain" id="toc-minimum-current-for-given-gbw-and-dc-gain" class="nav-link" data-scroll-target="#minimum-current-for-given-gbw-and-dc-gain"><span class="header-section-number">6</span> Minimum current for given GBW and DC gain</a>
+  <ul class="collapse">
+  <li><a href="#analysis-1" id="toc-analysis-1" class="nav-link" data-scroll-target="#analysis-1"><span class="header-section-number">6.1</span> Analysis</a></li>
+  <li><a href="#examples-1" id="toc-examples-1" class="nav-link" data-scroll-target="#examples-1"><span class="header-section-number">6.2</span> Examples</a>
+  <ul class="collapse">
+  <li><a href="#nmos-1" id="toc-nmos-1" class="nav-link" data-scroll-target="#nmos-1"><span class="header-section-number">6.2.1</span> nMOS</a></li>
+  <li><a href="#pmos-1" id="toc-pmos-1" class="nav-link" data-scroll-target="#pmos-1"><span class="header-section-number">6.2.2</span> pMOS</a></li>
+  </ul></li>
+  </ul></li>
+  <li><a href="#conclusion" id="toc-conclusion" class="nav-link" data-scroll-target="#conclusion"><span class="header-section-number">7</span> Conclusion</a></li>
+  <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references"><span class="header-section-number">8</span> References</a></li>
+  </ul>
+<div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="CS_optimization.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
+</div>
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Common-source Gain Stage Optimization</h1>
+<p class="subtitle lead">For IHP 130nm Process (Version 1)</p>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Christian Enz (christian.enz@epfl.ch) </p>
+          </div>
+  </div>
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="introduction" class="level1" data-number="1">
+<h1 data-number="1"><span class="header-section-number">1</span> Introduction</h1>
+<p>This notebook presents the optimization of a common-source gain stage to minimize the power consumption for a given gain-bandwidth product and DC gain using the sEKV model and the inversion coefficient approach <span class="citation" data-cites="bib:enz:book:2006"><a href="#ref-bib:enz:book:2006" role="doc-biblioref">[1]</a></span>, <span class="citation" data-cites="bib:enz:sscmag:autumn:2017"><a href="#ref-bib:enz:sscmag:autumn:2017" role="doc-biblioref">[2]</a></span>, <span class="citation" data-cites="bib:enz:sscmag:winter:2017"><a href="#ref-bib:enz:sscmag:winter:2017" role="doc-biblioref">[3]</a></span>.</p>
+<div id="fig-cs_ol_schematic" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-cs_ol_schematic-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="Figures/CS_OL_schematic.png" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-cs_ol_schematic-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;1: Schematic of the open-loop common-source (CS) gain stage.
+</figcaption>
+</figure>
+</div>
+<p>The schematic of the common-source (CS) stage in open-loop configuration is shown in <a href="#fig-cs_ol_schematic" class="quarto-xref">Figure&nbsp;1</a>. To size the transistor according to some specifications on the gain, bandwidth or noise, we need to find the bias current <span class="math inline">\(I_b\)</span> and the aspect ratio <span class="math inline">\(W/L\)</span> that satisfies the given specifications. In order to do this, we first need to analyze the circuit in terms of its key features. We will start with the small-signal analysis.</p>
+</section>
+<section id="small-signal-analysis" class="level1" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> Small-signal analysis</h1>
+<div id="fig-cs_ol_ssc_schematic" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-cs_ol_ssc_schematic-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="Figures/CS_OL_small-signal.png" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-cs_ol_ssc_schematic-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;2: Small-signal schematic of the open-loop (OL) common-source (CS) gain stage including the feedback capacitance.
+</figcaption>
+</figure>
+</div>
+<p>The small-signal schematic of the open-loop (OL) common-source (CS) stage is shown in <a href="#fig-cs_ol_ssc_schematic" class="quarto-xref">Figure&nbsp;2</a>. It is straightforward to show that the transfer function is given by <span class="math display">\[\begin{equation}
+  A(s) \triangleq \frac{\Delta V_{out}}{\Delta V_{in}} = A_{dc} \cdot \frac{1-s/\omega_z}{1+s/\omega_p}
+\end{equation}\]</span> where <span class="math display">\[\begin{align}
+  A_{dc} &amp;= -G_m \cdot R_{ds},\\
+  \omega_z &amp;= \frac{G_m}{C_F},\\
+  \omega_p &amp;= \frac{1}{R_{ds}\,C_{Ltot}},
+\end{align}\]</span> with <span class="math inline">\(A_{dc} = -G_m \cdot R_{ds}\)</span> the DC voltage gain, <span class="math inline">\(\omega_z\)</span> the zero (in the right half plan), <span class="math inline">\(\omega_p\)</span> the pole and <span class="math inline">\(C_{Ltot}=C_L+C_F\)</span> the total load capacitance inclduing the feedback capacitance. The gain-bandwidth product (<span class="math inline">\(GBW\)</span>) or unity gain frequency (<span class="math inline">\(\omega_u\)</span>) is then given by</p>
+<p><span class="math display">\[\begin{equation}
+  GBW = \omega_u = |A_{dc}| \cdot \omega_p = \frac{G_m}{C_{Ltot}}.
+\end{equation}\]</span></p>
+<div id="fig-gain_bode_plot" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-gain_bode_plot-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="Figures/Transfer_function.png" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-gain_bode_plot-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;3: Bode plot of the small-signal transfer function of the CS OL amplifier.
+</figcaption>
+</figure>
+</div>
+<p>As illustrated in <a href="#fig-gain_bode_plot" class="quarto-xref">Figure&nbsp;3</a>, the gain magnitude at high frequency will settle to <span class="math display">\[\begin{equation}
+  A_{\infty} \triangleq \lim_{s \to \infty} A(s) = \frac{C_F}{C_L+C_F},
+\end{equation}\]</span> and the phase will turn to <span class="math inline">\(-180^{\circ}\)</span> because of the positive zero.</p>
+</section>
+<section id="minimum-current-for-a-given-transconductance" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> Minimum current for a given transconductance</h1>
+<p>In this section we want to answer the following question:</p>
+<div class="callout callout-style-default callout-tip callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Question
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>What is the minimum bias current <span class="math inline">\(I_b\)</span> and transistor size (aspect ratio <span class="math inline">\(W/L\)</span>) in order for the OL CS gain stage to achieve a given transconductance?</p>
+</div>
+</div>
+<p>To answer this question we first rewrite the current as <span class="math display">\[\begin{equation}
+  I_b = I_{spec\Box} \cdot \frac{W}{L} \cdot IC
+\end{equation}\]</span> and the transconductance as <span class="math display">\[\begin{equation}
+  G_m = \frac{I_{spec\Box}}{n U_T} \cdot \frac{W}{L} \cdot g_{ms}(IC),
+\end{equation}\]</span> where <span class="math inline">\(g_{ms}(IC)\)</span> is the normalized source transconductance which only depends on <span class="math inline">\(IC\)</span> according to <span class="math display">\[\begin{equation}
+  g_{ms} \triangleq \frac{G_{ms}}{G_{spec}} = \frac{n\,G_m}{G_{spec}} = \frac{\sqrt{4 IC+1}-1}{2}
+\end{equation}\]</span> for a long-channel transistor and <span class="math display">\[\begin{equation}
+  g_{ms} = \frac{\sqrt{4 IC+1+(\lambda_C\,IC)^2}-1}{2+\lambda_c^2\,IC}
+\end{equation}\]</span> for a short-channel transistor accounting for velocity saturation with parameter <span class="math inline">\(\lambda_c\)</span>.</p>
+<p>We then need to solve the following set of equation for <span class="math inline">\(I_b\)</span> and <span class="math inline">\(W/L\)</span> <span class="math display">\[\begin{align}
+  G_m &amp;= \frac{I_{spec\Box}}{n U_T} \cdot \frac{W}{L} \cdot g_{ms}(IC),\\
+  I_b &amp;= I_{spec\Box} \cdot \frac{W}{L} \cdot IC.
+\end{align}\]</span> This leads to the following normalized results <span class="math display">\[\begin{align}
+  i_b &amp;\triangleq \frac{I_b}{G_m \cdot n U_T} = \frac{IC}{g_{ms}},\\
+  AR &amp;\triangleq \frac{W}{L} \cdot \frac{I_{spec\Box}}{G_m \cdot n U_T} = \frac{1}{g_{ms}}.
+\end{align}\]</span> <span class="math inline">\(i_b\)</span> and <span class="math inline">\(AR\)</span> are plotted below for various values of <span class="math inline">\(\lambda_c\)</span></p>
+<div id="cell-fig-ib_ar_ic_constant_gm" class="cell" data-execution_count="2">
+<div class="cell-output cell-output-display">
+<div id="fig-ib_ar_ic_constant_gm" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-ib_ar_ic_constant_gm-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="CS_optimization_files/figure-html/fig-ib_ar_ic_constant_gm-output-1.png" width="509" height="335" class="figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-ib_ar_ic_constant_gm-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;4: Normalized bias current and aspect ratio versus inversion coefficient.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>From <a href="#fig-ib_ar_ic_constant_gm" class="quarto-xref">Figure&nbsp;4</a>, we see that we can reduce the current <span class="math inline">\(i_b\)</span> when moving from strong inversion to moderate inversion reaching a minimum in weak inversion. The loss of transconductance resulting from a reduction of <span class="math inline">\(IC\)</span> is compensated by an increase of <span class="math inline">\(W/L\)</span> as shown by the blue curves, resulting in a very large transistor and a drastic area increase. Moderate inversion turns out to be a good trade-off between low current and acceptable area for achieving a given transconductance.</p>
+</section>
+<section id="minimum-current-for-a-given-gain-bandwidth-product-no-self-loading" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> Minimum current for a given gain-bandwidth product (no self-loading)</h1>
+<p>We now will answer the following question:</p>
+<div class="callout callout-style-default callout-tip callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Question
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>What is the minimum bias current <span class="math inline">\(I_b\)</span> and transistor size (aspect ratio <span class="math inline">\(W/L\)</span>) in order for the OL CS gain stage to achieve a given gain-bandwidth product for a given load capacitance neglecting the effect of self-loading?</p>
+</div>
+</div>
+<p>We first rewrite the gain-bandwidth as <span class="math display">\[\begin{equation}
+  \omega_u = \frac{G_m}{C_L} = \omega_L \cdot \frac{W}{L} \cdot g_{ms},
+\end{equation}\]</span> where <span class="math display">\[\begin{equation}
+  \omega_L \triangleq \frac{I_{spec\Box}}{n U_T \cdot C_{Ltot}}.
+\end{equation}\]</span></p>
+<p>To answer this question we need to solve the following set of equations for <span class="math inline">\(I_b\)</span> and <span class="math inline">\(W/L\)</span> <span class="math display">\[\begin{align}
+  \omega_u &amp;= \omega_L \cdot \frac{W}{L} \cdot g_{ms},\\
+  G_m &amp;= \frac{I_{spec\Box}}{n U_T} \cdot \frac{W}{L} \cdot g_{ms}(IC),\\
+  I_b &amp;= I_{spec\Box} \cdot \frac{W}{L} \cdot IC.
+\end{align}\]</span> Since the load capacitance <span class="math inline">\(C_L\)</span> is assumed constant, the problem is similar to imposing a given transconductance With a slightly different normalization we get the same normalized functions as before <span class="math display">\[\begin{align}
+  i_b &amp;\triangleq \frac{I_b}{G_m \cdot n U_T} \cdot \frac{1}{\Omega} = \frac{IC}{g_{ms}},\\
+  AR &amp;\triangleq \frac{W}{L} \cdot \frac{1}{\Omega} = \frac{1}{g_{ms}}.
+\end{align}\]</span> with <span class="math display">\[\begin{equation}
+  \Omega \triangleq \frac{\omega_u}{\omega_L}.
+\end{equation}\]</span></p>
+<p><span class="math inline">\(i_b\)</span> and <span class="math inline">\(AR\)</span> are plotted <a href="#fig-ib_ar_ic_constant_gm" class="quarto-xref">Figure&nbsp;4</a> for various values of <span class="math inline">\(\lambda_c\)</span>. A different normalization reduces to the same trade-off than constant <span class="math inline">\(G_m\)</span>. Moderate inversion again turns out to be a good trade-off between low current and acceptable area for achieving a given gain-bandwidth product.</p>
+<p>When moving to moderate and weak inversion, the transistor can become very large. The parasitic capacitance at the transistor drain can then no more be ignored. We will analyze the impact of self-loading in the next section.</p>
+</section>
+<section id="minimum-current-for-a-given-gain-bandwidth-product-including-self-loading" class="level1" data-number="5">
+<h1 data-number="5"><span class="header-section-number">5</span> Minimum current for a given gain-bandwidth product including self-loading</h1>
+<section id="analysis" class="level2" data-number="5.1">
+<h2 data-number="5.1" class="anchored" data-anchor-id="analysis"><span class="header-section-number">5.1</span> Analysis</h2>
+<div id="fig-cs_ol_self_loading_schematic" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-cs_ol_self_loading_schematic-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="Figures/CS_OL_self-loading.png" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-cs_ol_self_loading_schematic-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;5: Schematic of the open-loop common-source (CS) gain stage including the self-loading capacitances at the drain.
+</figcaption>
+</figure>
+</div>
+<p>When optimizing the OL CS amplifier for low current consumption, the transistor is often biased in moderate or even weak inversion leading to large transistor and therefore an increased output capacitance due to the self-loading from the parasitic capacitances connected to the drain. We now want to answer the following question:</p>
+<div class="callout callout-style-default callout-tip callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Question
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>What is the minimum bias current <span class="math inline">\(I_b\)</span> and transistor size (aspect ratio <span class="math inline">\(W/L\)</span>) in order for the OL CS gain stage to achieve a given gain-bandwidth product accounting for the effect of self-loading?</p>
+</div>
+</div>
+<p>As shown in <a href="#fig-cs_ol_self_loading_schematic" class="quarto-xref">Figure&nbsp;5</a>, the self-loading capacitances include the junction capacitance at the drain C_{BDj} and the feedback capacitance <span class="math inline">\(C_F\)</span>. The junction capacitance <span class="math inline">\(C_{BDj}\)</span> is given by <span class="math display">\[\begin{equation}
+  C_{DBJ} = AD \cdot C_J + (PD - W) \cdot C_{JSWSTI} + W \cdot C_{JSWGAT},
+\end{equation}\]</span> where <span class="math inline">\(AD\)</span> and <span class="math inline">\(PD\)</span> are the drain diffusion area and perimeter, respectively, which are given by <span class="math display">\[\begin{align}
+  AD &amp;= W \cdot Z_{dif},\\
+  PD &amp;= 2\,(W + Z_{dif}),
+\end{align}\]</span> with <span class="math inline">\(Z_{dif}\)</span> the diffusion width (i.e.&nbsp;<span class="math inline">\(Z_{dif} = 2\,H_{dif}\)</span>). Paramter <span class="math inline">\(C_J\)</span> is the bottom junction capacitance, <span class="math inline">\(C_{JSWSTI}\)</span> the side-wall junction capacitance along the STI edge and <span class="math inline">\(C_{JSWSTI}\)</span> the side-wall junction capacitance along the gate edge. The latter are bias-dependent since they depend on the drain-to-bulk voltage, but we can approximate them by their zero-bias values <span class="math inline">\(C_{JSWSTI0}\)</span>, <span class="math inline">\(C_{JSWSTI}\)</span> and <span class="math inline">\(C_{JSWGAT0}\)</span> which are larger.</p>
+<p>We can split the junction capacitance <span class="math inline">\(C_{DBJ}\)</span> among a component that scales with <span class="math inline">\(W\)</span> and another that remains constant <span class="math display">\[\begin{equation}
+  C_{DBJ} = C_{DBJW} \cdot W + C_{DBJ0},
+\end{equation}\]</span> where <span class="math display">\[\begin{align}
+  C_{DBJW} &amp;= Z_{dif} \cdot C_J + C_{JSWSTI} + C_{JSWGAT},\\
+  C_{DBJ0} &amp;= 2\,Z_{dif} \cdot C_{JSWSTI}.
+\end{align}\]</span></p>
+<p>The feedback capacitance is due to the overlap and fringing field capacitance which scale with <span class="math inline">\(W\)</span> <span class="math display">\[\begin{equation}
+  C_F = C_{GDe} \cdot W,
+\end{equation}\]</span> where <span class="math inline">\(C_{GDe}\)</span> is the extrinsic capacitance per unit width which is given by <span class="math display">\[\begin{equation}
+  C_{GDe} = C_{GDo} + C_{GDf}.
+\end{equation}\]</span> where <span class="math inline">\(C_{GDo}\)</span> is the overlap capacitance per unit width and <span class="math inline">\(C_{GDf}\)</span> is the fringing field capacitance per unit width.</p>
+<p>The total transistor parasitic capacitance at the drain can then be written as <span class="math display">\[\begin{equation}
+  C_D = C_{D0} + C_{DW} \cdot W.
+\end{equation}\]</span> with <span class="math display">\[\begin{align}
+  C_{DW} &amp;= Z_{dif} \cdot C_J + C_{JSWSTI} + C_{JSWGAT} + C_{GDo} + C_{GDf},\\
+  C_{D0} &amp;= C_{DBJ0} = 2\,Z_{dif} \cdot C_{JSWSTI}.
+\end{align}\]</span> The total load capacitance at the output is then given by <span class="math display">\[\begin{equation}
+  C_{out} = C_{L0} + C_{DBJ} + C_F
+\end{equation}\]</span> which can be split into a compoenent that scales with <span class="math inline">\(W\)</span> and a constant part <span class="math display">\[\begin{equation}
+  C_{out} = C_{DW} \cdot W + C_{out0}
+\end{equation}\]</span> with <span class="math display">\[\begin{equation}
+  C_{out0} = C_{L0} + C_{D0}.
+\end{equation}\]</span></p>
+<p>In order to achieve a certain bandwidth we need to have a certain transconductance for a certain load capacitance. In order to maximize the current efficiency, we should bias the transistor in weak inversion. This leads to a large transistor and therefore large parasitic capacitances which will impact the bandwidth. Imposing the bandwidth, at some point the capacitance becomes so large that it is no more possible to achieve the required transconductance in weak inversion for the desired bandwidth. Does this mean that there is a minimum current for the OL CS amplifier to achieve a certain gain-bandwidth product?</p>
+<p>To answer this question we need to solve the following set of equations for <span class="math inline">\(I_b\)</span> and <span class="math inline">\(W\)</span> assuming a given length <span class="math inline">\(L\)</span></p>
+<p><span class="math display">\[\begin{align}
+  \omega_u &amp;= \frac{G_m}{C_{out}},\\
+  G_m &amp;= \frac{I_{spec\Box}}{n U_T} \cdot \frac{W}{L} \cdot g_{ms}(IC),\\
+  C_{out} &amp;= C_{DW} \cdot W + C_{out0},\\
+  I_b &amp;= I_{spec\Box} \cdot \frac{W}{L} \cdot IC.
+\end{align}\]</span></p>
+<p>Solving for <span class="math inline">\(I_b\)</span> and <span class="math inline">\(W/L\)</span>, assuming a long-channel (i.e.&nbsp;<span class="math inline">\(\lambda_c = 0\)</span>), leads to the following normalized solutions <span class="math display">\[\begin{align}
+  i_b &amp;\triangleq \frac{I_b}{I_{pec\Box} \cdot \Omega} = \frac{IC}{g_{ms}(IC) - \Theta},\\
+  AR &amp;\triangleq \frac{W/L}{\Omega} =\frac{1}{g_{ms} - \Theta},
+\end{align}\]</span> where <span class="math display">\[\begin{align}
+  \Omega &amp;\triangleq \frac{\omega_u}{\omega_L},\\
+  \omega_L &amp;\triangleq \frac{I_{spec\Box}}{n U_T \cdot C_{out0}},\\
+  \Theta &amp;\triangleq \frac{\omega_u}{\omega_W},\\
+  \omega_W &amp;\triangleq \frac{I_{spec\Box}}{n U_T \cdot C_{DW} \cdot L}.
+\end{align}\]</span></p>
+<p>The normalized current <span class="math inline">\(i_b\)</span> is plotted <a href="#fig-ib_ar_ic_gbw_self_loading" class="quarto-xref">Figure&nbsp;6</a> for different values of <span class="math inline">\(\Theta\)</span>.</p>
+<div id="cell-fig-ib_ar_ic_gbw_self_loading" class="cell" data-execution_count="3">
+<div class="cell-output cell-output-display">
+<div id="fig-ib_ar_ic_gbw_self_loading" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-ib_ar_ic_gbw_self_loading-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="CS_optimization_files/figure-html/fig-ib_ar_ic_gbw_self_loading-output-1.png" width="509" height="335" class="figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-ib_ar_ic_gbw_self_loading-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;6: Normalized bias current and aspect ratio versus inversion coefficient including the self-loading capacitances at the drain.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<div id="cell-fig-ib_ic_gbw_self_loading" class="cell" data-execution_count="4">
+<div class="cell-output cell-output-display">
+<div id="fig-ib_ic_gbw_self_loading" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-ib_ic_gbw_self_loading-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="CS_optimization_files/figure-html/fig-ib_ic_gbw_self_loading-output-1.png" width="551" height="335" class="figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-ib_ic_gbw_self_loading-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;7: Normalized bias current versus inversion coefficient including the self-loading capacitances at the drain.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>From <a href="#fig-ib_ar_ic_gbw_self_loading" class="quarto-xref">Figure&nbsp;6</a> and <a href="#fig-ib_ic_gbw_self_loading" class="quarto-xref">Figure&nbsp;7</a>, we clearly see that there is a minimum current for a given value of parameter <span class="math inline">\(\Theta\)</span>. We can find the optimum inversion coefficient <span class="math inline">\(IC_{opt}\)</span> which is given by <span class="math display">\[\begin{equation}\label{eqn:icopt}
+  IC_{opt} = \left(\sqrt{\Theta \cdot (1+\Theta)} + \Theta + \frac{1}{2}\right)^2 - \frac{1}{4}
+  = 2 \Theta \cdot (1+\Theta) + (1+2\Theta) \cdot \sqrt{\Theta \cdot (1+\Theta)},
+\end{equation}\]</span> which for <span class="math inline">\(\Theta \ll 1\)</span> simplifies to <span class="math display">\[\begin{equation}
+  IC_{opt} \cong 2 \Theta + \sqrt{\Theta}.
+\end{equation}\]</span></p>
+<p>From <a href="#fig-ib_ar_ic_gbw_self_loading" class="quarto-xref">Figure&nbsp;6</a> and <a href="#fig-ib_ic_gbw_self_loading" class="quarto-xref">Figure&nbsp;7</a>, we also see that there is a minimum inversion coefficient <span class="math inline">\(IC_{lim}\)</span> below which the desired gain-bandwidth product <span class="math inline">\(GBW\)</span> can no more be achieved <span class="math display">\[\begin{equation}
+  IC_{lim} = \Theta \cdot (1+\Theta) \cong \Theta,
+\end{equation}\]</span> which is about equal to <span class="math inline">\(\Theta\)</span> for small values of <span class="math inline">\(\Theta\)</span>.</p>
+<p>The optimum normalized current is given by <span class="math display">\[\begin{equation}
+  i_{bopt} \triangleq i_b(IC_{opt}) = 1 + 2\Theta +2\sqrt{\Theta \cdot (1+\Theta)}.
+\end{equation}\]</span></p>
+<p>Parameter <span class="math inline">\(\Theta\)</span> can be eliminated from equations <span class="math inline">\(\eqref{eq:ibopt}\)</span> and <span class="math inline">\(\eqref{eq:icopt}\)</span> resulting in an expression of <span class="math inline">\(i_{opt}\)</span> in terms of <span class="math inline">\(IC_{opt}\)</span> <span class="math display">\[\begin{equation}
+  i_{bopt} = \sqrt{4 IC_{opt} + 1}
+\end{equation}\]</span> which is plotted in <a href="#fig-ib_ic_gbw_self_loading" class="quarto-xref">Figure&nbsp;7</a> as a dashed red line.</p>
+<p>The optimum normalized current is given by <span class="math display">\[\begin{equation}\label{eqn:ibopt}
+  i_{bopt} \triangleq i_b(IC_{opt}) = 1 + 2\Theta +2\sqrt{\Theta \cdot (1+\Theta)}.
+\end{equation}\]</span> Parameter <span class="math inline">\(\Theta\)</span> can be eliminated from equations <span class="math inline">\(\eqref{eqn:ibopt}\)</span> and <span class="math inline">\(\eqref{eqn:icopt}\)</span> resulting in an expression of <span class="math inline">\(i_{bopt}\)</span> in terms of <span class="math inline">\(IC_{opt}\)</span> <span class="math display">\[\begin{equation}
+  i_{bopt} = \sqrt{4 IC_{opt} + 1}
+\end{equation}\]</span> which is plotted in <a href="#fig-ib_ic_gbw_self_loading" class="quarto-xref">Figure&nbsp;7</a> as a dashed red line.</p>
+<div id="cell-fig-ar_ic_gbw_self_loading" class="cell" data-execution_count="5">
+<div class="cell-output cell-output-display">
+<div id="fig-ar_ic_gbw_self_loading" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-ar_ic_gbw_self_loading-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="CS_optimization_files/figure-html/fig-ar_ic_gbw_self_loading-output-1.png" width="552" height="335" class="figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-ar_ic_gbw_self_loading-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;8: Normalized aspect ratio versus inversion coefficient including the self-loading capacitances at the drain.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>From <a href="#fig-ar_ic_gbw_self_loading" class="quarto-xref">Figure&nbsp;8</a>, we see from the above plot that the transistor width increases first as <span class="math inline">\(1/\sqrt{IC}\)</span> in strong inversion and then as <span class="math inline">\(1/IC\)</span> in weak inversion making the transistor quickly very large until <span class="math inline">\(IC\)</span> reaches <span class="math inline">\(IC_{lim}\)</span> where the width becomes infinity. The dots correspond to the <span class="math inline">\(AR\)</span> obtained for <span class="math inline">\(IC_{opt}\)</span>.</p>
+<p>The above analysis was done assuming a long-channel transistor (i.e.&nbsp;<span class="math inline">\(\lambda_c = 0\)</span>). There is unfortunatly no closed form expression for the optimum inversion coefficient when including the short-channel effects (i.e.&nbsp;setting <span class="math inline">\(\lambda_c &gt; 0\)</span>). However we can plot the normalized bias current <span class="math inline">\(i_b\)</span> versus <span class="math inline">\(IC\)</span> accounting for the short-channel effects. The result is plotted in <a href="#fig-ib_ic_gbw_short_channel" class="quarto-xref">Figure&nbsp;9</a>. We can observe that the optimum inversion coefficient <span class="math inline">\(IC_{opt}\)</span> corresponding to the minimum bias current does change significantly for <span class="math inline">\(\lambda_c\)</span> varying from <span class="math inline">\(0\)</span> to <span class="math inline">\(1\)</span> (the latter value being beyond the usual values of <span class="math inline">\(\lambda_c\)</span>). The optimum inversion coefficient <span class="math inline">\(IC_{opt}\)</span> is plotted versus the parameter <span class="math inline">\(\Theta\)</span> in <a href="#fig-icopt_theta_gbw_short_channel" class="quarto-xref">Figure&nbsp;10</a> for <span class="math inline">\(\lambda_c\)</span> ranging from <span class="math inline">\(0\)</span> to <span class="math inline">\(1\)</span>. From <a href="#fig-icopt_theta_gbw_short_channel" class="quarto-xref">Figure&nbsp;10</a>, we can obeserve that the impact of short-channel effects is rather limited particularly for reasonable values of <span class="math inline">\(\lambda_c\)</span> (<span class="math inline">\(\lambda_c\)</span> is rarely larger than 0.4). We can therefore use the long-channel expression of the optimum inversion coefficient <span class="math inline">\(IC_{opt}\)</span> and get close to the minimum bias current even for short channel transistors.</p>
+<div id="cell-fig-ib_ic_gbw_short_channel" class="cell" data-execution_count="6">
+<div class="cell-output cell-output-display">
+<div id="fig-ib_ic_gbw_short_channel" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-ib_ic_gbw_short_channel-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="CS_optimization_files/figure-html/fig-ib_ic_gbw_short_channel-output-1.png" width="545" height="335" class="figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-ib_ic_gbw_short_channel-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;9: Normalized bias current versus inversion coefficient for various velocity saturation parameter <span class="math inline">\(\lambda_c\)</span>.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<div id="cell-fig-icopt_theta_gbw_short_channel" class="cell" data-execution_count="7">
+<div class="cell-output cell-output-display">
+<div id="fig-icopt_theta_gbw_short_channel" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-icopt_theta_gbw_short_channel-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="CS_optimization_files/figure-html/fig-icopt_theta_gbw_short_channel-output-1.png" width="553" height="335" class="figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-icopt_theta_gbw_short_channel-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;10: Optimum inversion coefficient versus <span class="math inline">\(\Theta\)</span> for different velocity saturation parameter <span class="math inline">\(\lambda_c\)</span>.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="examples" class="level2" data-number="5.2">
+<h2 data-number="5.2" class="anchored" data-anchor-id="examples"><span class="header-section-number">5.2</span> Examples</h2>
+<section id="process" class="level3" data-number="5.2.1">
+<h3 data-number="5.2.1" class="anchored" data-anchor-id="process"><span class="header-section-number">5.2.1</span> Process</h3>
+<p>We want to size a CS gain stage to achieve a certain gain-bandwidth <span class="math inline">\(GBW\)</span> for a given transistor length <span class="math inline">\(L\)</span> and constant load capacitance <span class="math inline">\(C_{L0}\)</span>. We select the open source IHP 130nm CMOS technology <span class="citation" data-cites="bib:ihp:2025"><a href="#ref-bib:ihp:2025" role="doc-biblioref">[4]</a></span>. The PDK uses the PSP 103.6 MOSFET compact model for the MOS part of the technology <span class="citation" data-cites="bib:psp103.6:2017"><a href="#ref-bib:psp103.6:2017" role="doc-biblioref">[5]</a></span>. The process parameters are given in <a href="#tbl-process_param" class="quarto-xref">Table&nbsp;1</a> and the transistor parameters in <a href="#tbl-mos_param" class="quarto-xref">Table&nbsp;2</a>.</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>The parameters given in <a href="#tbl-mos_param" class="quarto-xref">Table&nbsp;2</a> are a mix of parameters taken from the PSP model library and others (mostly the sEKV parameters) extracted from <span class="math inline">\(I_D\)</span>-<span class="math inline">\(V_G\)</span> and <span class="math inline">\(I_D\)</span>-<span class="math inline">\(V_D\)</span> data (this is done in another notebook).</p>
+</div>
+</div>
+<div class="cell" data-execution_count="8">
+<div id="tbl-process_param" class="cell quarto-float quarto-figure quarto-figure-center anchored" data-execution_count="8">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-process_param-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;1: Process parameters.
+</figcaption>
+<div aria-describedby="tbl-process_param-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output cell-output-display cell-output-markdown" data-execution_count="8">
+<table class="do-not-create-environment cell caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th style="text-align: center;">Parameter</th>
+<th style="text-align: center;">Value</th>
+<th style="text-align: center;">Unit</th>
+<th style="text-align: left;">Comment</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(t_{{ox}}\)</span></td>
+<td style="text-align: center;">2.24</td>
+<td style="text-align: center;"><span class="math inline">\(nm\)</span></td>
+<td style="text-align: left;">SiO<sub>2</sub> oxyde thickness</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(C_{{ox}}\)</span></td>
+<td style="text-align: center;">15.413</td>
+<td style="text-align: center;"><span class="math inline">\(\frac{{fF}}{{\mu m^2}}\)</span></td>
+<td style="text-align: left;">Oxyde capacitance per unit area</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(V_{{DD}}\)</span></td>
+<td style="text-align: center;">1.2</td>
+<td style="text-align: center;"><span class="math inline">\(V\)</span></td>
+<td style="text-align: left;">Nominal supply voltage</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(L_{{min}}\)</span></td>
+<td style="text-align: center;">130</td>
+<td style="text-align: center;"><span class="math inline">\(nm\)</span></td>
+<td style="text-align: left;">Minimum drawn gate length</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(W_{{min}}\)</span></td>
+<td style="text-align: center;">150</td>
+<td style="text-align: center;"><span class="math inline">\(nm\)</span></td>
+<td style="text-align: left;">Minimum drawn gate width</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(z_1\)</span></td>
+<td style="text-align: center;">340</td>
+<td style="text-align: center;"><span class="math inline">\(nm\)</span></td>
+<td style="text-align: left;">Minimum outer diffusion width</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(z_2\)</span></td>
+<td style="text-align: center;">389</td>
+<td style="text-align: center;"><span class="math inline">\(nm\)</span></td>
+<td style="text-align: left;">Minimum diffusion width between two fingers</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</figure>
+</div>
+</div>
+<div class="cell" data-execution_count="9">
+<div id="tbl-mos_param" class="cell quarto-float quarto-figure quarto-figure-center anchored" data-execution_count="9">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-mos_param-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;2: Transistors parameters.
+</figcaption>
+<div aria-describedby="tbl-mos_param-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output cell-output-display cell-output-markdown" data-execution_count="9">
+<table class="do-not-create-environment cell caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th style="text-align: right;">Parameter</th>
+<th style="text-align: center;">nMOS</th>
+<th style="text-align: center;">pMOS</th>
+<th style="text-align: left;">Unit</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: right;">Length and width correction parameters for current</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="even">
+<td style="text-align: right;"><span class="math inline">\(DL\)</span></td>
+<td style="text-align: center;">59</td>
+<td style="text-align: center;">51</td>
+<td style="text-align: left;"><span class="math inline">\(nm\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;"><span class="math inline">\(DW\)</span></td>
+<td style="text-align: center;">-20</td>
+<td style="text-align: center;">30</td>
+<td style="text-align: left;"><span class="math inline">\(nm\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">Length and width correction for intrinsic and overlap capacitances</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;"><span class="math inline">\(DLCV\)</span></td>
+<td style="text-align: center;">93</td>
+<td style="text-align: center;">146</td>
+<td style="text-align: left;"><span class="math inline">\(nm\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: right;"><span class="math inline">\(DWCV\)</span></td>
+<td style="text-align: center;">-10</td>
+<td style="text-align: center;">15</td>
+<td style="text-align: left;"><span class="math inline">\(nm\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">Length and width correction parameter for fringing capacitances</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="even">
+<td style="text-align: right;"><span class="math inline">\(DLGCV\)</span></td>
+<td style="text-align: center;">34</td>
+<td style="text-align: center;">96</td>
+<td style="text-align: left;"><span class="math inline">\(nm\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;"><span class="math inline">\(DWGCV\)</span></td>
+<td style="text-align: center;">10</td>
+<td style="text-align: center;">-15</td>
+<td style="text-align: left;"><span class="math inline">\(nm\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">Long-channel sEKV parameters parameters</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;"><span class="math inline">\(n\)</span></td>
+<td style="text-align: center;">1.22</td>
+<td style="text-align: center;">1.23</td>
+<td style="text-align: left;">-</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;"><span class="math inline">\(I_{{spec\Box}}\)</span></td>
+<td style="text-align: center;">708</td>
+<td style="text-align: center;">245</td>
+<td style="text-align: left;"><span class="math inline">\(nA\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;"><span class="math inline">\(V_{{T0}}\)</span></td>
+<td style="text-align: center;">246</td>
+<td style="text-align: center;">365</td>
+<td style="text-align: left;"><span class="math inline">\(mV\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">Short-channel sEKV parameters parameters</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;"><span class="math inline">\(L_{{sat}}\)</span></td>
+<td style="text-align: center;">7.1</td>
+<td style="text-align: center;">24.9</td>
+<td style="text-align: left;"><span class="math inline">\(nm\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: right;"><span class="math inline">\(\lambda\)</span></td>
+<td style="text-align: center;">1.4</td>
+<td style="text-align: center;">10</td>
+<td style="text-align: left;"><span class="math inline">\(\frac{{V}}{{\mu m}}\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">Junction capacitances parameters</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="even">
+<td style="text-align: right;"><span class="math inline">\(C_J\)</span></td>
+<td style="text-align: center;">0.976</td>
+<td style="text-align: center;">0.863</td>
+<td style="text-align: left;"><span class="math inline">\(\frac{{fF}}{{\mu m^2}}\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;"><span class="math inline">\(C_{{JSWSTI}}\)</span></td>
+<td style="text-align: center;">0.025</td>
+<td style="text-align: center;">0.032</td>
+<td style="text-align: left;"><span class="math inline">\(\frac{{fF}}{{\mu m}}\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: right;"><span class="math inline">\(C_{{JSWGAT}}\)</span></td>
+<td style="text-align: center;">0.03</td>
+<td style="text-align: center;">0.027</td>
+<td style="text-align: left;"><span class="math inline">\(\frac{{fF}}{{\mu m}}\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">Overlap capacitances parameters</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="even">
+<td style="text-align: right;"><span class="math inline">\(C_{{GSo}}\)</span></td>
+<td style="text-align: center;">0.453</td>
+<td style="text-align: center;">0.443</td>
+<td style="text-align: left;"><span class="math inline">\(\frac{{fF}}{{\mu m}}\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;"><span class="math inline">\(C_{{GDo}}\)</span></td>
+<td style="text-align: center;">0.453</td>
+<td style="text-align: center;">0.443</td>
+<td style="text-align: left;"><span class="math inline">\(\frac{{fF}}{{\mu m}}\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: right;"><span class="math inline">\(C_{{GBo}}\)</span></td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0.022</td>
+<td style="text-align: left;"><span class="math inline">\(\frac{{fF}}{{\mu m}}\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">Fringing capacitances parameters</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="even">
+<td style="text-align: right;"><span class="math inline">\(C_{{GSf}}\)</span></td>
+<td style="text-align: center;">0.2</td>
+<td style="text-align: center;">0.1</td>
+<td style="text-align: left;"><span class="math inline">\(\frac{{fF}}{{\mu m}}\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;"><span class="math inline">\(C_{{GDf}}\)</span></td>
+<td style="text-align: center;">0.2</td>
+<td style="text-align: center;">0.1</td>
+<td style="text-align: left;"><span class="math inline">\(\frac{{fF}}{{\mu m}}\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">Flicker noise parameters</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;"><span class="math inline">\(K_F\)</span></td>
+<td style="text-align: center;">2.208e-24</td>
+<td style="text-align: center;">8.801e-24</td>
+<td style="text-align: left;"><span class="math inline">\(V A s\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: right;"><span class="math inline">\(AF\)</span></td>
+<td style="text-align: center;">1</td>
+<td style="text-align: center;">1</td>
+<td style="text-align: left;">-</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;"><span class="math inline">\(\rho\)</span></td>
+<td style="text-align: center;">0.008642</td>
+<td style="text-align: center;">0.03445</td>
+<td style="text-align: left;"><span class="math inline">\(\frac{{V m^2}}{{A s}}\)</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</figure>
+</div>
+</div>
+<p>We start below with the nMOS case.</p>
+</section>
+<section id="nmos" class="level3" data-number="5.2.2">
+<h3 data-number="5.2.2" class="anchored" data-anchor-id="nmos"><span class="header-section-number">5.2.2</span> nMOS</h3>
+<section id="design" class="level4">
+<h4 class="anchored" data-anchor-id="design">Design</h4>
+<div id="fig-cs_ol_sim_schematic" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-cs_ol_sim_schematic-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="Figures/CS_OL_sim_sch.png" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-cs_ol_sim_schematic-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;11: Schematic of the open-loop common-source (CS) gain stage used for simulation.
+</figcaption>
+</figure>
+</div>
+<p>The schematic that is used for the simulations is shown in <a href="#fig-cs_ol_sim_schematic" class="quarto-xref">Figure&nbsp;11</a>. Note that a bias transistor M<sub>2</sub> has been added to correctly set the DC gate voltage of M<sub>1</sub> so that its drain current is equal to <span class="math inline">\(I_b\)</span> by means of a VCVS as shown in <a href="#fig-cs_ol_sim_schematic" class="quarto-xref">Figure&nbsp;11</a></p>
+<p>Since the transistor is biased in saturation, the intrinsic gate-to-drain capacitance <span class="math inline">\(C_{GDi}\)</span> can be considered as zero. The feedback capacitance <span class="math inline">\(C_F\)</span> is therefore made of the overlap <span class="math inline">\(C_{GDo}\)</span> and fringing capacitances <span class="math inline">\(C_{GDf}\)</span>, so that <span class="math inline">\(C_F \cong C_{GDo} + C_{GDf}\)</span>. Note that, since the DC gate voltage is constant it is an AC ground and hence <span class="math inline">\(C_F\)</span> adds to the total load capacitance. Since both <span class="math inline">\(C_{GDo}\)</span> and <span class="math inline">\(C_{GDf}\)</span> scale with <span class="math inline">\(W\)</span>, we need to add it to <span class="math inline">\(C_{DW}\)</span> which is now given by <span class="math display">\[\begin{equation}
+  C_{DW} = Z_{dif} \cdot C_J + C_{JSWSTI} + C_{JSWGAT} + C_{GDo} + C_{GDf}.
+\end{equation}\]</span> Since we don’t know the drain voltage across the junction capacitance, we will use its zero-bias values which is anyway larger than the actual value. The technology parameters we will need are summarized in <a href="#tbl-process_summary_gbw_nmos" class="quarto-xref">Table&nbsp;3</a>. From <a href="#tbl-process_summary_gbw_nmos" class="quarto-xref">Table&nbsp;3</a>, we observe that <span class="math inline">\(C_{D0}\)</span> is actuall very small.</p>
+<p>The specifications are given in <a href="#tbl-specs_gbw_nmos" class="quarto-xref">Table&nbsp;4</a>, where we have chosen a long-channel transistor to be consistent with the theory and the resulting design equations. Note that, as shown in <a href="#fig-ib_ic_gbw_short_channel" class="quarto-xref">Figure&nbsp;9</a> and <a href="#fig-icopt_theta_gbw_short_channel" class="quarto-xref">Figure&nbsp;10</a>, short-channel effects like velocity saturation have a m^limited impact on the value of <span class="math inline">\(IC_{opt}\)</span>. We can therefore use the long-channel expressions even for short-channel transistors still getting close to the minimum bias current.</p>
+<div class="cell" data-execution_count="10">
+<div id="tbl-process_summary_gbw_nmos" class="cell quarto-float quarto-figure quarto-figure-center anchored" data-execution_count="10">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-process_summary_gbw_nmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;3: Required process parameters (nMOS).
+</figcaption>
+<div aria-describedby="tbl-process_summary_gbw_nmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output cell-output-display cell-output-markdown" data-execution_count="10">
+<table class="do-not-create-environment cell caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th style="text-align: center;">Parameter</th>
+<th style="text-align: center;">Value</th>
+<th style="text-align: center;">Unit</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(V_{DD}\)</span></td>
+<td style="text-align: center;">1.2</td>
+<td style="text-align: center;"><span class="math inline">\(V\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(n\)</span></td>
+<td style="text-align: center;">1.22</td>
+<td style="text-align: center;">-</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(I_{spec\Box}\)</span></td>
+<td style="text-align: center;">708</td>
+<td style="text-align: center;"><span class="math inline">\(nA\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(C_{DW}\)</span></td>
+<td style="text-align: center;">1.041</td>
+<td style="text-align: center;"><span class="math inline">\(\frac{fF}{um}\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(C_{D0}\)</span></td>
+<td style="text-align: center;">0.017</td>
+<td style="text-align: center;"><span class="math inline">\(fF\)</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</figure>
+</div>
+</div>
+<div class="cell" data-execution_count="11">
+<div id="tbl-specs_gbw_nmos" class="cell quarto-float quarto-figure quarto-figure-center anchored" data-execution_count="11">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-specs_gbw_nmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;4: Specifications.
+</figcaption>
+<div aria-describedby="tbl-specs_gbw_nmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output cell-output-display cell-output-markdown" data-execution_count="11">
+<table class="do-not-create-environment cell caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th style="text-align: center;">Parameter</th>
+<th style="text-align: center;">Value</th>
+<th style="text-align: center;">Unit</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(GBW\)</span></td>
+<td style="text-align: center;">100</td>
+<td style="text-align: center;"><span class="math inline">\(MHz\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(L\)</span></td>
+<td style="text-align: center;">1</td>
+<td style="text-align: center;"><span class="math inline">\(\mu m\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(C_{L0}\)</span></td>
+<td style="text-align: center;">20</td>
+<td style="text-align: center;"><span class="math inline">\(fF\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(C_L\)</span></td>
+<td style="text-align: center;">20.017</td>
+<td style="text-align: center;"><span class="math inline">\(fF\)</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</figure>
+</div>
+</div>
+<p>We can now calculate the optimum inversion coefficient, optimum bias current and optimum width. The calculated parameters are given in <a href="#tbl-calc_param_gbw_nmos" class="quarto-xref">Table&nbsp;5</a>.</p>
+<div class="cell" data-execution_count="12">
+<div id="tbl-calc_param_gbw_nmos" class="cell quarto-float quarto-figure quarto-figure-center anchored" data-execution_count="12">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-calc_param_gbw_nmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;5: Calculated parameters (nMOS).
+</figcaption>
+<div aria-describedby="tbl-calc_param_gbw_nmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output cell-output-display cell-output-markdown" data-execution_count="12">
+<table class="do-not-create-environment cell caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th style="text-align: center;">Parameter</th>
+<th style="text-align: center;">Value</th>
+<th style="text-align: center;">Unit</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(f_L\)</span></td>
+<td style="text-align: center;">178.469</td>
+<td style="text-align: center;"><span class="math inline">\(MHz\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(f_W\)</span></td>
+<td style="text-align: center;">3.433</td>
+<td style="text-align: center;"><span class="math inline">\(GHz\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(\Omega\)</span></td>
+<td style="text-align: center;">0.56</td>
+<td style="text-align: center;">-</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(\theta\)</span></td>
+<td style="text-align: center;">0.029</td>
+<td style="text-align: center;">-</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(IC_{opt}\)</span></td>
+<td style="text-align: center;">0.243</td>
+<td style="text-align: center;">-</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(i_{b,opt}\)</span></td>
+<td style="text-align: center;">1.405</td>
+<td style="text-align: center;">-</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(AR_{opt}\)</span></td>
+<td style="text-align: center;">5.775</td>
+<td style="text-align: center;">-</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(\left(\frac{W}{L}\right)_{opt}\)</span></td>
+<td style="text-align: center;">3.236</td>
+<td style="text-align: center;">-</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(I_{b,opt}\)</span></td>
+<td style="text-align: center;">557</td>
+<td style="text-align: center;"><span class="math inline">\(nA\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(W_{opt}\)</span></td>
+<td style="text-align: center;">3.24</td>
+<td style="text-align: center;"><span class="math inline">\(\mu m\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(G_{m,opt}\)</span></td>
+<td style="text-align: center;">14.693</td>
+<td style="text-align: center;"><span class="math inline">\(\frac{\mu A}{V}\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(C_{D,opt}\)</span></td>
+<td style="text-align: center;">3.368</td>
+<td style="text-align: center;"><span class="math inline">\(fF\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(AD\)</span></td>
+<td style="text-align: center;">1.1</td>
+<td style="text-align: center;"><span class="math inline">\(\mu m^2\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(PD\)</span></td>
+<td style="text-align: center;">7.152</td>
+<td style="text-align: center;"><span class="math inline">\(\mu m\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(C_{DBJ}\)</span></td>
+<td style="text-align: center;">1.27</td>
+<td style="text-align: center;"><span class="math inline">\(fF\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(C_{DBJ,bot}\)</span></td>
+<td style="text-align: center;">1.074</td>
+<td style="text-align: center;"><span class="math inline">\(fF\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(C_{DBJ,SWSTI}\)</span></td>
+<td style="text-align: center;">0.099</td>
+<td style="text-align: center;"><span class="math inline">\(fF\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(C_{DBJ,SWGAT}\)</span></td>
+<td style="text-align: center;">0.097</td>
+<td style="text-align: center;"><span class="math inline">\(fF\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(C_{GDo}\)</span></td>
+<td style="text-align: center;">1.468</td>
+<td style="text-align: center;"><span class="math inline">\(fF\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(C_{GDf}\)</span></td>
+<td style="text-align: center;">0.647</td>
+<td style="text-align: center;"><span class="math inline">\(fF\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(C_{GDe}\)</span></td>
+<td style="text-align: center;">2.115</td>
+<td style="text-align: center;"><span class="math inline">\(fF\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(C_F\)</span></td>
+<td style="text-align: center;">2.115</td>
+<td style="text-align: center;"><span class="math inline">\(fF\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(C_{out}\)</span></td>
+<td style="text-align: center;">23.385</td>
+<td style="text-align: center;"><span class="math inline">\(fF\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(f_z\)</span></td>
+<td style="text-align: center;">1.106</td>
+<td style="text-align: center;"><span class="math inline">\(GHz\)</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</figure>
+</div>
+</div>
+<p>From <a href="#tbl-calc_param_gbw_nmos" class="quarto-xref">Table&nbsp;5</a>, we see that the optimum inversion coefficient for a minimum bias current is in the lower side of moderate inversion. We also end-up with a large transistor, but still an acceptable value.</p>
+<p>We can now estimate the output conductance</p>
+<p><span class="math inline">\(G_{{ds}} =\)</span> 398.170 <span class="math inline">\(nA/V\)</span></p>
+<p>and the DC gain</p>
+<p><span class="math inline">\(A_{{dc}} =\)</span> 3.690e+01 or in dB</p>
+<p><span class="math inline">\(A_{{dc}} =\)</span> 31.3 <span class="math inline">\(dB\)</span>.</p>
+<p>The CS estimated open-loop transfer function is shown in <a href="#fig-cs_ol_tf_gbw_the_nmos" class="quarto-xref">Figure&nbsp;12</a>.</p>
+<div id="cell-fig-cs_ol_tf_gbw_the_nmos" class="cell" data-execution_count="14">
+<div class="cell-output cell-output-display">
+<div id="fig-cs_ol_tf_gbw_the_nmos" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-cs_ol_tf_gbw_the_nmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="CS_optimization_files/figure-html/fig-cs_ol_tf_gbw_the_nmos-output-1.png" width="474" height="517" class="figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-cs_ol_tf_gbw_the_nmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;12: Transfer function (nMOS).
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>We can now proceed with the simulations.</p>
+</section>
+<section id="ngspice-simulations" class="level4">
+<h4 class="anchored" data-anchor-id="ngspice-simulations">ngspice simulations</h4>
+<p>We start checking the DC operating point by first looking at the drain current <span class="math inline">\(I_D\)</span>, gate transcondcutance <span class="math inline">\(G_m\)</span>, output conductance <span class="math inline">\(G_{ds}\)</span> and DC gain <span class="math inline">\(A_{dc}\)</span>. The values extracted from the simulation (PSP) are compared to the theoretical prediction in <a href="#tbl-gbw_op_comp1_nmos" class="quarto-xref">Table&nbsp;6</a>.</p>
+<div class="cell" data-execution_count="15">
+<div id="tbl-gbw_op_comp1_nmos" class="cell quarto-float quarto-figure quarto-figure-center anchored" data-execution_count="15">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-gbw_op_comp1_nmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;6: Simulated drain current and small-signal parameter values compared to theoretical values.
+</figcaption>
+<div aria-describedby="tbl-gbw_op_comp1_nmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output cell-output-display cell-output-markdown" data-execution_count="15">
+<table class="do-not-create-environment cell caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th></th>
+<th style="text-align: center;"><span class="math inline">\(I_D\,[nA]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(G_m\,[\mu A/V]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(G_{ds}\,[nA/V]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(A_v\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Theory</td>
+<td style="text-align: center;">557</td>
+<td style="text-align: center;">14.693</td>
+<td style="text-align: center;">398.17</td>
+<td style="text-align: center;">31.341</td>
+</tr>
+<tr class="even">
+<td>PSP</td>
+<td style="text-align: center;">557</td>
+<td style="text-align: center;">14.711</td>
+<td style="text-align: center;">633.26</td>
+<td style="text-align: center;">27.321</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</figure>
+</div>
+</div>
+<p>From <a href="#tbl-gbw_op_comp1_nmos" class="quarto-xref">Table&nbsp;6</a>, we see that the values extracted from PSP are very close to the theoretical values, except for the output conductance. We now compare the simulated values of the overlap and fringing capacitances to the theoretical estimation in <a href="#tbl-gbw_op_comp2_nmos" class="quarto-xref">Table&nbsp;7</a>.</p>
+<div class="cell" data-execution_count="16">
+<div id="tbl-gbw_op_comp2_nmos" class="cell quarto-float quarto-figure quarto-figure-center anchored" data-execution_count="16">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-gbw_op_comp2_nmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;7: Simulated overlap and fringing capacitances values compared to theoretical values.
+</figcaption>
+<div aria-describedby="tbl-gbw_op_comp2_nmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output cell-output-display cell-output-markdown" data-execution_count="16">
+<table class="do-not-create-environment cell caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th></th>
+<th style="text-align: center;"><span class="math inline">\(C_{GSo}\,[fF]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(C_{GDo}\,[fF]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(C_{GSf}\,[fF]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(C_{GDf}\,[fF]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(C_{GSe}\,[fF]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(C_{GDe}\,[fF]\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Theory</td>
+<td style="text-align: center;">1.463</td>
+<td style="text-align: center;">1.463</td>
+<td style="text-align: center;">0.649</td>
+<td style="text-align: center;">0.649</td>
+<td style="text-align: center;">2.112</td>
+<td style="text-align: center;">2.112</td>
+</tr>
+<tr class="even">
+<td>PSP</td>
+<td style="text-align: center;">1.472</td>
+<td style="text-align: center;">1.472</td>
+<td style="text-align: center;">0.645</td>
+<td style="text-align: center;">0.645</td>
+<td style="text-align: center;">1.997</td>
+<td style="text-align: center;">1.958</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</figure>
+</div>
+</div>
+<p>The two first columns <span class="math inline">\(C_{GSo}\)</span> and <span class="math inline">\(C_{GDo}\)</span> correspond to the zero-bias overlap capacitances, whereas the third and fourth columns <span class="math inline">\(C_{GSf}\)</span> and <span class="math inline">\(C_{GDf}\)</span> correspond to the zero-bias fringing capacitances. Finally, the theoretical <span class="math inline">\(C_{GSe}\)</span> and <span class="math inline">\(C_{GDe}\)</span> correspond to the sum of the zero-bias overlap and fringing capacitances, whereas for PSP it includes the bias dependence. We see that the estimated zero-bias values of the overlap and fringing capacitance are very close to those extracted from PSP, whereas the bias-dependent values of the total extrinsic capacitances extracted from PSP are slightly smaller and asymmetrical (this is certainly due to the bias dependence which is very different for the drain and the source).</p>
+<p>We finally look at the junction capacitances. The theoretical values of the junction capacitances are compared to the values extracted from PSP in <a href="#tbl-gbw_op_comp3_nmos" class="quarto-xref">Table&nbsp;8</a> and <a href="#tbl-gbw_op_comp4_nmos" class="quarto-xref">Table&nbsp;9</a>. <a href="#tbl-gbw_op_comp3_nmos" class="quarto-xref">Table&nbsp;8</a> compares the zero-bias values whereas <a href="#tbl-gbw_op_comp4_nmos" class="quarto-xref">Table&nbsp;9</a> compares the theoretical zero-bias values to the actual values accounting for the junction bias voltage extracted from PSP.</p>
+<div class="cell" data-execution_count="17">
+<div id="tbl-gbw_op_comp3_nmos" class="cell quarto-float quarto-figure quarto-figure-center anchored" data-execution_count="17">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-gbw_op_comp3_nmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;8: Simulated zero-bias junction capacitances values compared to theoretical values.
+</figcaption>
+<div aria-describedby="tbl-gbw_op_comp3_nmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output cell-output-display cell-output-markdown" data-execution_count="17">
+<table class="do-not-create-environment cell caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th></th>
+<th style="text-align: center;"><span class="math inline">\(C_{Jbot}(0)\,[fF]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(C_{JSWSTI}(0)\,[fF]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(C_{JSWGAT}(0)\,[fF]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(C_{Jtot}(0)\,[fF]\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Theory</td>
+<td style="text-align: center;">1.071</td>
+<td style="text-align: center;">0.099</td>
+<td style="text-align: center;">0.097</td>
+<td style="text-align: center;">1.267</td>
+</tr>
+<tr class="even">
+<td>PSP</td>
+<td style="text-align: center;">1.079</td>
+<td style="text-align: center;">0.099</td>
+<td style="text-align: center;">0.097</td>
+<td style="text-align: center;">1.275</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</figure>
+</div>
+</div>
+<div class="cell" data-execution_count="18">
+<div id="tbl-gbw_op_comp4_nmos" class="cell quarto-float quarto-figure quarto-figure-center anchored" data-execution_count="18">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-gbw_op_comp4_nmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;9: Simulated actual junction capacitances values compared to theoretical zero-bias values.
+</figcaption>
+<div aria-describedby="tbl-gbw_op_comp4_nmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output cell-output-display cell-output-markdown" data-execution_count="18">
+<table class="do-not-create-environment cell caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th></th>
+<th style="text-align: center;"><span class="math inline">\(C_{Jbot}\,[fF]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(C_{JSWSTI}\,[fF]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(C_{JSWGAT}\,[fF]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(C_{Jtot}\,[fF]\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Theory</td>
+<td style="text-align: center;">1.071</td>
+<td style="text-align: center;">0.099</td>
+<td style="text-align: center;">0.097</td>
+<td style="text-align: center;">1.266</td>
+</tr>
+<tr class="even">
+<td>PSP</td>
+<td style="text-align: center;">1.001</td>
+<td style="text-align: center;">0.093</td>
+<td style="text-align: center;">0.093</td>
+<td style="text-align: center;">1.188</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</figure>
+</div>
+</div>
+<p>From <a href="#tbl-gbw_op_comp3_nmos" class="quarto-xref">Table&nbsp;8</a>, we see that the estimated zero-bias junction capacitances, including bottom and side-wall components, are very close to those extracted from PSP. As expected, the actual values including the effect of bias in PSP and shown in <a href="#tbl-gbw_op_comp4_nmos" class="quarto-xref">Table&nbsp;9</a>, are slightly lower than the zero-bias theoretical values.</p>
+<p>From the values of the transconductance and capacitances, we can now estimate the <span class="math inline">\(GBW\)</span>.</p>
+<div class="cell" data-execution_count="19">
+<div id="tbl-gbw_op_comp5_nmos" class="cell quarto-float quarto-figure quarto-figure-center anchored" data-execution_count="19">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-gbw_op_comp5_nmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;10: Comparison of the simulated and predicted values of the gain-bandwidth and zero frequency.
+</figcaption>
+<div aria-describedby="tbl-gbw_op_comp5_nmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output cell-output-display cell-output-markdown" data-execution_count="19">
+<table class="do-not-create-environment cell caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th></th>
+<th style="text-align: center;"><span class="math inline">\(G_m\,[\mu A/V]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(C_{out}\,[fF]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(C_F\,[fF]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(GBW\,[MHz]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(f_z\,[GHz]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(A_{\infty}\,[dB]\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Theory</td>
+<td style="text-align: center;">14.693</td>
+<td style="text-align: center;">23.396</td>
+<td style="text-align: center;">2.112</td>
+<td style="text-align: center;">99.954</td>
+<td style="text-align: center;">6.956</td>
+<td style="text-align: center;">-21.639</td>
+</tr>
+<tr class="even">
+<td>PSP</td>
+<td style="text-align: center;">14.711</td>
+<td style="text-align: center;">23.164</td>
+<td style="text-align: center;">1.958</td>
+<td style="text-align: center;">101.081</td>
+<td style="text-align: center;">7.502</td>
+<td style="text-align: center;">-22.163</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</figure>
+</div>
+</div>
+<p>The theoretical and simulated values shown in <a href="#tbl-gbw_op_comp5_nmos" class="quarto-xref">Table&nbsp;10</a> are very close. The theoretical <span class="math inline">\(GBW\)</span> is almost on target as it should be (the slight difference comes from the recalculations of the effective width). Because of the smaller capacitance values extracted from PSP, the <span class="math inline">\(GBW\)</span> for PSP is larger than the estimated and the target values.</p>
+<p>We can now proceed with the AC simulation.</p>
+<div id="cell-fig-cs_ol_tf_gbw_sim_nmos" class="cell" data-execution_count="20">
+<div class="cell-output cell-output-display">
+<div id="fig-cs_ol_tf_gbw_sim_nmos" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-cs_ol_tf_gbw_sim_nmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="CS_optimization_files/figure-html/fig-cs_ol_tf_gbw_sim_nmos-output-1.png" width="474" height="517" class="figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-cs_ol_tf_gbw_sim_nmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;13: CS simulated open-loop transfer function compared to the theoretical prediction.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>The result of the AC simulation is compared to the theoretical estimation in <a href="#fig-cs_ol_tf_gbw_sim_nmos" class="quarto-xref">Figure&nbsp;13</a>. We see that the simulated <span class="math inline">\(GBW\)</span> is slightly higher than the spec due to the lower extrinsic capacitances. We also see that the simulated DC gain is lower than the estimated one. This is due to the high output conductance of the nMOS transistor in this technology even for long-channel transistors. The zero is also lower than the theoretical value. This is a bit surpising because the simulated extrinsic capacitance that are extracted from the DC operating point is lower than the theoretical estimation. We will come back to this discrepancy in the next Section when looking at the pMOS implementation.</p>
+</section>
+</section>
+<section id="pmos" class="level3" data-number="5.2.3">
+<h3 data-number="5.2.3" class="anchored" data-anchor-id="pmos"><span class="header-section-number">5.2.3</span> pMOS</h3>
+<section id="design-1" class="level4">
+<h4 class="anchored" data-anchor-id="design-1">Design</h4>
+<p>We now design the same CS gain stage but with a pMOS transistor. We use the same process with the pMOS parameters given in <a href="#tbl-mos_param" class="quarto-xref">Table&nbsp;2</a>. <span class="math inline">\(C_{DW}\)</span> and <span class="math inline">\(C_{D0}\)</span> need to be recalculated for the pMOS transistor and are given in <a href="#tbl-process_summary_gbw_pmos" class="quarto-xref">Table&nbsp;11</a>.</p>
+<div class="cell" data-execution_count="21">
+<div id="tbl-process_summary_gbw_pmos" class="cell quarto-float quarto-figure quarto-figure-center anchored" data-execution_count="21">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-process_summary_gbw_pmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;11: Required process parameters (pMOS).
+</figcaption>
+<div aria-describedby="tbl-process_summary_gbw_pmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output cell-output-display cell-output-markdown" data-execution_count="21">
+<table class="do-not-create-environment cell caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th style="text-align: center;">Parameter</th>
+<th style="text-align: center;">Value</th>
+<th style="text-align: center;">Unit</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(V_{DD}\)</span></td>
+<td style="text-align: center;">1.2</td>
+<td style="text-align: center;"><span class="math inline">\(V\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(n\)</span></td>
+<td style="text-align: center;">1.23</td>
+<td style="text-align: center;">-</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(I_{spec\Box}\)</span></td>
+<td style="text-align: center;">245</td>
+<td style="text-align: center;"><span class="math inline">\(nA\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(C_{DW}\)</span></td>
+<td style="text-align: center;">0.895</td>
+<td style="text-align: center;"><span class="math inline">\(\frac{fF}{um}\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(C_{D0}\)</span></td>
+<td style="text-align: center;">0.022</td>
+<td style="text-align: center;"><span class="math inline">\(fF\)</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</figure>
+</div>
+</div>
+<p>The specifications are the same than for the nMOS case. They are recalled in <a href="#tbl-specs_gbw_pmos" class="quarto-xref">Table&nbsp;12</a>.</p>
+<div class="cell" data-execution_count="22">
+<div id="tbl-specs_gbw_pmos" class="cell quarto-float quarto-figure quarto-figure-center anchored" data-execution_count="22">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-specs_gbw_pmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;12: Specifications.
+</figcaption>
+<div aria-describedby="tbl-specs_gbw_pmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output cell-output-display cell-output-markdown" data-execution_count="22">
+<table class="do-not-create-environment cell caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th style="text-align: center;">Parameter</th>
+<th style="text-align: center;">Value</th>
+<th style="text-align: center;">Unit</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(GBW\)</span></td>
+<td style="text-align: center;">100</td>
+<td style="text-align: center;"><span class="math inline">\(MHz\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(L\)</span></td>
+<td style="text-align: center;">1</td>
+<td style="text-align: center;"><span class="math inline">\(\mu m\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(C_{L0}\)</span></td>
+<td style="text-align: center;">20</td>
+<td style="text-align: center;"><span class="math inline">\(fF\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(C_L\)</span></td>
+<td style="text-align: center;">20.022</td>
+<td style="text-align: center;"><span class="math inline">\(fF\)</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</figure>
+</div>
+</div>
+<p>We can now calculate the optimum inversion coefficient, optimum bias current and optimum width. The calculated parameters are given in <a href="#tbl-calc_param_gbw_pmos" class="quarto-xref">Table&nbsp;13</a>.</p>
+<div class="cell" data-execution_count="23">
+<div id="tbl-calc_param_gbw_pmos" class="cell quarto-float quarto-figure quarto-figure-center anchored" data-execution_count="23">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-calc_param_gbw_pmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;13: Calculated parameters (pMOS).
+</figcaption>
+<div aria-describedby="tbl-calc_param_gbw_pmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output cell-output-display cell-output-markdown" data-execution_count="23">
+<table class="do-not-create-environment cell caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th style="text-align: center;">Parameter</th>
+<th style="text-align: center;">Value</th>
+<th style="text-align: center;">Unit</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(f_L\)</span></td>
+<td style="text-align: center;">61.117</td>
+<td style="text-align: center;"><span class="math inline">\(MHz\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(f_W\)</span></td>
+<td style="text-align: center;">1.367</td>
+<td style="text-align: center;"><span class="math inline">\(GHz\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(\Omega\)</span></td>
+<td style="text-align: center;">1.636</td>
+<td style="text-align: center;">-</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(\theta\)</span></td>
+<td style="text-align: center;">0.073</td>
+<td style="text-align: center;">-</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(IC_{opt}\)</span></td>
+<td style="text-align: center;">0.478</td>
+<td style="text-align: center;">-</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(i_{b,opt}\)</span></td>
+<td style="text-align: center;">1.707</td>
+<td style="text-align: center;">-</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(AR_{opt}\)</span></td>
+<td style="text-align: center;">3.568</td>
+<td style="text-align: center;">-</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(\left(\frac{W}{L}\right)_{opt}\)</span></td>
+<td style="text-align: center;">5.839</td>
+<td style="text-align: center;">-</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(I_{b,opt}\)</span></td>
+<td style="text-align: center;">683</td>
+<td style="text-align: center;"><span class="math inline">\(nA\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(W_{opt}\)</span></td>
+<td style="text-align: center;">5.84</td>
+<td style="text-align: center;"><span class="math inline">\(\mu m\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(G_{m,opt}\)</span></td>
+<td style="text-align: center;">15.865</td>
+<td style="text-align: center;"><span class="math inline">\(\frac{\mu A}{V}\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(C_{D,opt}\)</span></td>
+<td style="text-align: center;">5.228</td>
+<td style="text-align: center;"><span class="math inline">\(fF\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(AD\)</span></td>
+<td style="text-align: center;">1.985</td>
+<td style="text-align: center;"><span class="math inline">\(\mu m^2\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(PD\)</span></td>
+<td style="text-align: center;">12.357</td>
+<td style="text-align: center;"><span class="math inline">\(\mu m\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(C_{DBJ}\)</span></td>
+<td style="text-align: center;">2.082</td>
+<td style="text-align: center;"><span class="math inline">\(fF\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(C_{DBJ,bot}\)</span></td>
+<td style="text-align: center;">1.938</td>
+<td style="text-align: center;"><span class="math inline">\(fF\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(C_{DBJ,SWSTI}\)</span></td>
+<td style="text-align: center;">0.165</td>
+<td style="text-align: center;"><span class="math inline">\(fF\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(C_{DBJ,SWGAT}\)</span></td>
+<td style="text-align: center;">0.175</td>
+<td style="text-align: center;"><span class="math inline">\(fF\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(C_{GDo}\)</span></td>
+<td style="text-align: center;">2.584</td>
+<td style="text-align: center;"><span class="math inline">\(fF\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(C_{GDf}\)</span></td>
+<td style="text-align: center;">0.584</td>
+<td style="text-align: center;"><span class="math inline">\(fF\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(C_{GDe}\)</span></td>
+<td style="text-align: center;">3.168</td>
+<td style="text-align: center;"><span class="math inline">\(fF\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(C_F\)</span></td>
+<td style="text-align: center;">3.168</td>
+<td style="text-align: center;"><span class="math inline">\(fF\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(C_{out}\)</span></td>
+<td style="text-align: center;">25.25</td>
+<td style="text-align: center;"><span class="math inline">\(fF\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(f_z\)</span></td>
+<td style="text-align: center;">0.797</td>
+<td style="text-align: center;"><span class="math inline">\(GHz\)</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</figure>
+</div>
+</div>
+<p>Because of the smaller <span class="math inline">\(I_{spec\Box}\)</span> of the pMOS, we get a larger bias current and wider transistor than for the nMOS case.</p>
+<p>We can now estimate the output conductance</p>
+<p><span class="math inline">\(G_{{ds}} =\)</span> 68.310 <span class="math inline">\(nA/V\)</span></p>
+<p>and the DC gain</p>
+<p><span class="math inline">\(A_{{dc}} =\)</span> 2.322e+02 or in dB</p>
+<p><span class="math inline">\(A_{{dc}} =\)</span> 47.3 <span class="math inline">\(dB\)</span>.</p>
+<p>We see that the DC gain of the pMOS is much higher than what we obtained for the nMOS.</p>
+<p>The CS estimated open-loop transfer function for the pMOS implementation is shown in <a href="#fig-cs_ol_tf_gbw_the_pmos" class="quarto-xref">Figure&nbsp;14</a>.</p>
+<div id="cell-fig-cs_ol_tf_gbw_the_pmos" class="cell" data-execution_count="25">
+<div class="cell-output cell-output-display">
+<div id="fig-cs_ol_tf_gbw_the_pmos" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-cs_ol_tf_gbw_the_pmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="CS_optimization_files/figure-html/fig-cs_ol_tf_gbw_the_pmos-output-1.png" width="474" height="517" class="figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-cs_ol_tf_gbw_the_pmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;14: Theoretical transfer function (pMOS).
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>We can now proceed with the simulations.</p>
+</section>
+<section id="ngspice-simulations-1" class="level4">
+<h4 class="anchored" data-anchor-id="ngspice-simulations-1">ngspice simulations</h4>
+<p>We start checking the DC operating point by first looking at the drain current <span class="math inline">\(I_D\)</span>, gate transconductance <span class="math inline">\(G_m\)</span>, output conductance <span class="math inline">\(G_{ds}\)</span> and DC gain <span class="math inline">\(A_{dc}\)</span>. The values extracted from the simulation (PSP) are compared to the theoretical prediction in <a href="#tbl-gbw_op_comp1_pmos" class="quarto-xref">Table&nbsp;14</a>.</p>
+<div class="cell" data-execution_count="26">
+<div id="tbl-gbw_op_comp1_pmos" class="cell quarto-float quarto-figure quarto-figure-center anchored" data-execution_count="26">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-gbw_op_comp1_pmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;14: Simulated drain current and small-signal parameter values compared to theoretical values (pMOS).
+</figcaption>
+<div aria-describedby="tbl-gbw_op_comp1_pmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output cell-output-display cell-output-markdown" data-execution_count="26">
+<table class="do-not-create-environment cell caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th></th>
+<th style="text-align: center;"><span class="math inline">\(I_D\,[nA]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(G_m\,[\mu A/V]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(G_{ds}\,[nA/V]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(A_v\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Theory</td>
+<td style="text-align: center;">683</td>
+<td style="text-align: center;">15.865</td>
+<td style="text-align: center;">68.31</td>
+<td style="text-align: center;">47.319</td>
+</tr>
+<tr class="even">
+<td>PSP</td>
+<td style="text-align: center;">683</td>
+<td style="text-align: center;">15.487</td>
+<td style="text-align: center;">71.743</td>
+<td style="text-align: center;">46.684</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</figure>
+</div>
+</div>
+<p>From <a href="#tbl-gbw_op_comp1_pmos" class="quarto-xref">Table&nbsp;14</a>, we see that the values extracted from PSP are very close to the theoretical values, even for the output conductance. We now compare the simulated values of the overlap and fringing capacitances to the theoretical estimation in <a href="#tbl-gbw_op_comp2_pmos" class="quarto-xref">Table&nbsp;15</a>.</p>
+<div class="cell" data-execution_count="27">
+<div id="tbl-gbw_op_comp2_pmos" class="cell quarto-float quarto-figure quarto-figure-center anchored" data-execution_count="27">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-gbw_op_comp2_pmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;15: Simulated overlap and fringing capacitances values compared to theoretical values (pMOS).
+</figcaption>
+<div aria-describedby="tbl-gbw_op_comp2_pmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output cell-output-display cell-output-markdown" data-execution_count="27">
+<table class="do-not-create-environment cell caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th></th>
+<th style="text-align: center;"><span class="math inline">\(C_{GSo}\,[fF]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(C_{GDo}\,[fF]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(C_{GSf}\,[fF]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(C_{GDf}\,[fF]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(C_{GSe}\,[fF]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(C_{GDe}\,[fF]\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Theory</td>
+<td style="text-align: center;">2.591</td>
+<td style="text-align: center;">2.591</td>
+<td style="text-align: center;">0.582</td>
+<td style="text-align: center;">0.582</td>
+<td style="text-align: center;">3.173</td>
+<td style="text-align: center;">3.173</td>
+</tr>
+<tr class="even">
+<td>PSP</td>
+<td style="text-align: center;">2.578</td>
+<td style="text-align: center;">2.578</td>
+<td style="text-align: center;">0.585</td>
+<td style="text-align: center;">0.585</td>
+<td style="text-align: center;">2.967</td>
+<td style="text-align: center;">2.829</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</figure>
+</div>
+</div>
+<p>We see that the estimated zero-bias values of the overlap and fringing capacitance are very close to the values extracted from PSP, whereas the bias-dependent values of the total extrinsic capacitances extracted from PSP are slightly smaller and asymmetrical (this is due to the bias dependence which is very different for the drain and the source).</p>
+<p>We finally look at the junction capacitances. The theoretical values of the junction capacitances are compared to the values extracted from PSP in <a href="#tbl-gbw_op_comp3_pmos" class="quarto-xref">Table&nbsp;16</a> and <a href="#tbl-gbw_op_comp4_pmos" class="quarto-xref">Table&nbsp;17</a>. <a href="#tbl-gbw_op_comp3_pmos" class="quarto-xref">Table&nbsp;16</a> compares the zero-bias values whereas <a href="#tbl-gbw_op_comp4_pmos" class="quarto-xref">Table&nbsp;17</a> compares the theoretical zero-bias values to the actual values accounting for the junction bias voltage extracted from PSP.</p>
+<div class="cell" data-execution_count="28">
+<div id="tbl-gbw_op_comp3_pmos" class="cell quarto-float quarto-figure quarto-figure-center anchored" data-execution_count="28">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-gbw_op_comp3_pmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;16: Simulated zero-bias junction capacitances values compared to theoretical values.
+</figcaption>
+<div aria-describedby="tbl-gbw_op_comp3_pmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output cell-output-display cell-output-markdown" data-execution_count="28">
+<table class="do-not-create-environment cell caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th></th>
+<th style="text-align: center;"><span class="math inline">\(C_{Jbot}(0)\,[fF]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(C_{JSWSTI}(0)\,[fF]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(C_{JSWGAT}(0)\,[fF]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(C_{Jtot}(0)\,[fF]\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Theory</td>
+<td style="text-align: center;">1.718</td>
+<td style="text-align: center;">0.209</td>
+<td style="text-align: center;">0.16</td>
+<td style="text-align: center;">2.087</td>
+</tr>
+<tr class="even">
+<td>PSP</td>
+<td style="text-align: center;">1.722</td>
+<td style="text-align: center;">0.209</td>
+<td style="text-align: center;">0.16</td>
+<td style="text-align: center;">2.091</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</figure>
+</div>
+</div>
+<div class="cell" data-execution_count="29">
+<div id="tbl-gbw_op_comp4_pmos" class="cell quarto-float quarto-figure quarto-figure-center anchored" data-execution_count="29">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-gbw_op_comp4_pmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;17: Simulated actual junction capacitances values compared to theoretical zero-bias values.
+</figcaption>
+<div aria-describedby="tbl-gbw_op_comp4_pmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output cell-output-display cell-output-markdown" data-execution_count="29">
+<table class="do-not-create-environment cell caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th></th>
+<th style="text-align: center;"><span class="math inline">\(C_{Jbot}\,[fF]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(C_{JSWSTI}\,[fF]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(C_{JSWGAT}\,[fF]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(C_{Jtot}\,[fF]\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Theory</td>
+<td style="text-align: center;">1.718</td>
+<td style="text-align: center;">0.209</td>
+<td style="text-align: center;">0.161</td>
+<td style="text-align: center;">2.087</td>
+</tr>
+<tr class="even">
+<td>PSP</td>
+<td style="text-align: center;">1.512</td>
+<td style="text-align: center;">0.2</td>
+<td style="text-align: center;">0.139</td>
+<td style="text-align: center;">1.851</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</figure>
+</div>
+</div>
+<p>From <a href="#tbl-gbw_op_comp3_pmos" class="quarto-xref">Table&nbsp;16</a> and <a href="#tbl-gbw_op_comp4_pmos" class="quarto-xref">Table&nbsp;17</a>, we observe that the estimated values of the zero-bias junction capacitances, including bottom and side-wall components, are almost equal to the values extracted from PSP. As expected, the actual values including the effect of bias in PSP are slightly lower than the zero-bias zero-bias theoretical values.</p>
+<p>From the values of transconductance and capacitances, we can now estimate the <span class="math inline">\(GBW\)</span>.</p>
+<div class="cell" data-execution_count="30">
+<div id="tbl-gbw_op_comp5_pmos" class="cell quarto-float quarto-figure quarto-figure-center anchored" data-execution_count="30">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-gbw_op_comp5_pmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;18: Comparison of the simulated and predicted values of the gain-bandwidth and zero frequency.
+</figcaption>
+<div aria-describedby="tbl-gbw_op_comp5_pmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output cell-output-display cell-output-markdown" data-execution_count="30">
+<table class="do-not-create-environment cell caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th></th>
+<th style="text-align: center;"><span class="math inline">\(G_m\,[\mu A/V]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(C_{out}\,[fF]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(C_F\,[fF]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(GBW\,[MHz]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(f_z\,[GHz]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(A_{\infty}\,[dB]\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Theory</td>
+<td style="text-align: center;">15.865</td>
+<td style="text-align: center;">25.282</td>
+<td style="text-align: center;">3.173</td>
+<td style="text-align: center;">99.873</td>
+<td style="text-align: center;">5</td>
+<td style="text-align: center;">-19.053</td>
+</tr>
+<tr class="even">
+<td>PSP</td>
+<td style="text-align: center;">15.487</td>
+<td style="text-align: center;">24.702</td>
+<td style="text-align: center;">2.829</td>
+<td style="text-align: center;">99.783</td>
+<td style="text-align: center;">5.608</td>
+<td style="text-align: center;">-19.764</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</figure>
+</div>
+</div>
+<p>The theoretical and simulated values shown in <a href="#tbl-gbw_op_comp5_pmos" class="quarto-xref">Table&nbsp;18</a> are very close. The theoretical <span class="math inline">\(GBW\)</span> is almost on target as it should be (the slight difference comes from the recalculations of the effective width).</p>
+<p>We can now proceed with the AC simulation.</p>
+<div id="cell-fig-cs_ol_tf_gbw_sim_pmos" class="cell" data-execution_count="31">
+<div class="cell-output cell-output-display">
+<div id="fig-cs_ol_tf_gbw_sim_pmos" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-cs_ol_tf_gbw_sim_pmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="CS_optimization_files/figure-html/fig-cs_ol_tf_gbw_sim_pmos-output-1.png" width="632" height="517" class="figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-cs_ol_tf_gbw_sim_pmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;15: CS simulated open-loop transfer function compared to the theoretical prediction (pMOS).
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>From <a href="#fig-cs_ol_tf_gbw_sim_pmos" class="quarto-xref">Figure&nbsp;15</a>, we see that the simulated <span class="math inline">\(GBW\)</span> is slightly higher than the estimated value and the spec. This is probably due to the effect of the nearby zero and the lower extrinsic capacitances. We also see that the simulated DC gain is slightly lower than the estimated one. The zero is also lower than the theoretical value. This is coming from the fact that we have a rather long pMOS transistor and therefore the quasi-static frequency, which is scaling like <span class="math inline">\(1/L^2\)</span>, is probably at the level of the zero introduced by the feedback capacitor. We can have a better estimation of the transfer function accounting for the quasi-static time constant by replacing <span class="math inline">\(G_m\)</span> by <span class="math display">\[\begin{equation}
+  Y_m(s) = G_m \cdot (1 - s \cdot \tau_{qs}) = G_m \cdot \left(1 - \frac{s}{\omega_{qs}}\right),
+\end{equation}\]</span> where <span class="math inline">\(\tau_{qs} = 1/\omega_{qs}\)</span> is the quasi-static time constant and <span class="math inline">\(\omega_{qs}\)</span> the quasi-static frequency which delimits the frequency range above which the operation of the transistor can no more be considered as quasi-static, but becomes non-quasi-static (NQS). The quasi-static time constant <span class="math inline">\(\tau_{qs}\)</span> is given by <span class="math display">\[\begin{equation}
+  \tau_{qs} = \frac{C_m}{G_m},
+\end{equation}\]</span> where <span class="math inline">\(C_m\)</span> is the gate transcapacitance which is a fraction of the total gate capacitance <span class="math inline">\(W\,L\,C_{ox}\)</span> given by <span class="math display">\[\begin{equation}
+  \frac{C_m}{W\,L\,C_{ox}} = \frac{q_s-q_d}{15} \cdot\frac{4 q_s^2 + 4 q_d^2 + 12 q_s q_d + 10 q_s + 10 q_d + 5}{(q_s + q_d + 1)^3}.
+\end{equation}\]</span></p>
+<p>In saturation <span class="math inline">\(q_d = 0\)</span> and <span class="math inline">\(C_m\)</span> reduces to <span class="math display">\[\begin{equation}
+  \frac{C_m}{W\,L\,C_{ox}} = \frac{q_s}{15}\,\frac{4 q_s^2 + 10 q_s + 5}{(q_s + 1)^3}
+\end{equation}\]</span> In strong inversion <span class="math inline">\(q_s \gg 1\)</span> and <span class="math inline">\(C_m\)</span> saturates to <span class="math display">\[\begin{equation}
+  \frac{C_m}{W\,L\,C_{ox}} \cong \frac{4}{15},
+\end{equation}\]</span> whereas in weak inversion <span class="math inline">\(q_s \ll 1\)</span> and <span class="math inline">\(C_m\)</span> simplifies to <span class="math display">\[\begin{equation}
+  \frac{C_m}{W\,L\,C_{ox}} \cong \frac{q_s}{3}.
+\end{equation}\]</span> Since the transconductance in weak inversion is given by <span class="math display">\[\begin{equation}
+  G_m = \frac{G_{spec}}{n} \cdot q_s,
+\end{equation}\]</span> the quasi-static time constant <span class="math inline">\(\tau_{qs}\)</span> in weak inversion becomes bias independent <span class="math display">\[\begin{equation}
+  \tau_{qs} \cong \frac{L^2}{6\mu\,U_T}
+\end{equation}\]</span> and scales as <span class="math inline">\(L^2\)</span> and is inversely proportionnal to the mobility <span class="math inline">\(\mu\)</span>. This explains why for a long-channel pMOS transistor, the quasi-static frequency may become low.</p>
+<p>We can now estimate the transcapacitance for this particular design as</p>
+<p><span class="math inline">\(C_m =\)</span> 7.726 <span class="math inline">\(fF\)</span></p>
+<p>and the corresponding quasi-static frequency as</p>
+<p><span class="math inline">\(f_{{qs}} =\)</span> 326.811 <span class="math inline">\(MHz\)</span>.</p>
+<p>We see that <span class="math inline">\(C_m\)</span> is even larger than the extrinsic feedback capacitance and therefore cannot be neglected. The quasi-static frequency is just 3 times the target <span class="math inline">\(GBW\)</span> and hence the transcapacitance cannot be neglected.</p>
+<p>The transfer function accounting for the transcapacitance is still given by the same expression, which is repeated below <span class="math display">\[\begin{equation}
+  A(s) \triangleq \frac{\Delta V_{out}}{\Delta V_{in}} = A_{dc} \cdot \frac{1-s/\omega_z}{1+s/\omega_p}.
+\end{equation}\]</span> However <span class="math inline">\(\omega_z\)</span> now includes the effect of the transcapacitance according to <span class="math display">\[\begin{align}
+  A_{dc} &amp;= -G_m \cdot R_{ds},\\
+  \omega_z &amp;= \frac{G_m}{C_F+C_m},\\
+  \omega_p &amp;= \frac{1}{R_{ds}\,(C_F+C_L)}.
+\end{align}\]</span> We see that <span class="math inline">\(C_m\)</span> directly adds to <span class="math inline">\(C_F\)</span>. This of course changes the position of the zero, but also the asymptotic high frequency value which now becomes <span class="math display">\[\begin{equation}
+  A_{\infty} \triangleq \lim_{s \to \infty} A(s) = \frac{C_F+C_m}{C_L+C_F} = \frac{1+C_m/C_F}{1 + C_L/C_F},
+\end{equation}\]</span></p>
+<p><span class="math inline">\(A_{\infty}\)</span> can be estimated as</p>
+<p><span class="math inline">\(A_{\infty} =\)</span> 3.834e-01</p>
+<p>or in dB</p>
+<p><span class="math inline">\(A_{\infty} =\)</span> -8.328 <span class="math inline">\(dB\)</span></p>
+<p>We can now compare the simulations to the improved model accounting for the transcapacitance. The result is shown in <a href="#fig-cs_ol_tf_gbw_sim_pmos_qs" class="quarto-xref">Figure&nbsp;16</a>.</p>
+<div id="cell-fig-cs_ol_tf_gbw_sim_pmos_qs" class="cell" data-execution_count="34">
+<div class="cell-output cell-output-display">
+<div id="fig-cs_ol_tf_gbw_sim_pmos_qs" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-cs_ol_tf_gbw_sim_pmos_qs-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="CS_optimization_files/figure-html/fig-cs_ol_tf_gbw_sim_pmos_qs-output-1.png" width="632" height="517" class="figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-cs_ol_tf_gbw_sim_pmos_qs-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;16: CS simulated open-loop transfer function compared to the theoretical prediction including the transcapacitance <span class="math inline">\(C_m\)</span>.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>From <a href="#fig-cs_ol_tf_gbw_sim_pmos_qs" class="quarto-xref">Figure&nbsp;16</a>, we see that we have now an almost perfect fit between the theoretical estimation including the effect of the transcapacitance <span class="math inline">\(C_m\)</span> and the simulation.</p>
+<p>It is worth mentioning that even if we have a good fit between theory and simulation, in reality the non-quasi-static (NQS) effects make the magnitude of the transadmittance <span class="math inline">\(Y_m\)</span> to decrease fast and its phase to turn quickly with respect to frequency above <span class="math inline">\(\omega_{qs}\)</span>. As <span class="math inline">\(Y_m \to 0\)</span>, the gain then tends to</p>
+<p><span class="math display">\[\begin{equation}
+  \lim_{s \to \infty} A(s) = \frac{C_F}{C_L+C_F}.
+\end{equation}\]</span></p>
+<p>This can be verified by simulation by turning on the NQS model in PSP by setting <span class="math inline">\(rfmode=1\)</span>.</p>
+<div id="cell-fig-cs_ol_tf_gbw_sim_pmos_nqs" class="cell" data-execution_count="35">
+<div class="cell-output cell-output-display">
+<div id="fig-cs_ol_tf_gbw_sim_pmos_nqs" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-cs_ol_tf_gbw_sim_pmos_nqs-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="CS_optimization_files/figure-html/fig-cs_ol_tf_gbw_sim_pmos_nqs-output-1.png" width="632" height="517" class="figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-cs_ol_tf_gbw_sim_pmos_nqs-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;17: CS open-loop transfer function simulated with the NQS option in PSP and compared to the theoretical prediction with and without the transcapacitance <span class="math inline">\(C_m\)</span>.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p><a href="#fig-cs_ol_tf_gbw_sim_pmos_nqs" class="quarto-xref">Figure&nbsp;17</a> shows that now the magnitude tends indeed to <span class="math inline">\(C_F/(C_F+C_L)\)</span> as predicted by the initial model without <span class="math inline">\(C_m\)</span>. We also see that the phase is quickly turning and then tending to <span class="math inline">\(-180^{\circ}\)</span>. In reality, the phase would continue to turn. This example shows that the PSP compact model without turning on the NQS option, does not give a correct result above <span class="math inline">\(\omega_{qs}\)</span>. To evaluate the impact of NQS we need to turn on the NQS option which approximates the NQS effect by splitting the channel into several pieces. This example shows the limit of the quasi-static model.</p>
+</section>
+</section>
+</section>
+</section>
+<section id="minimum-current-for-given-gbw-and-dc-gain" class="level1" data-number="6">
+<h1 data-number="6"><span class="header-section-number">6</span> Minimum current for given GBW and DC gain</h1>
+<section id="analysis-1" class="level2" data-number="6.1">
+<h2 data-number="6.1" class="anchored" data-anchor-id="analysis-1"><span class="header-section-number">6.1</span> Analysis</h2>
+<p>We can actually use the additional degree of freedom, namely the transistor length <span class="math inline">\(L\)</span> (which has been chosen arbitrarily in the previous example), to set the DC gain. To this purpose we can use the simple output conductance model (actually corresponding to channel length modulation only) given by <span class="math display">\[\begin{equation}
+  G_{ds} \cong \frac{I_D}{\lambda \cdot L}.
+\end{equation}\]</span> We now need to solve the following set of equations <span class="math display">\[\begin{align}
+  \omega_u &amp;= \frac{G_m}{C_L} = \frac{G_m}{C_{L0} + C_{DW} \cdot W},\\
+  A_{dc} &amp;= \frac{G_m}{G_{ds}} = \frac{G_m \cdot \lambda \cdot L}{I_b},\\
+  G_m &amp;= \frac{I_{spec\Box}}{n U_T} \cdot \frac{W}{L} \cdot g_{ms}(IC),\\
+  I_b &amp;= I_{spec\Box} \cdot \frac{W}{L} \cdot IC.
+\end{align}\]</span> for <span class="math inline">\(I_b\)</span>, <span class="math inline">\(W\)</span>, <span class="math inline">\(L\)</span> and <span class="math inline">\(G_m\)</span>. This leads to the following normalized results <span class="math display">\[\begin{align}
+  i_b &amp;\triangleq \frac{I_b}{I_{norm}} = \frac{g_{ms} \cdot IC}{g_{ms}^2 - \xi \cdot IC}
+  = \frac{g_{ms}/IC}{(g_{ms}/IC)^2 - \xi/IC},\\
+  w &amp;\triangleq \frac{W}{W_{norm}} = \frac{IC}{g_{ms}^2 - \xi \cdot IC},\\
+  \ell &amp;\triangleq \frac{L}{L_{norm}} = \frac{IC}{g_{ms}},
+\end{align}\]</span> where <span class="math display">\[\begin{align}
+  \xi &amp;\triangleq \frac{C_{DW} \cdot (n U_T)^2}{I_{spec\Box} \cdot \lambda} \cdot A_{dc} \cdot \omega_u,\\
+  I_{norm} &amp; \triangleq n\,U_T \cdot C_{L0} \cdot \omega_u,\\
+  W_{norm} &amp;\triangleq \frac{C_{L0} \cdot (n U_T)^2}{I_{spec\Box} \cdot \lambda} \cdot A_{dc} \cdot \omega_u,\\
+  L_{norm} &amp; \triangleq \frac{n U_T}{\lambda} \cdot A_{dc}.
+\end{align}\]</span></p>
+<p>The normalized current <span class="math inline">\(i_b\)</span>, width <span class="math inline">\(w\)</span> and length <span class="math inline">\(\ell\)</span> are plotted versus the inversion coefficient <span class="math inline">\(IC\)</span> in <a href="#fig-ib_ic_gbw_adc" class="quarto-xref">Figure&nbsp;18</a>, <a href="#fig-w_ic_gbw_adc" class="quarto-xref">Figure&nbsp;19</a> and <a href="#fig-l_ic_gbw_adc" class="quarto-xref">Figure&nbsp;20</a>, respectively. From <a href="#fig-ib_ic_gbw_adc" class="quarto-xref">Figure&nbsp;18</a>, we observe that similarly to the previous case, there is an optimium <span class="math inline">\(IC\)</span> for which the bias current is minimum.</p>
+<div id="cell-fig-ib_ic_gbw_adc" class="cell" data-execution_count="36">
+<div class="cell-output cell-output-display">
+<div id="fig-ib_ic_gbw_adc" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-ib_ic_gbw_adc-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="CS_optimization_files/figure-html/fig-ib_ic_gbw_adc-output-1.png" width="546" height="335" class="figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-ib_ic_gbw_adc-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;18: Normalized bias current versus inversion coefficient including the self-loading capacitances at the drain.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<div id="cell-fig-w_ic_gbw_adc" class="cell" data-execution_count="37">
+<div class="cell-output cell-output-display">
+<div id="fig-w_ic_gbw_adc" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-w_ic_gbw_adc-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="CS_optimization_files/figure-html/fig-w_ic_gbw_adc-output-1.png" width="542" height="335" class="figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-w_ic_gbw_adc-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;19: Normalized width versus inversion coefficient including the self-loading capacitances at the drain.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<div id="cell-fig-l_ic_gbw_adc" class="cell" data-execution_count="38">
+<div class="cell-output cell-output-display">
+<div id="fig-l_ic_gbw_adc" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-l_ic_gbw_adc-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="CS_optimization_files/figure-html/fig-l_ic_gbw_adc-output-1.png" width="481" height="335" class="figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-l_ic_gbw_adc-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;20: Normalized length versus inversion coefficient including the self-loading capacitances at the drain.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="examples-1" class="level2" data-number="6.2">
+<h2 data-number="6.2" class="anchored" data-anchor-id="examples-1"><span class="header-section-number">6.2</span> Examples</h2>
+<p>We now will design a CS stage imposing the GBW and the DC gain at the same time. We use the same technology with the parameters given in <a href="#tbl-process_param" class="quarto-xref">Table&nbsp;1</a> and <a href="#tbl-mos_param" class="quarto-xref">Table&nbsp;2</a>. We start with the case where the CS transistor is implemented with an nMOS transistor.</p>
+<section id="nmos-1" class="level3" data-number="6.2.1">
+<h3 data-number="6.2.1" class="anchored" data-anchor-id="nmos-1"><span class="header-section-number">6.2.1</span> nMOS</h3>
+<section id="design-2" class="level4">
+<h4 class="anchored" data-anchor-id="design-2">Design</h4>
+<p>The process parameters that are needed to achieve the specifications given in <a href="#tbl-specs_gbw_adc_nmos" class="quarto-xref">Table&nbsp;20</a> are given in <a href="#tbl-process_summary_gbw_adc_nmos" class="quarto-xref">Table&nbsp;19</a>. Notice that because of the high output conductance of nMOS transistors in this particular technology, we have chosen a moderate DC gain. The optimum inversion coefficient, optimum bias current, optimum width and optimum length are calculated in <a href="#tbl-calc_param_gbw_adc_nmos" class="quarto-xref">Table&nbsp;21</a>.</p>
+<div class="cell" data-execution_count="39">
+<div id="tbl-process_summary_gbw_adc_nmos" class="cell quarto-float quarto-figure quarto-figure-center anchored" data-execution_count="39">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-process_summary_gbw_adc_nmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;19: Required process parameters (nMOS).
+</figcaption>
+<div aria-describedby="tbl-process_summary_gbw_adc_nmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output cell-output-display cell-output-markdown" data-execution_count="39">
+<table class="do-not-create-environment cell caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th style="text-align: center;">Parameter</th>
+<th style="text-align: center;">Value</th>
+<th style="text-align: center;">Unit</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(V_{DD}\)</span></td>
+<td style="text-align: center;">1.2</td>
+<td style="text-align: center;"><span class="math inline">\(V\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(n\)</span></td>
+<td style="text-align: center;">1.22</td>
+<td style="text-align: center;">-</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(I_{spec\Box}\)</span></td>
+<td style="text-align: center;">708</td>
+<td style="text-align: center;"><span class="math inline">\(nA\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(\lambda\)</span></td>
+<td style="text-align: center;">1.4</td>
+<td style="text-align: center;"><span class="math inline">\(\frac{V}{\mu m}\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(C_{DW}\)</span></td>
+<td style="text-align: center;">1.041</td>
+<td style="text-align: center;"><span class="math inline">\(\frac{fF}{um}\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(C_{D0}\)</span></td>
+<td style="text-align: center;">0.017</td>
+<td style="text-align: center;"><span class="math inline">\(fF\)</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</figure>
+</div>
+</div>
+<div class="cell" data-execution_count="40">
+<div id="tbl-specs_gbw_adc_nmos" class="cell quarto-float quarto-figure quarto-figure-center anchored" data-execution_count="40">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-specs_gbw_adc_nmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;20: Specifications.
+</figcaption>
+<div aria-describedby="tbl-specs_gbw_adc_nmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output cell-output-display cell-output-markdown" data-execution_count="40">
+<table class="do-not-create-environment cell caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th style="text-align: center;">Parameter</th>
+<th style="text-align: center;">Value</th>
+<th style="text-align: center;">Unit</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(GBW\)</span></td>
+<td style="text-align: center;">100</td>
+<td style="text-align: center;"><span class="math inline">\(MHz\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(A_{dc}\)</span></td>
+<td style="text-align: center;">25</td>
+<td style="text-align: center;"><span class="math inline">\(dB\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(C_{L0}\)</span></td>
+<td style="text-align: center;">20</td>
+<td style="text-align: center;"><span class="math inline">\(fF\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(C_L\)</span></td>
+<td style="text-align: center;">20.017</td>
+<td style="text-align: center;"><span class="math inline">\(fF\)</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</figure>
+</div>
+</div>
+<div class="cell" data-execution_count="41">
+<div id="tbl-calc_param_gbw_adc_nmos" class="cell quarto-float quarto-figure quarto-figure-center anchored" data-execution_count="41">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-calc_param_gbw_adc_nmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;21: Calculated parameters (nMOS).
+</figcaption>
+<div aria-describedby="tbl-calc_param_gbw_adc_nmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output cell-output-display cell-output-markdown" data-execution_count="41">
+<table class="do-not-create-environment cell caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th style="text-align: center;">Parameter</th>
+<th style="text-align: center;">Value</th>
+<th style="text-align: center;">Unit</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(\xi\)</span></td>
+<td style="text-align: center;">0.012</td>
+<td style="text-align: center;">-</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(IC_{opt}\)</span></td>
+<td style="text-align: center;">0.136</td>
+<td style="text-align: center;">-</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(i_{b,opt}\)</span></td>
+<td style="text-align: center;">1.257</td>
+<td style="text-align: center;">-</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(w_{opt}\)</span></td>
+<td style="text-align: center;">10.375</td>
+<td style="text-align: center;">-</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(\ell_{opt}\)</span></td>
+<td style="text-align: center;">1.121</td>
+<td style="text-align: center;">-</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(g_{m,opt}\)</span></td>
+<td style="text-align: center;">1.121</td>
+<td style="text-align: center;">-</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(I_{norm}\)</span></td>
+<td style="text-align: center;">396.875</td>
+<td style="text-align: center;"><span class="math inline">\(nA\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(W_{norm}\)</span></td>
+<td style="text-align: center;">0.225</td>
+<td style="text-align: center;"><span class="math inline">\(\mu m\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(L_{norm}\)</span></td>
+<td style="text-align: center;">0.401</td>
+<td style="text-align: center;"><span class="math inline">\(\mu m\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(G_{m,norm}\)</span></td>
+<td style="text-align: center;">12.577</td>
+<td style="text-align: center;"><span class="math inline">\(\frac{\mu A}{V}\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(I_{b,opt}\)</span></td>
+<td style="text-align: center;">498.864</td>
+<td style="text-align: center;"><span class="math inline">\(nA\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(W_{opt}\)</span></td>
+<td style="text-align: center;">2.33</td>
+<td style="text-align: center;"><span class="math inline">\(\mu m\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(L_{opt}\)</span></td>
+<td style="text-align: center;">0.449</td>
+<td style="text-align: center;"><span class="math inline">\(\mu m\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(G_{m,opt}\)</span></td>
+<td style="text-align: center;">14.101</td>
+<td style="text-align: center;"><span class="math inline">\(\frac{\mu A}{V}\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(C_{D,opt}\)</span></td>
+<td style="text-align: center;">2.425</td>
+<td style="text-align: center;"><span class="math inline">\(fF\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(AD\)</span></td>
+<td style="text-align: center;">0.792</td>
+<td style="text-align: center;"><span class="math inline">\(\mu m^2\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(PD\)</span></td>
+<td style="text-align: center;">5.34</td>
+<td style="text-align: center;"><span class="math inline">\(\mu m\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(C_{DBJ}\)</span></td>
+<td style="text-align: center;">0.92</td>
+<td style="text-align: center;"><span class="math inline">\(fF\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(C_{DBJ,bot}\)</span></td>
+<td style="text-align: center;">0.774</td>
+<td style="text-align: center;"><span class="math inline">\(fF\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(C_{DBJ,SWSTI}\)</span></td>
+<td style="text-align: center;">0.076</td>
+<td style="text-align: center;"><span class="math inline">\(fF\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(C_{DBJ,SWGAT}\)</span></td>
+<td style="text-align: center;">0.07</td>
+<td style="text-align: center;"><span class="math inline">\(fF\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(C_{GDo}\)</span></td>
+<td style="text-align: center;">1.057</td>
+<td style="text-align: center;"><span class="math inline">\(fF\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(C_{GDf}\)</span></td>
+<td style="text-align: center;">0.466</td>
+<td style="text-align: center;"><span class="math inline">\(fF\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(C_{GDe}\)</span></td>
+<td style="text-align: center;">1.523</td>
+<td style="text-align: center;"><span class="math inline">\(fF\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(C_F\)</span></td>
+<td style="text-align: center;">1.523</td>
+<td style="text-align: center;"><span class="math inline">\(fF\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(C_{out}\)</span></td>
+<td style="text-align: center;">22.442</td>
+<td style="text-align: center;"><span class="math inline">\(fF\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(f_z\)</span></td>
+<td style="text-align: center;">1.474</td>
+<td style="text-align: center;"><span class="math inline">\(GHz\)</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</figure>
+</div>
+</div>
+<p>We can now estimate the output conductance</p>
+<p><span class="math inline">\(G_{{ds}} =\)</span> 792.952 <span class="math inline">\(nA/V\)</span></p>
+<p>and the DC gain</p>
+<p><span class="math inline">\(A_{{dc}} =\)</span> 1.778e+01 or in dB</p>
+<p><span class="math inline">\(A_{{dc}} =\)</span> 25.0 <span class="math inline">\(dB\)</span>,</p>
+<p>which is expected!</p>
+<p>The CS estimated open-loop transfer function is shown in <a href="#fig-cs_ol_tf_gbw_adc_the_nmos" class="quarto-xref">Figure&nbsp;21</a>.</p>
+<div id="cell-fig-cs_ol_tf_gbw_adc_the_nmos" class="cell" data-execution_count="43">
+<div class="cell-output cell-output-display">
+<div id="fig-cs_ol_tf_gbw_adc_the_nmos" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-cs_ol_tf_gbw_adc_the_nmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="CS_optimization_files/figure-html/fig-cs_ol_tf_gbw_adc_the_nmos-output-1.png" width="474" height="517" class="figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-cs_ol_tf_gbw_adc_the_nmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;21: Transfer function (nMOS).
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="ngspice-simulations-2" class="level4">
+<h4 class="anchored" data-anchor-id="ngspice-simulations-2">ngspice simulations</h4>
+<p>We now simulate the above design to check whether the design meets the specifications. We use the ngspice open source simulator <span class="citation" data-cites="bib:ngspice:2024"><a href="#ref-bib:ngspice:2024" role="doc-biblioref">[6]</a></span>.</p>
+<p>Similarly to the previous design, we can first check the operating point informations. The drain current, transconductance and output conductance are given in <a href="#tbl-gbw_adc_op_comp1_nmos" class="quarto-xref">Table&nbsp;22</a> and the various capacitances are shown in <a href="#tbl-gbw_adc_op_comp2_nmos" class="quarto-xref">Table&nbsp;23</a>, <a href="#tbl-gbw_adc_op_comp3_nmos" class="quarto-xref">Table&nbsp;24</a> and <a href="#tbl-gbw_adc_op_comp4_nmos" class="quarto-xref">Table&nbsp;25</a>. Finally, the gain-bandwidth, zero frequency are given in <a href="#tbl-gbw_adc_op_comp5_nmos" class="quarto-xref">Table&nbsp;26</a>. We observe that the estimated and simulated values are close.</p>
+<div class="cell" data-execution_count="44">
+<div id="tbl-gbw_adc_op_comp1_nmos" class="cell quarto-float quarto-figure quarto-figure-center anchored" data-execution_count="44">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-gbw_adc_op_comp1_nmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;22: Simulated drain current and small-signal parameter values compared to theoretical values.
+</figcaption>
+<div aria-describedby="tbl-gbw_adc_op_comp1_nmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output cell-output-display cell-output-markdown" data-execution_count="44">
+<table class="do-not-create-environment cell caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th></th>
+<th style="text-align: center;"><span class="math inline">\(I_D\,[nA]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(G_m\,[\mu A/V]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(G_{ds}\,[nA/V]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(A_v\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Theory</td>
+<td style="text-align: center;">498.864</td>
+<td style="text-align: center;">14.101</td>
+<td style="text-align: center;">792.952</td>
+<td style="text-align: center;">25</td>
+</tr>
+<tr class="even">
+<td>PSP</td>
+<td style="text-align: center;">499</td>
+<td style="text-align: center;">13.745</td>
+<td style="text-align: center;">753.297</td>
+<td style="text-align: center;">25.224</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</figure>
+</div>
+</div>
+<div class="cell" data-execution_count="45">
+<div id="tbl-gbw_adc_op_comp2_nmos" class="cell quarto-float quarto-figure quarto-figure-center anchored" data-execution_count="45">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-gbw_adc_op_comp2_nmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;23: Simulated overlap and fringing capacitances values compared to theoretical values.
+</figcaption>
+<div aria-describedby="tbl-gbw_adc_op_comp2_nmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output cell-output-display cell-output-markdown" data-execution_count="45">
+<table class="do-not-create-environment cell caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th></th>
+<th style="text-align: center;"><span class="math inline">\(C_{GSo}\,[fF]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(C_{GDo}\,[fF]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(C_{GSf}\,[fF]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(C_{GDf}\,[fF]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(C_{GSe}\,[fF]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(C_{GDe}\,[fF]\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Theory</td>
+<td style="text-align: center;">1.052</td>
+<td style="text-align: center;">1.052</td>
+<td style="text-align: center;">0.468</td>
+<td style="text-align: center;">0.468</td>
+<td style="text-align: center;">1.52</td>
+<td style="text-align: center;">1.52</td>
+</tr>
+<tr class="even">
+<td>PSP</td>
+<td style="text-align: center;">1.061</td>
+<td style="text-align: center;">1.061</td>
+<td style="text-align: center;">0.464</td>
+<td style="text-align: center;">0.464</td>
+<td style="text-align: center;">1.441</td>
+<td style="text-align: center;">1.411</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</figure>
+</div>
+</div>
+<div class="cell" data-execution_count="46">
+<div id="tbl-gbw_adc_op_comp3_nmos" class="cell quarto-float quarto-figure quarto-figure-center anchored" data-execution_count="46">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-gbw_adc_op_comp3_nmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;24: Simulated zero-bias junction capacitances values compared to theoretical values.
+</figcaption>
+<div aria-describedby="tbl-gbw_adc_op_comp3_nmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output cell-output-display cell-output-markdown" data-execution_count="46">
+<table class="do-not-create-environment cell caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th></th>
+<th style="text-align: center;"><span class="math inline">\(C_{Jbot}(0)\,[fF]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(C_{JSWSTI}(0)\,[fF]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(C_{JSWGAT}(0)\,[fF]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(C_{Jtot}(0)\,[fF]\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Theory</td>
+<td style="text-align: center;">0.77</td>
+<td style="text-align: center;">0.076</td>
+<td style="text-align: center;">0.07</td>
+<td style="text-align: center;">0.916</td>
+</tr>
+<tr class="even">
+<td>PSP</td>
+<td style="text-align: center;">0.777</td>
+<td style="text-align: center;">0.076</td>
+<td style="text-align: center;">0.07</td>
+<td style="text-align: center;">0.923</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</figure>
+</div>
+</div>
+<div class="cell" data-execution_count="47">
+<div id="tbl-gbw_adc_op_comp4_nmos" class="cell quarto-float quarto-figure quarto-figure-center anchored" data-execution_count="47">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-gbw_adc_op_comp4_nmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;25: Simulated actual junction capacitances values compared to theoretical zero-bias values.
+</figcaption>
+<div aria-describedby="tbl-gbw_adc_op_comp4_nmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output cell-output-display cell-output-markdown" data-execution_count="47">
+<table class="do-not-create-environment cell caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th></th>
+<th style="text-align: center;"><span class="math inline">\(C_{Jbot}\,[fF]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(C_{JSWSTI}\,[fF]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(C_{JSWGAT}\,[fF]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(C_{Jtot}\,[fF]\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Theory</td>
+<td style="text-align: center;">0.77</td>
+<td style="text-align: center;">0.076</td>
+<td style="text-align: center;">0.07</td>
+<td style="text-align: center;">0.916</td>
+</tr>
+<tr class="even">
+<td>PSP</td>
+<td style="text-align: center;">0.715</td>
+<td style="text-align: center;">0.071</td>
+<td style="text-align: center;">0.067</td>
+<td style="text-align: center;">0.853</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</figure>
+</div>
+</div>
+<div class="cell" data-execution_count="48">
+<div id="tbl-gbw_adc_op_comp5_nmos" class="cell quarto-float quarto-figure quarto-figure-center anchored" data-execution_count="48">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-gbw_adc_op_comp5_nmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;26: Comparison of the simulated and predicted values of the gain-bandwidth and zero frequency.
+</figcaption>
+<div aria-describedby="tbl-gbw_adc_op_comp5_nmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output cell-output-display cell-output-markdown" data-execution_count="48">
+<table class="do-not-create-environment cell caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th></th>
+<th style="text-align: center;"><span class="math inline">\(G_m\,[\mu A/V]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(C_{out}\,[fF]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(C_F\,[fF]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(GBW\,[MHz]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(f_z\,[GHz]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(A_{\infty}\,[dB]\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Theory</td>
+<td style="text-align: center;">14.101</td>
+<td style="text-align: center;">22.453</td>
+<td style="text-align: center;">1.52</td>
+<td style="text-align: center;">99.952</td>
+<td style="text-align: center;">9.276</td>
+<td style="text-align: center;">-23.956</td>
+</tr>
+<tr class="even">
+<td>PSP</td>
+<td style="text-align: center;">13.745</td>
+<td style="text-align: center;">22.281</td>
+<td style="text-align: center;">1.411</td>
+<td style="text-align: center;">98.183</td>
+<td style="text-align: center;">9.996</td>
+<td style="text-align: center;">-24.503</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</figure>
+</div>
+</div>
+<p>We can now proceed with the AC simulation. The simulation result is compared to the theoretical prediction in <a href="#fig-cs_ol_tf_gbw_adc_sim_nmos" class="quarto-xref">Figure&nbsp;22</a>. We see that the simulated GBW is slightly lower than the spec. This is due to the lower transconductance of PSP compared to sEKV. On the other hand the simulated DC gain and gain at high frequency are perfectly matching the theoretical estimations.</p>
+<div id="cell-fig-cs_ol_tf_gbw_adc_sim_nmos" class="cell" data-execution_count="49">
+<div class="cell-output cell-output-display">
+<div id="fig-cs_ol_tf_gbw_adc_sim_nmos" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-cs_ol_tf_gbw_adc_sim_nmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="CS_optimization_files/figure-html/fig-cs_ol_tf_gbw_adc_sim_nmos-output-1.png" width="632" height="517" class="figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-cs_ol_tf_gbw_adc_sim_nmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;22: CS simulated open-loop transfer function compared to the theoretical prediction.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</section>
+</section>
+<section id="pmos-1" class="level3" data-number="6.2.2">
+<h3 data-number="6.2.2" class="anchored" data-anchor-id="pmos-1"><span class="header-section-number">6.2.2</span> pMOS</h3>
+<p>We now design the same CS gain stage but with a pMOS transistor. Note that all the design equations remain the same.</p>
+<section id="design-3" class="level4">
+<h4 class="anchored" data-anchor-id="design-3">Design</h4>
+<p>The process parameters that are needed to achieve the specifications given in <a href="#tbl-specs_gbw_adc_pmos" class="quarto-xref">Table&nbsp;28</a> are given in <a href="#tbl-process_summary_gbw_adc_pmos" class="quarto-xref">Table&nbsp;27</a>. The optimum inversion coefficient, optimum bias current, optimum width and optimum length are calculated in <a href="#tbl-calc_param_gbw_adc_pmos" class="quarto-xref">Table&nbsp;29</a>.</p>
+<div class="cell" data-execution_count="50">
+<div id="tbl-process_summary_gbw_adc_pmos" class="cell quarto-float quarto-figure quarto-figure-center anchored" data-execution_count="50">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-process_summary_gbw_adc_pmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;27: Required process parameters (nMOS).
+</figcaption>
+<div aria-describedby="tbl-process_summary_gbw_adc_pmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output cell-output-display cell-output-markdown" data-execution_count="50">
+<table class="do-not-create-environment cell caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th style="text-align: center;">Parameter</th>
+<th style="text-align: center;">Value</th>
+<th style="text-align: center;">Unit</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(V_{DD}\)</span></td>
+<td style="text-align: center;">1.2</td>
+<td style="text-align: center;"><span class="math inline">\(V\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(n\)</span></td>
+<td style="text-align: center;">1.23</td>
+<td style="text-align: center;">-</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(I_{spec\Box}\)</span></td>
+<td style="text-align: center;">245</td>
+<td style="text-align: center;"><span class="math inline">\(nA\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(\lambda\)</span></td>
+<td style="text-align: center;">10</td>
+<td style="text-align: center;"><span class="math inline">\(\frac{V}{\mu m}\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(C_{DW}\)</span></td>
+<td style="text-align: center;">0.895</td>
+<td style="text-align: center;"><span class="math inline">\(\frac{fF}{um}\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(C_{D0}\)</span></td>
+<td style="text-align: center;">0.022</td>
+<td style="text-align: center;"><span class="math inline">\(fF\)</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</figure>
+</div>
+</div>
+<div class="cell" data-execution_count="51">
+<div id="tbl-specs_gbw_adc_pmos" class="cell quarto-float quarto-figure quarto-figure-center anchored" data-execution_count="51">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-specs_gbw_adc_pmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;28: Specifications.
+</figcaption>
+<div aria-describedby="tbl-specs_gbw_adc_pmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output cell-output-display cell-output-markdown" data-execution_count="51">
+<table class="do-not-create-environment cell caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th style="text-align: center;">Parameter</th>
+<th style="text-align: center;">Value</th>
+<th style="text-align: center;">Unit</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(GBW\)</span></td>
+<td style="text-align: center;">100</td>
+<td style="text-align: center;"><span class="math inline">\(MHz\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(A_{dc}\)</span></td>
+<td style="text-align: center;">50</td>
+<td style="text-align: center;"><span class="math inline">\(dB\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(C_{L0}\)</span></td>
+<td style="text-align: center;">20</td>
+<td style="text-align: center;"><span class="math inline">\(fF\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(C_L\)</span></td>
+<td style="text-align: center;">20.022</td>
+<td style="text-align: center;"><span class="math inline">\(fF\)</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</figure>
+</div>
+</div>
+<div class="cell" data-execution_count="52">
+<div id="tbl-calc_param_gbw_adc_pmos" class="cell quarto-float quarto-figure quarto-figure-center anchored" data-execution_count="52">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-calc_param_gbw_adc_pmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;29: Calculated parameters (nMOS).
+</figcaption>
+<div aria-describedby="tbl-calc_param_gbw_adc_pmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output cell-output-display cell-output-markdown" data-execution_count="52">
+<table class="do-not-create-environment cell caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th style="text-align: center;">Parameter</th>
+<th style="text-align: center;">Value</th>
+<th style="text-align: center;">Unit</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(\xi\)</span></td>
+<td style="text-align: center;">0.074</td>
+<td style="text-align: center;">-</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(IC_{opt}\)</span></td>
+<td style="text-align: center;">0.511</td>
+<td style="text-align: center;">-</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(i_{b,opt}\)</span></td>
+<td style="text-align: center;">1.883</td>
+<td style="text-align: center;">-</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(w_{opt}\)</span></td>
+<td style="text-align: center;">5.058</td>
+<td style="text-align: center;">-</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(\ell_{opt}\)</span></td>
+<td style="text-align: center;">1.372</td>
+<td style="text-align: center;">-</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(g_{m,opt}\)</span></td>
+<td style="text-align: center;">1.372</td>
+<td style="text-align: center;">-</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(I_{norm}\)</span></td>
+<td style="text-align: center;">400.218</td>
+<td style="text-align: center;"><span class="math inline">\(nA\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(W_{norm}\)</span></td>
+<td style="text-align: center;">1.646</td>
+<td style="text-align: center;"><span class="math inline">\(\mu m\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(L_{norm}\)</span></td>
+<td style="text-align: center;">1.006</td>
+<td style="text-align: center;"><span class="math inline">\(\mu m\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(G_{m,norm}\)</span></td>
+<td style="text-align: center;">12.58</td>
+<td style="text-align: center;"><span class="math inline">\(\frac{\mu A}{V}\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(I_{b,opt}\)</span></td>
+<td style="text-align: center;">753.763</td>
+<td style="text-align: center;"><span class="math inline">\(nA\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(W_{opt}\)</span></td>
+<td style="text-align: center;">8.326</td>
+<td style="text-align: center;"><span class="math inline">\(\mu m\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(L_{opt}\)</span></td>
+<td style="text-align: center;">1.381</td>
+<td style="text-align: center;"><span class="math inline">\(\mu m\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(G_{m,opt}\)</span></td>
+<td style="text-align: center;">17.264</td>
+<td style="text-align: center;"><span class="math inline">\(\frac{\mu A}{V}\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(C_{D,opt}\)</span></td>
+<td style="text-align: center;">7.455</td>
+<td style="text-align: center;"><span class="math inline">\(fF\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(AD\)</span></td>
+<td style="text-align: center;">2.831</td>
+<td style="text-align: center;"><span class="math inline">\(\mu m^2\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(PD\)</span></td>
+<td style="text-align: center;">17.332</td>
+<td style="text-align: center;"><span class="math inline">\(\mu m\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(C_{DBJ}\)</span></td>
+<td style="text-align: center;">2.959</td>
+<td style="text-align: center;"><span class="math inline">\(fF\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(C_{DBJ,bot}\)</span></td>
+<td style="text-align: center;">2.764</td>
+<td style="text-align: center;"><span class="math inline">\(fF\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(C_{DBJ,SWSTI}\)</span></td>
+<td style="text-align: center;">0.228</td>
+<td style="text-align: center;"><span class="math inline">\(fF\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(C_{DBJ,SWGAT}\)</span></td>
+<td style="text-align: center;">0.25</td>
+<td style="text-align: center;"><span class="math inline">\(fF\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(C_{GDo}\)</span></td>
+<td style="text-align: center;">3.685</td>
+<td style="text-align: center;"><span class="math inline">\(fF\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(C_{GDf}\)</span></td>
+<td style="text-align: center;">0.833</td>
+<td style="text-align: center;"><span class="math inline">\(fF\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(C_{GDe}\)</span></td>
+<td style="text-align: center;">4.518</td>
+<td style="text-align: center;"><span class="math inline">\(fF\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(C_F\)</span></td>
+<td style="text-align: center;">4.518</td>
+<td style="text-align: center;"><span class="math inline">\(fF\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(C_{out}\)</span></td>
+<td style="text-align: center;">27.477</td>
+<td style="text-align: center;"><span class="math inline">\(fF\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(f_z\)</span></td>
+<td style="text-align: center;">0.608</td>
+<td style="text-align: center;"><span class="math inline">\(GHz\)</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</figure>
+</div>
+</div>
+<p>We can now estimate the output conductance</p>
+<p><span class="math inline">\(G_{{ds}} =\)</span> 54.595 <span class="math inline">\(nA/V\)</span></p>
+<p>and the DC gain</p>
+<p><span class="math inline">\(A_{{dc}} =\)</span> 3.162e+02 or in dB</p>
+<p><span class="math inline">\(A_{{dc}} =\)</span> 50.0 <span class="math inline">\(dB\)</span>,</p>
+<p>which is expected!</p>
+<p>The CS estimated open-loop transfer function is shown in <a href="#fig-cs_ol_tf_gbw_adc_the_pmos" class="quarto-xref">Figure&nbsp;23</a>.</p>
+<div id="cell-fig-cs_ol_tf_gbw_adc_the_pmos" class="cell" data-execution_count="54">
+<div class="cell-output cell-output-display">
+<div id="fig-cs_ol_tf_gbw_adc_the_pmos" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-cs_ol_tf_gbw_adc_the_pmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="CS_optimization_files/figure-html/fig-cs_ol_tf_gbw_adc_the_pmos-output-1.png" width="474" height="517" class="figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-cs_ol_tf_gbw_adc_the_pmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;23: Transfer function (pMOS).
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="ngspice-simulations-3" class="level4">
+<h4 class="anchored" data-anchor-id="ngspice-simulations-3">ngspice simulations</h4>
+<p>We now simulate the above design to check whether the design meets the specifications. We now simulate the above design to check whether the design meets the specifications.</p>
+<p>Similarly to the previous design, we can first check the operating point informations. The drain current, transconductance and output conductance are given in <a href="#tbl-gbw_adc_op_comp1_pmos" class="quarto-xref">Table&nbsp;30</a> and the various capacitances are shown in <a href="#tbl-gbw_adc_op_comp2_pmos" class="quarto-xref">Table&nbsp;31</a>, <a href="#tbl-gbw_adc_op_comp3_pmos" class="quarto-xref">Table&nbsp;32</a> and <a href="#tbl-gbw_adc_op_comp4_pmos" class="quarto-xref">Table&nbsp;33</a>. Finally, the gain-bandwidth, zero frequency are given in <a href="#tbl-gbw_adc_op_comp5_pmos" class="quarto-xref">Table&nbsp;34</a>. We observe that the estimated and simulated values are close.</p>
+<div class="cell" data-execution_count="55">
+<div id="tbl-gbw_adc_op_comp1_pmos" class="cell quarto-float quarto-figure quarto-figure-center anchored" data-execution_count="55">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-gbw_adc_op_comp1_pmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;30: Simulated drain current and small-signal parameter values compared to theoretical values.
+</figcaption>
+<div aria-describedby="tbl-gbw_adc_op_comp1_pmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output cell-output-display cell-output-markdown" data-execution_count="55">
+<table class="do-not-create-environment cell caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th></th>
+<th style="text-align: center;"><span class="math inline">\(I_D\,[nA]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(G_m\,[\mu A/V]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(G_{ds}\,[nA/V]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(A_v\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Theory</td>
+<td style="text-align: center;">754</td>
+<td style="text-align: center;">17.264</td>
+<td style="text-align: center;">54.595</td>
+<td style="text-align: center;">50</td>
+</tr>
+<tr class="even">
+<td>PSP</td>
+<td style="text-align: center;">754</td>
+<td style="text-align: center;">16.832</td>
+<td style="text-align: center;">65.277</td>
+<td style="text-align: center;">48.228</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</figure>
+</div>
+</div>
+<div class="cell" data-execution_count="56">
+<div id="tbl-gbw_adc_op_comp2_pmos" class="cell quarto-float quarto-figure quarto-figure-center anchored" data-execution_count="56">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-gbw_adc_op_comp2_pmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;31: Simulated overlap and fringing capacitances values compared to theoretical values (pMOS).
+</figcaption>
+<div aria-describedby="tbl-gbw_adc_op_comp2_pmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output cell-output-display cell-output-markdown" data-execution_count="56">
+<table class="do-not-create-environment cell caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th></th>
+<th style="text-align: center;"><span class="math inline">\(C_{GSo}\,[fF]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(C_{GDo}\,[fF]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(C_{GSf}\,[fF]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(C_{GDf}\,[fF]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(C_{GSe}\,[fF]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(C_{GDe}\,[fF]\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Theory</td>
+<td style="text-align: center;">3.692</td>
+<td style="text-align: center;">3.692</td>
+<td style="text-align: center;">0.831</td>
+<td style="text-align: center;">0.831</td>
+<td style="text-align: center;">4.523</td>
+<td style="text-align: center;">4.523</td>
+</tr>
+<tr class="even">
+<td>PSP</td>
+<td style="text-align: center;">3.678</td>
+<td style="text-align: center;">3.678</td>
+<td style="text-align: center;">0.834</td>
+<td style="text-align: center;">0.834</td>
+<td style="text-align: center;">4.232</td>
+<td style="text-align: center;">4.035</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</figure>
+</div>
+</div>
+<div class="cell" data-execution_count="57">
+<div id="tbl-gbw_adc_op_comp3_pmos" class="cell quarto-float quarto-figure quarto-figure-center anchored" data-execution_count="57">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-gbw_adc_op_comp3_pmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;32: Simulated zero-bias junction capacitances values compared to theoretical values.
+</figcaption>
+<div aria-describedby="tbl-gbw_adc_op_comp3_pmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output cell-output-display cell-output-markdown" data-execution_count="57">
+<table class="do-not-create-environment cell caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th></th>
+<th style="text-align: center;"><span class="math inline">\(C_{Jbot}(0)\,[fF]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(C_{JSWSTI}(0)\,[fF]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(C_{JSWGAT}(0)\,[fF]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(C_{Jtot}(0)\,[fF]\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Theory</td>
+<td style="text-align: center;">2.448</td>
+<td style="text-align: center;">0.288</td>
+<td style="text-align: center;">0.229</td>
+<td style="text-align: center;">2.964</td>
+</tr>
+<tr class="even">
+<td>PSP</td>
+<td style="text-align: center;">2.456</td>
+<td style="text-align: center;">0.288</td>
+<td style="text-align: center;">0.229</td>
+<td style="text-align: center;">2.973</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</figure>
+</div>
+</div>
+<div class="cell" data-execution_count="58">
+<div id="tbl-gbw_adc_op_comp4_pmos" class="cell quarto-float quarto-figure quarto-figure-center anchored" data-execution_count="58">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-gbw_adc_op_comp4_pmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;33: Simulated actual junction capacitances values compared to theoretical zero-bias values.
+</figcaption>
+<div aria-describedby="tbl-gbw_adc_op_comp4_pmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output cell-output-display cell-output-markdown" data-execution_count="58">
+<table class="do-not-create-environment cell caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th></th>
+<th style="text-align: center;"><span class="math inline">\(C_{Jbot}\,[fF]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(C_{JSWSTI}\,[fF]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(C_{JSWGAT}\,[fF]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(C_{Jtot}\,[fF]\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Theory</td>
+<td style="text-align: center;">2.448</td>
+<td style="text-align: center;">0.288</td>
+<td style="text-align: center;">0.229</td>
+<td style="text-align: center;">2.965</td>
+</tr>
+<tr class="even">
+<td>PSP</td>
+<td style="text-align: center;">2.155</td>
+<td style="text-align: center;">0.276</td>
+<td style="text-align: center;">0.199</td>
+<td style="text-align: center;">2.631</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</figure>
+</div>
+</div>
+<div class="cell" data-execution_count="59">
+<div id="tbl-gbw_adc_op_comp5_pmos" class="cell quarto-float quarto-figure quarto-figure-center anchored" data-execution_count="59">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-gbw_adc_op_comp5_pmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;34: Comparison of the simulated and predicted values of the gain-bandwidth and zero frequency.
+</figcaption>
+<div aria-describedby="tbl-gbw_adc_op_comp5_pmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output cell-output-display cell-output-markdown" data-execution_count="59">
+<table class="do-not-create-environment cell caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th></th>
+<th style="text-align: center;"><span class="math inline">\(G_m\,[\mu A/V]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(C_{out}\,[fF]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(C_F\,[fF]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(GBW\,[MHz]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(f_z\,[GHz]\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(A_{\infty}\,[dB]\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Theory</td>
+<td style="text-align: center;">17.264</td>
+<td style="text-align: center;">27.509</td>
+<td style="text-align: center;">4.523</td>
+<td style="text-align: center;">99.883</td>
+<td style="text-align: center;">3.817</td>
+<td style="text-align: center;">-17.004</td>
+</tr>
+<tr class="even">
+<td>PSP</td>
+<td style="text-align: center;">16.832</td>
+<td style="text-align: center;">26.688</td>
+<td style="text-align: center;">4.035</td>
+<td style="text-align: center;">100.381</td>
+<td style="text-align: center;">4.278</td>
+<td style="text-align: center;">-17.631</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</figure>
+</div>
+</div>
+<p>We can now proceed with the AC simulation. The simulation result is compared to the theoretical prediction in <a href="#fig-cs_ol_tf_gbw_adc_sim_pmos" class="quarto-xref">Figure&nbsp;24</a>.</p>
+<div id="cell-fig-cs_ol_tf_gbw_adc_sim_pmos" class="cell" data-execution_count="60">
+<div class="cell-output cell-output-display">
+<div id="fig-cs_ol_tf_gbw_adc_sim_pmos" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-cs_ol_tf_gbw_adc_sim_pmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="CS_optimization_files/figure-html/fig-cs_ol_tf_gbw_adc_sim_pmos-output-1.png" width="632" height="517" class="figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-cs_ol_tf_gbw_adc_sim_pmos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;24: CS simulated open-loop transfer function compared to the theoretical prediction.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>From <a href="#fig-cs_ol_tf_gbw_adc_sim_pmos" class="quarto-xref">Figure&nbsp;24</a>, we see that the simulated GBW is higher than the target. This is due to the influence of the zero which is very low due to the low quasi-static frequency related to the transcapacitance, similarly to the pMOS case in the previous optimization. We can estimate the transcapacitance for this particular design as</p>
+<p><span class="math inline">\(C_m =\)</span> 15.788 <span class="math inline">\(fF\)</span></p>
+<p>and the corresponding quasi-static frequency as</p>
+<p><span class="math inline">\(f_{{qs}} =\)</span> 174.038 <span class="math inline">\(MHz\)</span>.</p>
+<p>We see that <span class="math inline">\(C_m\)</span> is much larger than the extrinsic feedback capacitance and almost equal to the load capacitance. The quasi-static frequency is slightly above the target <span class="math inline">\(GBW\)</span>. We can also estimate the asymptotic high frequency gain <span class="math inline">\(A_{\infty}\)</span> as</p>
+<p><span class="math inline">\(A_{\infty} =\)</span> 6.347e-01</p>
+<p>or in dB</p>
+<p><span class="math inline">\(A_{\infty} =\)</span> -3.949 <span class="math inline">\(dB\)</span></p>
+<p><a href="#fig-cs_ol_tf_gbw_adc_sim_pmos_qs" class="quarto-xref">Figure&nbsp;25</a> compares the simulated transfer function to the theoretical estimations with and without the transcapacitance <span class="math inline">\(C_m\)</span>. We now have an almost perfect fit between the theoretical prediciton including the transcapacitance and the simulation.</p>
+<div id="cell-fig-cs_ol_tf_gbw_adc_sim_pmos_qs" class="cell" data-execution_count="62">
+<div class="cell-output cell-output-display">
+<div id="fig-cs_ol_tf_gbw_adc_sim_pmos_qs" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-cs_ol_tf_gbw_adc_sim_pmos_qs-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="CS_optimization_files/figure-html/fig-cs_ol_tf_gbw_adc_sim_pmos_qs-output-1.png" width="632" height="517" class="figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-cs_ol_tf_gbw_adc_sim_pmos_qs-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;25: CS simulated open-loop transfer function compared to the theoretical prediction including the transcapacitance <span class="math inline">\(C_m\)</span>.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</section>
+</section>
+</section>
+</section>
+<section id="conclusion" class="level1" data-number="7">
+<h1 data-number="7"><span class="header-section-number">7</span> Conclusion</h1>
+<p>In this notebook we have analyzed the common-source gain stage and found the minimum current to achieve certain specifications such as transconductance and gain-bandwidth. We first had a look at the case with a constant load capacitance for which the minimum current is in weak inversion. Optimizing the CS in weak inversion usually leads to fairly large transistor increasing the parasitic load capacitance which can no more be ignored. We then accounted for the junction, overlap and fringing capacitances which are all scaling with the transistor width. We then have shown that the self-loading capacitance introduces a true minimum current for achieving a given gain-bandwidth product for a given transistor length. The theoretical prediction were then validated by simulations done for the IHP 130nm process using the open source libary with the PSP compact model in ngspice. Despite the transistor model in the simulations is not the EKV model, the design approach using the inversion coefficient and the sEKV model parameters gave results that are very close to the simulations for the nMOS case. When implementing the CS gain stage with a pMOS device having a long channel length, we have discovered a strong deviation between the simulation and theoretical predictions at high frequency (above the gain-bandwidth product frequency). We have explained that this discrepancy came from the gate transcapacitance <span class="math inline">\(C_m\)</span> which could no more be neglected. We could estimate the quasi-static frequency, which was close to the target gain-bandwidth product. Adding the transcapacitance, we then obtained a theoretical prediction that is very close to the simulation. We then used the additional degree of freedom, namely the transistor length (which was set arbitrarily in the previous case) to set the DC gain in addition to the gain-bandwidth product. The predicted results were again very close to the simulation except for the pMOS case. Since the resulting gate length is fairly long, we need to account for the transcapacitance as we did for the gain-bandwidth optimization. After adding the transcapacitance, we get an almost perfect fit between the theoretical prediction and the simulation.</p>
+<p>This simple example of designing an elementary CS stage for gain-bandwidth and DC gain specifications has shown that the inversion coefficient approach can succesfully be used provided the sEKV parameters are correctly extracted for the target technology. It also has sown that the resulting design can be validated by simulation even if the compact model used in the simulator is not the EKV model.</p>
+</section>
+<section id="references" class="level1 unnumbered" data-number="8">
+
+
+</section>
+
+<div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" role="doc-bibliography" id="quarto-bibliography"><h2 class="anchored quarto-appendix-heading">8 References</h2><div id="refs" class="references csl-bib-body" data-entry-spacing="0" role="list">
+<div id="ref-bib:enz:book:2006" class="csl-entry" role="listitem">
+<div class="csl-left-margin">[1] </div><div class="csl-right-inline">C. C. Enz and E. A. Vittoz, <em><span class="nocase">Charge-Based MOS Transistor Modeling - The EKV Model for Low-Power and RF IC Design</span></em>, 1st ed. John Wiley, 2006.</div>
+</div>
+<div id="ref-bib:enz:sscmag:autumn:2017" class="csl-entry" role="listitem">
+<div class="csl-left-margin">[2] </div><div class="csl-right-inline">C. Enz, F. Chicco, and A. Pezzotta, <span>“<span class="nocase">Nanoscale MOSFET Modeling: Part 1: The Simplified EKV Model for the Design of Low-Power Analog Circuits</span>,”</span> <em>IEEE Solid-State Circuits Magazine</em>, vol. 9, no. 3, pp. 26–35, 2017.</div>
+</div>
+<div id="ref-bib:enz:sscmag:winter:2017" class="csl-entry" role="listitem">
+<div class="csl-left-margin">[3] </div><div class="csl-right-inline">C. Enz, F. Chicco, and A. Pezzotta, <span>“<span class="nocase">Nanoscale MOSFET Modeling: Part 2: Using the Inversion Coefficient as the Primary Design Parameter</span>,”</span> <em>IEEE Solid-State Circuits Magazine</em>, vol. 9, no. 4, pp. 73–81, 2017.</div>
+</div>
+<div id="ref-bib:ihp:2025" class="csl-entry" role="listitem">
+<div class="csl-left-margin">[4] </div><div class="csl-right-inline">IHP, <span>“<span>IHP SG13G2 Open Source PDK</span>.”</span> <a href="https://github.com/IHP-GmbH/IHP-Open-PDK" class="uri">https://github.com/IHP-GmbH/IHP-Open-PDK</a>, 2025.</div>
+</div>
+<div id="ref-bib:psp103.6:2017" class="csl-entry" role="listitem">
+<div class="csl-left-margin">[5] </div><div class="csl-right-inline">G.D.J. Smit, A.J. Scholten, D.B.M. Klaassen, O. Rozeau, S. Martinie, T. Poiroux and J.C. Barbé, <span>“<span class="nocase">PSP 103.6 - The PSP model is a joint development of CEA-Leti and NXP Semiconductors</span>.”</span> <a href="https://www.cea.fr/cea-tech/leti/pspsupport/Documents/psp103p6_summary.pdf" class="uri">https://www.cea.fr/cea-tech/leti/pspsupport/Documents/psp103p6_summary.pdf</a>, 2017.</div>
+</div>
+<div id="ref-bib:ngspice:2024" class="csl-entry" role="listitem">
+<div class="csl-left-margin">[6] </div><div class="csl-right-inline">Holger Vogt, Giles Atkinson, Paolo Nenzi, <span>“<span class="nocase">Ngspice User’s Manual Version 43</span>.”</span> <a href="https://ngspice.sourceforge.io/docs/ngspice-43-manual.pdf" class="uri">https://ngspice.sourceforge.io/docs/ngspice-43-manual.pdf</a>, 2024.</div>
+</div>
+</div></section></div></main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const onCopySuccess = function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  }
+  const getTextToCopy = function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+    text: getTextToCopy
+  });
+  clipboard.on('success', onCopySuccess);
+  if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+    const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+      text: getTextToCopy,
+      container: window.document.getElementById('quarto-embedded-source-code-modal')
+    });
+    clipboardModal.on('success', onCopySuccess);
+  }
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp('/' + window.location.host + '/');
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

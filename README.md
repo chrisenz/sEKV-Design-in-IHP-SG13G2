@@ -1,8 +1,8 @@
 # sEKV-Design-in-IHP-SG13G2
-Examples of  analog circuit design with sEKV for the open source IHP 130nm technology
+Examples of  analog circuit design with sEKV for the [open source IHP 130nm technology](https://github.com/IHP-GmbH/IHP-Open-PDK).
 
 The examples are ran in either Jupyter (.pynb) or quarto  Notebooks (.qmd). I edit and run them in Visual Studio Code (VS Code) after having intalled the appropriate Juypter and Quarto extensions.
-The simulations are performed with ngspice (version 43). In order to run the simulation from the Juypter or Quarto Notebooks, you need to install things properly as described in the next section.
+The simulations are performed by ngspice (version 43) using the [PSP 103.6 MOSFET compact model](https://www.cea.fr/leti/psp103p6_summary.pdf). In order to run the simulation from the Juypter or Quarto Notebooks, you need to install things properly as described below.
 
 You can download the latest version of ngspice from the [official ngspice site](https://sourceforge.net/projects/ngspice/files/ng-spice-rework/44.2/). You can also download the version 43 [version 43](https://sourceforge.net/projects/ngspice/files/ng-spice-rework/old-releases/43/) I am using. It is a good idea to also download the user manual from the same site.
 

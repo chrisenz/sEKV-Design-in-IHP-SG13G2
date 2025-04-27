@@ -11,7 +11,7 @@ You can down load ngspice from the official ngspice site. It is a good idea to a
 Install the  ngspice folder named Spice64 where you want. I created a NGSpice folder in the C:\Program Files\ folder and copied the Spice64 folder in it. So for my installation, the path to the ngspice binary is C:\Program Files\NGSpice\Spice64\bin\. Now you can choose any other installation location.
 Then you need to add a few variables to the Windows Environment variables. In order to do this in Windows 10 or Windows 11, open Settings>Sytem>About. On the right panel click Advanced system settings. You will see this dialog box
 
-![Edit system variables.](system_variables.png)
+![Edit system variables.](/img/system_variables.png)
 
 
 

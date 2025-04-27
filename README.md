@@ -4,7 +4,7 @@ Examples of  analog circuit design with sEKV for the open source IHP 130nm techn
 The examples are ran in either Jupyter (.pynb) or quarto  Notebooks (.qmd). I edit and run them in Visual Studio Code (VS Code) after having intalled the appropriate Juypter and Quarto extensions.
 The simulations are performed with ngspice (version 43). In order to run the simulation from the Juypter or Quarto Notebooks, you need to install things properly as described in the next section.
 
-You can download ngspice from the [official ngspice site](https://sourceforge.net/projects/ngspice/files/ng-spice-rework/44.2/). It is a good idea to also download the user manual from the same site.
+You can download the latest version of ngspice from the [official ngspice site](https://sourceforge.net/projects/ngspice/files/ng-spice-rework/44.2/). You can also download the version 43 [version 43](https://sourceforge.net/projects/ngspice/files/ng-spice-rework/old-releases/43/) I am using. It is a good idea to also download the [user manual](https://sourceforge.net/projects/ngspice/files/ng-spice-rework/44.2/ngspice-44-manual.pdf) from the same site.
 
 Install the  ngspice folder named Spice64 where you want. I created a NGSpice folder in the C:\Program Files\ folder and copied the Spice64 folder in it. So for my installation, the path to the ngspice binary is C:\Program Files\NGSpice\Spice64\bin\. Of course you can choose any other installation location.
 

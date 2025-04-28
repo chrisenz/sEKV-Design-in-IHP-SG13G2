@@ -1,6 +1,6 @@
 # sEKV-Design-in-IHP-SG13G2
 
-Examples of  analog circuit design with sEKV for the [open source IHP 130nm technology](https://github.com/IHP-GmbH/IHP-Open-PDK).
+This repository presents some examples of analog circuit design using the EKV design methodology with the invertsion coefficient. The examples are designed for the [open source IHP 130nm technology](https://github.com/IHP-GmbH/IHP-Open-PDK).
 
 The sEKV parameters are extracted for nMOS and pMOS separately using the extraction Jupyter Notebooks you find in the [sEKV Parameter Extraction directory](/sEKV%20Parameter%20Extraction/). The pdf outputs are available for [nMOS](/sEKV%20Parameter%20Extraction/sEKV_IHP130nm_nmos.pdf) and [pMOS](/sEKV%20Parameter%20Extraction/sEKV_IHP130nm_pmos.pdf). The Jupyter Notebooks generate an Excel file for nMOS and pMOS.
 

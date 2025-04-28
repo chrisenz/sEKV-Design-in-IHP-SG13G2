@@ -2,9 +2,6 @@
 
 Examples of  analog circuit design with sEKV for the [open source IHP 130nm technology](https://github.com/IHP-GmbH/IHP-Open-PDK).
 
-The sEKV parameters are extracted for nMOS and pMOS separately using the extraction Jupyter Notebooks you find in the [sEKV Parameter Extraction directory](/sEKV%20Parameter%20Extraction/) You can look at the pdf outputs for [nMOS](/sEKV%20Parameter%20Extraction/sEKV_IHP130nm_nmos.pdf) and [pMOS](/sEKV%20Parameter%20Extraction/sEKV_IHP130nm_pmos.pdf).
+The sEKV parameters are extracted for nMOS and pMOS separately using the extraction Jupyter Notebooks you find in the [sEKV Parameter Extraction directory](/sEKV%20Parameter%20Extraction/). The pdf outputs are available for [nMOS](/sEKV%20Parameter%20Extraction/sEKV_IHP130nm_nmos.pdf) and [pMOS](/sEKV%20Parameter%20Extraction/sEKV_IHP130nm_pmos.pdf). The Jupyter Notebooks generate an Excel file for nMOS and pMOS.
 
-
-[PSP Verilog-A directory](/PSP/Verilog-A/) 
-The examples are ran in either Jupyter (.pynb) or quarto  Notebooks (.qmd). I edit and run them in Visual Studio Code (VS Code) after having intalled the appropriate Juypter and Quarto extensions.
-The simulations are performed by ngspice (version 43) using the [PSP 103.6 MOSFET compact model](https://www.cea.fr/cea-tech/leti/pspsupport). In order to run the simulation from the Juypter or Quarto Notebooks, you need to install things properly as described below.
+The sEKV design methodology is illustrated with several simple examples you can find in 

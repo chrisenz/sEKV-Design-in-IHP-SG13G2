@@ -36,6 +36,6 @@ as shown below:
 
 ![ngspice osdi dirspice scripts.](/img/SPICE_SCRIPTS.png)
 
-You are now all set to run the examples (if I didn't forget anything :-)).
+You are now all set to run the examples.
 
 Enjoy!

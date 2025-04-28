@@ -1,4 +1,4 @@
-ngspice installation
+# ngspice installation
 
 You can download the latest version of ngspice from the [official ngspice site](https://sourceforge.net/projects/ngspice/files/ng-spice-rework/44.2/). You can also download the version 43 [version 43](https://sourceforge.net/projects/ngspice/files/ng-spice-rework/old-releases/43/) I am using. It is a good idea to also download the user manual from the same site.
 

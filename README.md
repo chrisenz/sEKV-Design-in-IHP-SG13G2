@@ -2,7 +2,7 @@
 
 Examples of  analog circuit design with sEKV for the [open source IHP 130nm technology](https://github.com/IHP-GmbH/IHP-Open-PDK).
 
-The sEKV parameters are extracted for nMOS and pMOS separately using the extraction Jupyter Notebooks you find in the [sEKV Parameter Extraction directory](/sEKV-Parameter-Extraction/)
+The sEKV parameters are extracted for nMOS and pMOS separately using the extraction Jupyter Notebooks you find in the [sEKV Parameter Extraction directory](/sEKV%20Parameter%20Extraction/)
 
 
 [PSP Verilog-A directory](/PSP/Verilog-A/) 

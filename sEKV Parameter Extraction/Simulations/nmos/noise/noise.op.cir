@@ -1,0 +1,15 @@
+OSDI PSP nMOS noise analysis
+
+.lib /Simulations/models/cornerMOSlv.lib mos_tt
+.include noise.op.par ; Size and bias values
+.include noise.net ; Circuit netlist
+
+.control
+ save @n.xn.Nsg13_lv_nmos[weff] @n.xn.Nsg13_lv_nmos[weff] @n.xn.Nsg13_lv_nmos[leff] @n.xn.Nsg13_lv_nmos[ids] @n.xn.Nsg13_lv_nmos[gm] @n.xn.Nsg13_lv_nmos[gds] @n.xn.Nsg13_lv_nmos[sid] @n.xn.Nsg13_lv_nmos[sqrtsfw] @n.xn.Nsg13_lv_nmos[sfl] @n.xn.Nsg13_lv_nmos[sqrtsff] @n.xn.Nsg13_lv_nmos[fknee]
+ op
+ wrnodev $inputdir/noise.op.ic
+ set wr_singlescale
+ set wr_vecnames
+ wrdata $inputdir/noise.op.dat @n.xn.Nsg13_lv_nmos[weff] @n.xn.Nsg13_lv_nmos[leff] @n.xn.Nsg13_lv_nmos[ids] @n.xn.Nsg13_lv_nmos[gm] @n.xn.Nsg13_lv_nmos[gds] @n.xn.Nsg13_lv_nmos[sid] @n.xn.Nsg13_lv_nmos[sqrtsfw] @n.xn.Nsg13_lv_nmos[sfl] @n.xn.Nsg13_lv_nmos[sqrtsff] @n.xn.Nsg13_lv_nmos[fknee]
+.endc
+.end

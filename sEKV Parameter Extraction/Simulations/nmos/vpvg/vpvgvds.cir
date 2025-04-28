@@ -1,0 +1,17 @@
+OSDI PSP nMOS VP-VG characteristic
+
+.lib cornerMOSlv.lib mos_tt
+.include vpvgvds.par ; Size and bias values
+.include vpvgvds.net ; Circuit netlist
+
+.control
+ options GMIN=1e-15
+ dc VG $&VGmin $&VGmax $&dVG
+ let VP = v(s)
+ let VD = v(d)
+ meas dc VT0 WHEN V(s)=0.0
+ set wr_singlescale
+ set wr_vecnames
+ wrdata $inputdir/vpvgvds.dat VP VD
+.endc
+.end

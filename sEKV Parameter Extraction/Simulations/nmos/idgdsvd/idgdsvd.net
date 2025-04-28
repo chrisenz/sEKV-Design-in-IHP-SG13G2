@@ -1,0 +1,4 @@
+Xn d g s 0 sg13_lv_nmos W={W} L={L}
+VG g 0 {VG}
+VS s 0 {VS}
+VD d 0 {VD}

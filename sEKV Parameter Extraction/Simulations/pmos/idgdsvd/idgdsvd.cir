@@ -1,0 +1,17 @@
+OSDI PSP nMOS ID-VD characteristic
+
+.lib /Simulations/models/cornerMOSlv.lib mos_tt
+.include idgdsvd.par ; Size and bias values
+.include idgdsvd.net ; Circuit netlist
+
+.control
+ options GMIN=1e-15
+ save all @n.xp.Nsg13_lv_pmos[gds]
+ dc VD $&VDmin $&VDmax $&dVD
+ let ID = -i(vd)
+ let Gds = @n.xp.Nsg13_lv_pmos[gds]
+ set wr_singlescale
+ set wr_vecnames
+ wrdata $inputdir/idgdsvd.dat ID Gds
+.endc
+.end

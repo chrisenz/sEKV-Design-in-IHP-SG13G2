@@ -1,0 +1,8 @@
+* Intermediate Transient Solution
+* Circuit: simulation of the cs stage designed with the corresponding jupyter notebook
+* Recorded at simulation time: 0
+.ic v(out) = 0.835629
+.ic v(in) = 0.835655
+.ic v(vdd) = 1.2
+.ic v(1) = 0.835655
+.ic v(2) = 0.835655

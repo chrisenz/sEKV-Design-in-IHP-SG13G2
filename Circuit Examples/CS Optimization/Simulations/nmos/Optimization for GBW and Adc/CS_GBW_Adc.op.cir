@@ -1,0 +1,19 @@
+Simulation of the CS stage designed with the corresponding Jupyter Notebook
+
+.lib /Simulations/models/cornerMOSlv.lib mos_tt
+.include CS_GBW_Adc.op.par ; Size and bias values
+.include CS_GBW_Adc.net ; Circuit netlist
+
+.control
+ save @n.x1.Nsg13_lv_nmos[ids] @n.x1.Nsg13_lv_nmos[gm] @n.x1.Nsg13_lv_nmos[gds] @n.x1.Nsg13_lv_nmos[cgdol] @n.x1.Nsg13_lv_nmos[cgsol] @n.x1.Nsg13_lv_nmos[lp_cgov]  @n.x1.Nsg13_lv_nmos[lp_cfr] @n.x1.Nsg13_lv_nmos[cjd] @n.x1.Nsg13_lv_nmos[cjdbot] @n.x1.Nsg13_lv_nmos[cjdgat] @n.x1.Nsg13_lv_nmos[cjdsti] @n.x1.Nsg13_lv_nmos[cjosbot] @n.x1.Nsg13_lv_nmos[cjossti] @n.x1.Nsg13_lv_nmos[cjosgat] @n.x1.Nsg13_lv_nmos[fug]
+ save @n.x2.Nsg13_lv_nmos[ids] @n.x2.Nsg13_lv_nmos[gm] @n.x2.Nsg13_lv_nmos[gds] @n.x2.Nsg13_lv_nmos[cgdol] @n.x2.Nsg13_lv_nmos[cgsol] @n.x2.Nsg13_lv_nmos[lp_cgov]  @n.x2.Nsg13_lv_nmos[lp_cfr] @n.x2.Nsg13_lv_nmos[cjd] @n.x2.Nsg13_lv_nmos[cjdbot] @n.x2.Nsg13_lv_nmos[cjdgat] @n.x2.Nsg13_lv_nmos[cjdsti] @n.x2.Nsg13_lv_nmos[cjosbot] @n.x2.Nsg13_lv_nmos[cjossti] @n.x2.Nsg13_lv_nmos[cjosgat] @n.x2.Nsg13_lv_nmos[fug]
+ op
+ wrnodev $inputdir/CS_GBW_Adc.op.ic
+ set wr_singlescale
+ set wr_vecnames
+ wrdata $inputdir/CS_GBW_Adc.op.dat
+ wrdata $inputdir/CS_GBW_Adc.op.dat @n.x1.Nsg13_lv_nmos[ids] @n.x1.Nsg13_lv_nmos[gm] @n.x1.Nsg13_lv_nmos[gds] @n.x1.Nsg13_lv_nmos[cgdol] @n.x1.Nsg13_lv_nmos[cgsol] @n.x1.Nsg13_lv_nmos[lp_cgov] @n.x1.Nsg13_lv_nmos[lp_cfr] @n.x1.Nsg13_lv_nmos[cjd] @n.x1.Nsg13_lv_nmos[cjdbot] @n.x1.Nsg13_lv_nmos[cjdgat] @n.x1.Nsg13_lv_nmos[cjdsti] @n.x1.Nsg13_lv_nmos[cjosbot] @n.x1.Nsg13_lv_nmos[cjossti] @n.x1.Nsg13_lv_nmos[cjosgat] @n.x1.Nsg13_lv_nmos[fug]
+ set appendwrite
+ wrdata $inputdir/CS_GBW_Adc.op.dat @n.x2.Nsg13_lv_nmos[ids] @n.x2.Nsg13_lv_nmos[gm] @n.x2.Nsg13_lv_nmos[gds] @n.x2.Nsg13_lv_nmos[cgdol] @n.x2.Nsg13_lv_nmos[cgsol] @n.x2.Nsg13_lv_nmos[lp_cgov] @n.x2.Nsg13_lv_nmos[lp_cfr] @n.x2.Nsg13_lv_nmos[cjd] @n.x2.Nsg13_lv_nmos[cjdbot] @n.x2.Nsg13_lv_nmos[cjdgat] @n.x2.Nsg13_lv_nmos[cjdsti] @n.x2.Nsg13_lv_nmos[cjosbot] @n.x2.Nsg13_lv_nmos[cjossti] @n.x2.Nsg13_lv_nmos[cjosgat] @n.x2.Nsg13_lv_nmos[fug]
+.endc
+.end

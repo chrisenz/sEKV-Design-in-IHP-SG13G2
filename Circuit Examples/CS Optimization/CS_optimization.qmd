@@ -1,0 +1,4123 @@
+---
+title: Common-source Gain Stage Optimization
+subtitle: For IHP 130nm Process (Version 1)
+author: Christian Enz (christian.enz@epfl.ch)
+affiliation: EPFL
+published: today
+execute:
+  echo: false
+  warning: false
+toc: true
+number-sections: true
+number-depth: 3
+highlight-style: pygments
+bibliography: references.bib
+csl: ieee.csl
+format:
+  html:
+    include-in-header: mathjax.html
+    code-fold: true
+    html-math-method: mathjax
+    css: styles.css
+  pdf:
+    keep-tex: true
+    pdf-engine: pdflatex
+    documentclass: scrreprt
+    papersize: a4
+    geometry:
+      - top=20mm
+      - bottom=20mm
+      - left=20mm
+      - right=20mm
+---
+
+```{python}
+#| init_cell: true
+from ekv_functions import *
+
+import numpy as np
+from numpy import pi as pi
+from numpy import log as ln
+from numpy import log10 as log
+from numpy import sqrt as sqrt
+from numpy import exp as exp
+from numpy import arctan as atan
+import pandas as pd
+import matplotlib.pyplot as plt
+from matplotlib.ticker import EngFormatter
+plt.style.use('plt_style.mplstyle')
+import subprocess
+import shutil
+import os
+import os.path as op
+import sys
+import re
+
+from IPython.display import Markdown
+from tabulate import tabulate
+
+from matplotlib.ticker import EngFormatter
+from IPython.display import display, Latex
+
+sys.path.append(".")
+
+#plt.rcParams['text.usetex'] = True
+plt.rcParams['svg.fonttype'] = 'none'
+plt.rcParams['pdf.fonttype'] = 42
+#plt.rcParams['ps.fonttype'] = 42
+plt.rcParams['font.family'] = 'Arial'
+#plt.rcParams['mathtext.fontset'] = 'cm'
+
+plt.rcParams['mathtext.fontset'] = 'custom'
+plt.rcParams['mathtext.rm'] = 'Arial'
+plt.rcParams['mathtext.it'] = 'Arial:italic'
+plt.rcParams['mathtext.bf'] = 'Arial:bold'
+
+plt.style.use('plt_style_medium.mplstyle')
+lw=1
+msize=4
+mevery=4
+
+refloat=r'.*?([+-]?\d+([.]\d*)?([eE][+-]?\d+)?|[.]\d+([eE][+-]?\d+)?)'
+
+#newSim=True
+newSim=False
+```
+
+# Introduction
+This notebook presents the optimization of a common-source gain stage to minimize the power consumption for a given gain-bandwidth product and DC gain using the sEKV model and the inversion coefficient approach @bib:enz:book:2006, @bib:enz:sscmag:autumn:2017, @bib:enz:sscmag:winter:2017.
+
+![Schematic of the open-loop common-source (CS) gain stage.](Figures/CS_OL_schematic.png){#fig-cs_ol_schematic}
+
+The schematic of the common-source (CS) stage in open-loop configuration is shown in @fig-cs_ol_schematic. To size the transistor according to some specifications on the gain, bandwidth or noise, we need to find the bias current $I_b$ and the aspect ratio $W/L$ that satisfies the given specifications. In order to do this, we first need to analyze the circuit in terms of its key features. We will start with the small-signal analysis.
+
+# Small-signal analysis
+
+![Small-signal schematic of the open-loop (OL) common-source (CS) gain stage including the feedback capacitance.](Figures/CS_OL_small-signal.png){#fig-cs_ol_ssc_schematic}
+
+The small-signal schematic of the open-loop (OL) common-source (CS) stage is shown in @fig-cs_ol_ssc_schematic. It is straightforward to show that the transfer function is given by
+\begin{equation}
+  A(s) \triangleq \frac{\Delta V_{out}}{\Delta V_{in}} = A_{dc} \cdot \frac{1-s/\omega_z}{1+s/\omega_p}
+\end{equation}
+where
+\begin{align}
+  A_{dc} &= -G_m \cdot R_{ds},\\
+  \omega_z &= \frac{G_m}{C_F},\\
+  \omega_p &= \frac{1}{R_{ds}\,C_{Ltot}},
+\end{align}
+with $A_{dc} = -G_m \cdot R_{ds}$ the DC voltage gain, $\omega_z$ the zero (in the  right half plan), $\omega_p$ the pole and $C_{Ltot}=C_L+C_F$ the total load capacitance inclduing the feedback capacitance. The gain-bandwidth product ($GBW$) or unity gain frequency ($\omega_u$) is then given by
+
+\begin{equation}
+  GBW = \omega_u = |A_{dc}| \cdot \omega_p = \frac{G_m}{C_{Ltot}}.
+\end{equation}
+
+![Bode plot of the small-signal transfer function of the CS OL amplifier.](Figures/Transfer_function.png){#fig-gain_bode_plot}
+
+As illustrated in @fig-gain_bode_plot, the gain magnitude at high frequency will settle to
+\begin{equation}
+  A_{\infty} \triangleq \lim_{s \to \infty} A(s) = \frac{C_F}{C_L+C_F},
+\end{equation}
+and the phase will turn to $-180^{\circ}$ because of the positive zero.
+
+# Minimum current for a given transconductance
+In this section we want to answer the following question:
+
+::: {.callout-tip}
+## Question
+What is the minimum bias current $I_b$ and transistor size (aspect ratio $W/L$) in order for the OL CS gain stage to achieve a given transconductance?
+:::
+
+To answer this question we first rewrite the current as
+\begin{equation}
+  I_b = I_{spec\Box} \cdot \frac{W}{L} \cdot IC
+\end{equation}
+and the transconductance as
+\begin{equation}
+  G_m = \frac{I_{spec\Box}}{n U_T} \cdot \frac{W}{L} \cdot g_{ms}(IC),
+\end{equation}
+where $g_{ms}(IC)$ is the normalized source transconductance which only depends on $IC$ according to
+\begin{equation}
+  g_{ms} \triangleq \frac{G_{ms}}{G_{spec}} = \frac{n\,G_m}{G_{spec}} = \frac{\sqrt{4 IC+1}-1}{2}
+\end{equation}
+for a long-channel transistor and
+\begin{equation}
+  g_{ms} = \frac{\sqrt{4 IC+1+(\lambda_C\,IC)^2}-1}{2+\lambda_c^2\,IC}
+\end{equation}
+for a short-channel transistor accounting for velocity saturation with parameter $\lambda_c$.
+
+We then need to solve the following set of equation for $I_b$ and $W/L$
+\begin{align}
+  G_m &= \frac{I_{spec\Box}}{n U_T} \cdot \frac{W}{L} \cdot g_{ms}(IC),\\
+  I_b &= I_{spec\Box} \cdot \frac{W}{L} \cdot IC.
+\end{align}
+This leads to the following normalized results
+\begin{align}
+  i_b &\triangleq \frac{I_b}{G_m \cdot n U_T} = \frac{IC}{g_{ms}},\\
+  AR &\triangleq \frac{W}{L} \cdot \frac{I_{spec\Box}}{G_m \cdot n U_T} = \frac{1}{g_{ms}}.
+\end{align}
+$i_b$ and $AR$ are plotted below for various values of $\lambda_c$
+
+```{python}
+#| label: fig-ib_ar_ic_constant_gm
+#| fig-cap: "Normalized bias current and aspect ratio versus inversion coefficient."
+
+Npts=101
+logICmin=-2
+logICmax=2
+ICmin=pow(10,logICmin)
+ICmax=pow(10,logICmax)
+IC=np.logspace(logICmin,logICmax,Npts,endpoint=True,base=10.0)
+ib0=np.zeros(Npts)
+ib0si=np.zeros(Npts)
+ib1=np.zeros(Npts)
+ib1si=np.zeros(Npts)
+ib2=np.zeros(Npts)
+ib2si=np.zeros(Npts)
+ar0=np.zeros(Npts)
+ar0si=np.zeros(Npts)
+ar1=np.zeros(Npts)
+ar1si=np.zeros(Npts)
+ar2=np.zeros(Npts)
+ar2si=np.zeros(Npts)
+lambdac=[0,0.3,1]
+
+for k in range(0,Npts):
+    ib0[k]=idgms_ic_long(IC[k])
+    ib0si[k]=sqrt(IC[k])
+    ib1[k]=idgms_ic(IC[k],lambdac[1])
+    ib1si[k]=lambdac[1]*IC[k]
+    ib2[k]=idgms_ic(IC[k],lambdac[2])
+    ib2si[k]=lambdac[2]*IC[k]
+    ar0[k]=1/gms_ic_long(IC[k])
+    ar0si[k]=1/sqrt(IC[k])
+    ar1[k]=1/gms_ic(IC[k],lambdac[1])
+    ar1si[k]=lambdac[1]
+    ar2[k]=1/gms_ic(IC[k],lambdac[2])
+    ar2si[k]=lambdac[2]
+
+fig, ax1 = plt.subplots()
+
+ax2 = ax1.twinx()
+ax1.loglog(IC,ib0si,'k--',linewidth=lw)
+ax1.loglog(IC,ib0,'r-')
+ax1.loglog(IC,ib1si,'k--',linewidth=lw)
+ax1.loglog(IC,ib1,'r-')
+ax1.loglog(IC,ib2si,'k--',linewidth=lw)
+ax1.loglog(IC,ib2,'r-')
+ax1.set_xlabel('Inversion Coefficient $IC$')
+ax1.set_xlim(ICmin,ICmax)
+ax1.set_ylabel('Normalized bias current $i_b$')
+ax1.set_ylim(0.1,100)
+ax1.annotate('$\\lambda_c=$' + f'{lambdac[0]:.0f}', size=10,
+             xy=(10, idgms_ic_long(10)), xycoords='data',
+             xytext=(-25, 25), textcoords='offset points',
+             bbox=dict(boxstyle='square,pad=0', fc='w', ec='none'),
+             arrowprops=dict(arrowstyle="-|>", shrinkA=0, capstyle='butt', ec='k', fc='k', joinstyle='miter'),
+             ha='right', va='bottom')
+ax1.annotate('$\\lambda_c=$' + f'{lambdac[1]:.1f}', size=10,
+             xy=(20, idgms_ic(20,lambdac[1])), xycoords='data',
+             xytext=(-25,25), textcoords='offset points',
+             bbox=dict(boxstyle='square,pad=0', fc='w', ec='none'),
+             arrowprops=dict(arrowstyle="-|>", shrinkA=0, capstyle='butt', ec='k', fc='k', joinstyle='miter'),
+             ha='right', va='bottom')
+ax1.annotate('$\\lambda_c=$' + f'{lambdac[2]:.0f}', size=10,
+             xy=(20, idgms_ic(20,lambdac[2])), xycoords='data',
+             xytext=(-25,25), textcoords='offset points',
+             bbox=dict(boxstyle='square,pad=0', fc='w', ec='none'),
+             arrowprops=dict(arrowstyle="-|>", shrinkA=0, capstyle='butt', ec='k', fc='k', joinstyle='miter'),
+             ha='right', va='bottom')
+ax1.annotate('', xy=(2e-2, 1.5), xycoords='data',
+             xytext=(20, 0), textcoords='offset points',
+             arrowprops=dict(arrowstyle="-|>", shrinkA=0, linewidth=3, capstyle='butt', ec='r', fc='r', joinstyle='miter'))
+
+ax2.loglog(IC,ar0si,'k--',linewidth=lw)
+ax2.loglog(IC,ar0,'b-')
+ax2.loglog(IC,ar1si,'k--',linewidth=lw)
+ax2.loglog(IC,ar1,'b-')
+ax2.loglog(IC,ar2si,'k--',linewidth=lw)
+ax2.loglog(IC,ar2,'b-')
+ax2.set_ylabel('Normalized $W/L$ $AR$', va='bottom', rotation=270)
+ax2.set_ylim(0.1,100)
+ax2.annotate('$\\lambda_c=$' + f'{lambdac[0]:.0f}', size=10,
+             xy=(8, 1/gms_ic_long(8)), xycoords='data',
+             xytext=(-15, -15), textcoords='offset points',
+             bbox=dict(boxstyle='square,pad=0', fc='w', ec='none'),
+             arrowprops=dict(arrowstyle="-|>", shrinkA=0, capstyle='butt', ec='k', fc='k', joinstyle='miter'),
+             ha='right', va='top')
+ax2.annotate('$\\lambda_c=$' + f'{lambdac[1]:.1f}', size=10,
+             xy=(20, 1/gms_ic(20,lambdac[1])), xycoords='data',
+             xytext=(-25, -25), textcoords='offset points',
+             bbox=dict(boxstyle='square,pad=0', fc='w', ec='none'),
+             arrowprops=dict(arrowstyle="-|>", shrinkA=0, capstyle='butt', ec='k', fc='k', joinstyle='miter'),
+             ha='right', va='top')
+ax2.annotate('$\\lambda_c=$' + f'{lambdac[2]:.0f}', size=10,
+             xy=(50, 1/gms_ic(50,lambdac[2])), xycoords='data',
+             xytext=(-15, 15), textcoords='offset points',
+             bbox=dict(boxstyle='square,pad=0', fc='w', ec='none'),
+             arrowprops=dict(arrowstyle="-|>", shrinkA=0, capstyle='butt', ec='k', fc='k', joinstyle='miter'),
+             ha='right', va='bottom')
+ax2.annotate('', xy=(8e-2, 30), xycoords='data',
+             xytext=(-20, 0), textcoords='offset points',
+             arrowprops=dict(arrowstyle="-|>", shrinkA=0, linewidth=3, capstyle='butt', ec='b', fc='b', joinstyle='miter'))
+
+#saveFigures(savePath, 'CS_OL_ib_ar_ic_gm')
+plt.show()
+```
+
+From @fig-ib_ar_ic_constant_gm, we see that we can reduce the current $i_b$ when moving from strong inversion to moderate inversion reaching a minimum in weak inversion. The loss of transconductance resulting from a reduction of $IC$ is compensated by an increase of $W/L$ as shown by the blue curves, resulting in a very large transistor and a drastic area increase. Moderate inversion turns out to be a good trade-off between low current and acceptable area for achieving a given transconductance.
+
+# Minimum current for a given gain-bandwidth product  (no self-loading)
+We now will answer the following question:
+
+::: {.callout-tip}
+## Question
+What is the minimum bias current $I_b$ and transistor size (aspect ratio $W/L$) in order for the OL CS gain stage to achieve a given gain-bandwidth product for a given load capacitance neglecting the effect of self-loading?
+:::
+
+We first rewrite the gain-bandwidth as
+\begin{equation}
+  \omega_u = \frac{G_m}{C_L} = \omega_L \cdot \frac{W}{L} \cdot g_{ms},
+\end{equation}
+where
+\begin{equation}
+  \omega_L \triangleq \frac{I_{spec\Box}}{n U_T \cdot C_{Ltot}}.
+\end{equation}
+
+To answer this question we need to solve the following set of equations for $I_b$ and $W/L$
+\begin{align}
+  \omega_u &= \omega_L \cdot \frac{W}{L} \cdot g_{ms},\\
+  G_m &= \frac{I_{spec\Box}}{n U_T} \cdot \frac{W}{L} \cdot g_{ms}(IC),\\
+  I_b &= I_{spec\Box} \cdot \frac{W}{L} \cdot IC.
+\end{align}
+Since the load capacitance $C_L$ is assumed constant, the problem is similar to imposing a given transconductance
+With a slightly different normalization we get the same normalized functions as before
+\begin{align}
+  i_b &\triangleq \frac{I_b}{G_m \cdot n U_T} \cdot \frac{1}{\Omega} = \frac{IC}{g_{ms}},\\
+  AR &\triangleq \frac{W}{L} \cdot \frac{1}{\Omega} = \frac{1}{g_{ms}}.
+\end{align}
+with
+\begin{equation}
+  \Omega \triangleq \frac{\omega_u}{\omega_L}.
+\end{equation}
+
+$i_b$ and $AR$ are plotted @fig-ib_ar_ic_constant_gm for various values of $\lambda_c$. A different normalization reduces to the same trade-off than constant $G_m$. Moderate inversion again turns out to be a good trade-off between low current and acceptable area for achieving a given gain-bandwidth product.
+
+When moving to moderate and weak inversion, the transistor can become very large. The parasitic capacitance at the transistor drain can then no more be ignored. We will analyze the impact of self-loading in the next section.
+
+# Minimum current for a given gain-bandwidth product including self-loading
+## Analysis
+
+![Schematic of the open-loop common-source (CS) gain stage including the self-loading capacitances at the drain.](Figures/CS_OL_self-loading.png){#fig-cs_ol_self_loading_schematic}
+
+When optimizing the OL CS amplifier for low current consumption, the transistor is often biased in moderate or even weak inversion leading to large transistor and therefore an increased output capacitance due to the self-loading from the parasitic capacitances connected to the drain. We now want to answer the following question:
+
+::: {.callout-tip}
+## Question
+What is the minimum bias current $I_b$ and transistor size (aspect ratio $W/L$) in order for the OL CS gain stage to achieve a given gain-bandwidth product accounting for the effect of self-loading?
+:::
+
+As shown in @fig-cs_ol_self_loading_schematic, the self-loading capacitances include the junction capacitance at the drain C_{BDj} and the feedback capacitance $C_F$. The junction capacitance $C_{BDj}$ is given by
+\begin{equation}
+  C_{DBJ} = AD \cdot C_J + (PD - W) \cdot C_{JSWSTI} + W \cdot C_{JSWGAT},
+\end{equation}
+where $AD$ and $PD$ are the drain diffusion area and perimeter, respectively, which are given by
+\begin{align}
+  AD &= W \cdot Z_{dif},\\
+  PD &= 2\,(W + Z_{dif}),
+\end{align}
+with $Z_{dif}$ the diffusion width (i.e. $Z_{dif} = 2\,H_{dif}$). Paramter $C_J$ is the bottom junction capacitance, $C_{JSWSTI}$ the side-wall junction capacitance along the STI edge and $C_{JSWSTI}$ the side-wall junction capacitance along the gate edge. The latter are bias-dependent since they depend on the drain-to-bulk voltage, but we can approximate them by their zero-bias values $C_{JSWSTI0}$, $C_{JSWSTI}$ and $C_{JSWGAT0}$ which are larger.
+
+We can split the junction capacitance $C_{DBJ}$ among a component that scales with $W$ and another that remains constant
+\begin{equation}
+  C_{DBJ} = C_{DBJW} \cdot W + C_{DBJ0},
+\end{equation}
+where
+\begin{align}
+  C_{DBJW} &= Z_{dif} \cdot C_J + C_{JSWSTI} + C_{JSWGAT},\\
+  C_{DBJ0} &= 2\,Z_{dif} \cdot C_{JSWSTI}.
+\end{align}
+
+The feedback capacitance is due to the overlap and fringing field capacitance which scale with $W$
+\begin{equation}
+  C_F = C_{GDe} \cdot W,
+\end{equation}
+where $C_{GDe}$ is the extrinsic capacitance per unit width which is given by
+\begin{equation}
+  C_{GDe} = C_{GDo} + C_{GDf}.
+\end{equation}
+where $C_{GDo}$ is the overlap capacitance per unit width and $C_{GDf}$ is the fringing field capacitance per unit width.
+
+The total transistor parasitic capacitance at the drain can then be written as
+\begin{equation}
+  C_D = C_{D0} + C_{DW} \cdot W.
+\end{equation}
+with
+\begin{align}
+  C_{DW} &= Z_{dif} \cdot C_J + C_{JSWSTI} + C_{JSWGAT} + C_{GDo} + C_{GDf},\\
+  C_{D0} &= C_{DBJ0} = 2\,Z_{dif} \cdot C_{JSWSTI}.
+\end{align}
+The total load capacitance at the output is then given by
+\begin{equation}
+  C_{out} = C_{L0} + C_{DBJ} + C_F
+\end{equation}
+which can be split into a compoenent that scales with $W$ and a constant part
+\begin{equation}
+  C_{out} = C_{DW} \cdot W + C_{out0}
+\end{equation}
+with
+\begin{equation}
+  C_{out0} = C_{L0} + C_{D0}.
+\end{equation}
+
+In order to achieve a certain bandwidth we need to have a certain transconductance for a certain load capacitance. In order to maximize the current efficiency, we should bias the transistor in weak inversion. This leads to a large transistor and therefore large parasitic capacitances which will impact the bandwidth. Imposing the bandwidth, at some point the capacitance becomes so large that it is no more possible to achieve the required transconductance in weak inversion for the desired bandwidth. Does this mean that there is a minimum current for the OL CS amplifier to achieve a certain gain-bandwidth product?
+
+To answer this question we need to solve the following set of equations for $I_b$ and $W$ assuming a given length $L$
+
+\begin{align}
+  \omega_u &= \frac{G_m}{C_{out}},\\
+  G_m &= \frac{I_{spec\Box}}{n U_T} \cdot \frac{W}{L} \cdot g_{ms}(IC),\\
+  C_{out} &= C_{DW} \cdot W + C_{out0},\\
+  I_b &= I_{spec\Box} \cdot \frac{W}{L} \cdot IC.
+\end{align}
+
+Solving for $I_b$ and $W/L$, assuming a long-channel (i.e. $\lambda_c = 0$), leads to the following normalized solutions
+\begin{align}
+  i_b &\triangleq \frac{I_b}{I_{pec\Box} \cdot \Omega} = \frac{IC}{g_{ms}(IC) - \Theta},\\
+  AR &\triangleq \frac{W/L}{\Omega} =\frac{1}{g_{ms} - \Theta},
+\end{align}
+where
+\begin{align}
+  \Omega &\triangleq \frac{\omega_u}{\omega_L},\\
+  \omega_L &\triangleq \frac{I_{spec\Box}}{n U_T \cdot C_{out0}},\\
+  \Theta &\triangleq \frac{\omega_u}{\omega_W},\\
+  \omega_W &\triangleq \frac{I_{spec\Box}}{n U_T \cdot C_{DW} \cdot L}.
+\end{align}
+
+The normalized current $i_b$ is plotted @fig-ib_ar_ic_gbw_self_loading for different values of $\Theta$.
+
+```{python}
+#| label: fig-ib_ar_ic_gbw_self_loading
+#| fig-cap: "Normalized bias current and aspect ratio versus inversion coefficient including the self-loading capacitances at the drain."
+
+def ICopt_theta(theta):
+    return (sqrt(theta*(1+theta))+theta+0.5)**2-0.25
+
+def ibopt_theta(theta):
+    return 1+2*theta+2*sqrt(theta*(1+theta))
+
+Npts=1001
+logICmin=-2
+logICmax=2
+ICmin=pow(10,logICmin)
+ICmax=pow(10,logICmax)
+IC=np.logspace(logICmin,logICmax,Npts,endpoint=True,base=10.0)
+ib0=np.zeros(Npts)
+ib0si=np.zeros(Npts)
+ib1=np.zeros(Npts)
+ib2=np.zeros(Npts)
+ar0=np.zeros(Npts)
+ar0si=np.zeros(Npts)
+ar1=np.zeros(Npts)
+ar2=np.zeros(Npts)
+theta=[0,0.03,0.1]
+thetaopt=np.logspace(-4,1,Npts,endpoint=True,base=10.0)
+ICopt=np.zeros(Npts)
+ibopt=np.zeros(Npts)
+Ncurves=len(theta)
+ICop=np.zeros(Ncurves)
+ibop=np.zeros(Ncurves)
+
+for m in range(1,Ncurves):
+    ICop[m]=ICopt_theta(theta[m])
+    ibop[m]=ibopt_theta(theta[m])
+
+for k in range(0,Npts):
+    ib0[k]=ib_ic_long(IC[k],theta[0])
+    ib0si[k]=sqrt(IC[k])
+    ib1[k]=ib_ic_long(IC[k],theta[1])
+    ib2[k]=ib_ic_long(IC[k],theta[2])
+    ar0[k]=ar_ic_long(IC[k],theta[0])
+    ar0si[k]=1/sqrt(IC[k])
+    ar1[k]=ar_ic_long(IC[k],theta[1])
+    ar2[k]=ar_ic_long(IC[k],theta[2])
+    ICopt[k]=ICopt_theta(thetaopt[k])
+    ibopt[k]=ibopt_theta(thetaopt[k])
+
+fig, ax1 = plt.subplots()
+ax2 = ax1.twinx()
+ax1.loglog(ICop,ibop,'ro', markersize=5)
+ax1.loglog(IC,ib0si,'k--',linewidth=lw)
+ax1.loglog([theta[1],theta[1]],[1e-1,1e2],'k--',linewidth=lw)
+ax1.loglog([theta[2],theta[2]],[1e-1,1e2],'k--',linewidth=lw)
+ax1.loglog(IC,ib0,'r-')
+ax1.loglog(IC,ib1,'r-')
+ax1.loglog(IC,ib2,'r-')
+ax1.loglog(ICopt,ibopt,'r--')
+ax1.set_xlabel('Inversion Coefficient $IC$')
+ax1.set_xlim(ICmin,ICmax)
+ax1.set_ylabel('Normalized bias current $i_b$')
+ax1.set_ylim(0.1,100)
+ax1.annotate('$\\Theta=$' + f'{theta[0]:.0f}', size=10,
+             xy=(0.017, ib_ic_long(0.017,theta[0])), xycoords='data',
+             xytext=(0, -30), textcoords='offset points',
+             bbox=dict(boxstyle='square,pad=0', fc='w', ec='none'),
+             arrowprops=dict(arrowstyle="-|>", shrinkA=0, capstyle='butt', ec='k', fc='k', joinstyle='miter'),
+            ha='center', va='top')
+ax1.annotate('$\\Theta=$' + f'{theta[1]:.2f}', size=10,
+             xy=(0.08, ib_ic_long(0.08,theta[1])), xycoords='data',
+             xytext=(0, -35), textcoords='offset points',
+             bbox=dict(boxstyle='square,pad=0', fc='w', ec='none'),
+             arrowprops=dict(arrowstyle="-|>", shrinkA=0, capstyle='butt', ec='k', fc='k', joinstyle='miter'),
+             ha='center', va='top')
+ax1.annotate('$\\Theta=$' + f'{theta[2]:.1f}', size=10,
+             xy=(0.3, ib_ic_long(0.3,theta[2])), xycoords='data',
+             xytext=(0, -35), textcoords='offset points',
+             bbox=dict(boxstyle='square,pad=0', fc='w', ec='none'),
+             arrowprops=dict(arrowstyle="-|>", shrinkA=0, capstyle='butt', ec='k', fc='k', joinstyle='miter'),
+             ha='center', va='top')
+ax1.annotate('', xy=(2e-2, 3), xycoords='data',
+             xytext=(20, 0), textcoords='offset points',
+             arrowprops=dict(arrowstyle="-|>", shrinkA=0, linewidth=3, capstyle='butt', ec='r', fc='r', joinstyle='miter'))
+ax1.text(30, 70, '$\\lambda_c = 0$', ha='center', va='top', size=10,
+         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+
+ax2.loglog(IC,ar0si,'k--',linewidth=lw)
+ax2.loglog(IC,ar0,'b-')
+ax2.loglog(IC,ar1,'b-')
+ax2.loglog(IC,ar2,'b-')
+ax2.set_ylabel('Normalized $W/L$ $AR$', va='bottom', rotation=270)
+ax2.set_ylim(0.1,100)
+ax2.annotate('$\\Theta=$' + f'{theta[0]:.0f}', size=10,
+             xy=(0.017, ar_ic_long(0.017,theta[0])), xycoords='data',
+             xytext=(0, -30), textcoords='offset points',
+             bbox=dict(boxstyle='square,pad=0', fc='w', ec='none'),
+             arrowprops=dict(arrowstyle="-|>", shrinkA=0, capstyle='butt', ec='k', fc='k', joinstyle='miter'),
+             ha='center', va='top')
+ax2.annotate('$\\Theta=$' + f'{theta[1]:.2f}', size=10,
+             xy=(0.08, ar_ic_long(0.08,theta[1])), xycoords='data',
+             xytext=(25,25), textcoords='offset points',
+             bbox=dict(boxstyle='square,pad=0', fc='w', ec='none'),
+             arrowprops=dict(arrowstyle="-|>", shrinkA=0, capstyle='butt', ec='k', fc='k', joinstyle='miter'),
+             ha='left', va='bottom')
+ax2.annotate('$\\Theta=$' + f'{theta[2]:.1f}', size=10,
+             xy=(0.22, ar_ic_long(0.22,theta[2])), xycoords='data',
+             xytext=(25,25), textcoords='offset points',
+             bbox=dict(boxstyle='square,pad=0', fc='w', ec='none'),
+             arrowprops=dict(arrowstyle="-|>", shrinkA=0, capstyle='butt', ec='k', fc='k', joinstyle='miter'),
+             ha='left', va='bottom')
+ax2.annotate('', xy=(50, 3e-1), xycoords='data',
+             xytext=(-20, 0), textcoords='offset points',
+             arrowprops=dict(arrowstyle="-|>", shrinkA=0, linewidth=3, capstyle='butt', ec='b', fc='b', joinstyle='miter'))
+
+#saveFigures(savePath, 'CS_OL_ib_ar_ic_gm_self')
+plt.show()
+```
+
+```{python}
+#| label: fig-ib_ic_gbw_self_loading
+#| fig-cap: "Normalized bias current versus inversion coefficient including the self-loading capacitances at the drain."
+
+def ICopt_theta(theta):
+    return (sqrt(theta*(1+theta))+theta+0.5)**2-0.25
+
+def ibopt_theta(theta):
+    return 1+2*theta+2*sqrt(theta*(1+theta))
+
+theta=[0,0.01,0.03,0.1,0.3,1]
+Npts=1001
+Ncurves=len(theta)
+IClim=np.zeros(Ncurves)
+colors=plt.cm.rainbow(np.linspace(0, 1, Ncurves))
+logICmin=-2
+logICmax=2
+ICmin=pow(10,logICmin)
+ICmax=pow(10,logICmax)
+IC=np.logspace(logICmin,logICmax,Npts,endpoint=True,base=10.0)
+
+ib=np.zeros(Npts)
+ibopt=np.zeros(Npts)
+
+for m in range(0,Ncurves):
+    IClim[m]=theta[m]*(1+theta[m])
+    ICop=ICopt_theta(theta[m])
+    ibop=ibopt_theta(theta[m])
+    for k in range(0,Npts):
+        ibopt[k]=sqrt(4*IC[k]+1)
+        if IC[k]<IClim[m]:
+            ib[k]=float("nan")
+        else:
+            ib[k]=ib_ic_long(IC[k],theta[m])
+    plt.loglog([IClim[m],IClim[m]],[1,1e2],'k--', linewidth=lw)
+    plt.loglog(IC,ib,color=colors[m], label='$\\Theta =$' + f'{theta[m]:.2f}')
+    plt.loglog(ICop,ibop,'ro', markersize=6)
+
+plt.loglog([1,1e2],[1,1e1],'k--', linewidth=lw)
+plt.loglog([1/4,1e2],[1,20],'k--', linewidth=lw)
+plt.loglog(IC,ibopt,'r--')
+plt.xlim(ICmin,ICmax)
+#plt.xticks(np.arange(0,11,1))
+plt.xlabel('$IC$')
+plt.ylim(1,1e2)
+#plt.yticks(np.arange(0,1.1,0.1))
+plt.ylabel('Normalized bias current $i_b$')
+#plt.legend(loc='lower right')
+plt.legend(loc='center left', fontsize=10, bbox_to_anchor=(1, 0.5))
+plt.text(0.74, 0.95, 'No VS ($\\lambda_c = 0$)', ha='left', va='top', size=10, transform=plt.gca().transAxes,
+         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+#saveFigures(savePath, 'CS_OL_ib_vs_IC_self_no_VS')
+plt.show()
+```
+
+From @fig-ib_ar_ic_gbw_self_loading and @fig-ib_ic_gbw_self_loading, we clearly see that there is a minimum current for a given value of parameter $\Theta$. We can find the optimum inversion coefficient $IC_{opt}$ which is given by
+\begin{equation}\label{eqn:icopt}
+  IC_{opt} = \left(\sqrt{\Theta \cdot (1+\Theta)} + \Theta + \frac{1}{2}\right)^2 - \frac{1}{4}
+  = 2 \Theta \cdot (1+\Theta) + (1+2\Theta) \cdot \sqrt{\Theta \cdot (1+\Theta)},
+\end{equation}
+which for $\Theta \ll 1$ simplifies to
+\begin{equation}
+  IC_{opt} \cong 2 \Theta + \sqrt{\Theta}.
+\end{equation}
+
+From @fig-ib_ar_ic_gbw_self_loading and @fig-ib_ic_gbw_self_loading, we also see that there is a minimum inversion coefficient $IC_{lim}$ below which the desired gain-bandwidth product $GBW$ can no more be achieved
+\begin{equation}
+  IC_{lim} = \Theta \cdot (1+\Theta) \cong \Theta,
+\end{equation}
+which is about equal to $\Theta$ for small values of $\Theta$.
+
+The optimum normalized current is given by
+\begin{equation}
+  i_{bopt} \triangleq i_b(IC_{opt}) = 1 + 2\Theta +2\sqrt{\Theta \cdot (1+\Theta)}.
+\end{equation}
+
+Parameter $\Theta$ can be eliminated from equations \eqref{eq:ibopt} and \eqref{eq:icopt} resulting in an expression of $i_{opt}$ in terms of $IC_{opt}$
+\begin{equation}
+  i_{bopt} = \sqrt{4 IC_{opt} + 1}
+\end{equation}
+which is plotted in @fig-ib_ic_gbw_self_loading as a dashed red line.
+
+The optimum normalized current is given by
+\begin{equation}\label{eqn:ibopt}
+  i_{bopt} \triangleq i_b(IC_{opt}) = 1 + 2\Theta +2\sqrt{\Theta \cdot (1+\Theta)}.
+\end{equation}
+Parameter $\Theta$ can be eliminated from equations \eqref{eqn:ibopt} and \eqref{eqn:icopt} resulting in an expression of $i_{bopt}$ in terms of $IC_{opt}$
+\begin{equation}
+  i_{bopt} = \sqrt{4 IC_{opt} + 1}
+\end{equation}
+which is plotted in @fig-ib_ic_gbw_self_loading as a dashed red line.
+
+```{python}
+#| label: fig-ar_ic_gbw_self_loading
+#| fig-cap: "Normalized aspect ratio versus inversion coefficient including the self-loading capacitances at the drain."
+
+def ARopt_theta(theta):
+    if theta==0:
+        ARopt=float("nan")
+    else:
+        ARopt=1/sqrt(theta*(1+theta))
+    return ARopt
+
+theta=[0,0.01,0.03,0.1,0.3,1]
+Npts=1001
+Ncurves=len(theta)
+IClim=np.zeros(Ncurves)
+colors=plt.cm.rainbow(np.linspace(0, 1, Ncurves))
+logICmin=-2
+logICmax=2
+ICmin=pow(10,logICmin)
+ICmax=pow(10,logICmax)
+IC=np.logspace(logICmin,logICmax,Npts,endpoint=True,base=10.0)
+
+AR=np.zeros(Npts)
+ARopt=np.zeros(Npts)
+
+for k in range(0,Npts):
+    ARopt[k]=sqrt(4*IC[k]+1)/IC[k]
+
+plt.loglog([1e-2,1],[1e2,1],'k--', linewidth=lw)
+plt.loglog([1,1e2],[1,1e-1],'k--', linewidth=lw)
+plt.loglog([1/4,1e2],[4,0.2],'k--', linewidth=lw)
+plt.loglog(IC,ARopt,'r--')
+
+for m in range(0,Ncurves):
+    IClim[m]=theta[m]*(1+theta[m])
+    ICop=ICopt_theta(theta[m])
+    ARop=ARopt_theta(theta[m])
+    for k in range(0,Npts):
+#        ARopt[k]=sqrt(4*IC[k]+1)/IC[k]
+        if IC[k]<IClim[m]:
+            AR[k]=float("nan")
+        else:
+#            AR[k]=1/(gms_ic(IC[k])-theta[m])
+            AR[k]=ar_ic_long(IC[k],theta[m])
+    plt.loglog([IClim[m],IClim[m]],[1e-1,1e2],'k--', linewidth=lw)
+    plt.loglog(IC, AR, color=colors[m], label='$\\Theta =$' + f'{theta[m]:.2f}')
+    plt.loglog(ICop,ARop,'ro', markersize=6)
+
+plt.xlim(ICmin,ICmax)
+#plt.xticks(np.arange(0,11,1))
+plt.xlabel('$IC$')
+plt.ylim(1e-1,1e2)
+#plt.yticks(np.arange(0,1.1,0.1))
+plt.ylabel('Normalized $W/L$')
+#plt.legend(loc='lower right')
+plt.legend(loc='center left', fontsize=10, bbox_to_anchor=(1, 0.5))
+plt.text(0.74, 0.95, 'No VS ($\\lambda_c = 0$)', ha='left', va='top', size=10, transform=plt.gca().transAxes,
+         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+#saveFigures(savePath, 'CS_OL_AR_vs_IC_self_no_VS')
+plt.show()
+```
+
+From @fig-ar_ic_gbw_self_loading, we see from the above plot that the transistor width increases first as $1/\sqrt{IC}$ in strong inversion and then as $1/IC$ in weak inversion making the transistor quickly very large until $IC$ reaches $IC_{lim}$ where the width becomes infinity. The dots correspond to the $AR$ obtained for $IC_{opt}$.
+
+The above analysis was done assuming a long-channel transistor (i.e. $\lambda_c = 0$). There is unfortunatly no closed form expression for the optimum inversion coefficient when including the short-channel effects (i.e. setting $\lambda_c > 0$). However we can plot the normalized bias current $i_b$ versus $IC$ accounting for the short-channel effects. The result is plotted in @fig-ib_ic_gbw_short_channel. We can observe that the optimum inversion coefficient $IC_{opt}$ corresponding to the minimum bias current does change significantly for $\lambda_c$ varying from $0$ to $1$ (the latter value being beyond the usual values of $\lambda_c$). The optimum inversion coefficient $IC_{opt}$ is plotted versus the parameter $\Theta$ in @fig-icopt_theta_gbw_short_channel for $\lambda_c$ ranging from $0$ to $1$. From @fig-icopt_theta_gbw_short_channel, we can obeserve that the impact of short-channel effects is rather limited particularly for reasonable values of $\lambda_c$ ($\lambda_c$ is rarely larger than 0.4). We can therefore use the long-channel expression of the optimum inversion coefficient $IC_{opt}$ and get close to the minimum bias current even for short channel transistors.
+
+```{python}
+#| label: fig-ib_ic_gbw_short_channel
+#| fig-cap: "Normalized bias current versus inversion coefficient for various velocity saturation parameter $\\lambda_c$."
+
+from scipy.optimize import fsolve
+
+def flim(IC, lc, theta):
+    return gms_ic(IC,lc)-theta
+
+theta=0.1
+IClim0=theta*(1+theta)
+lambdac=[0,0.1,0.2,0.3,0.5,0.7,1]
+Npts=1001
+Ncurves=len(lambdac)
+IClim=np.zeros(Ncurves)
+colors=plt.cm.rainbow(np.linspace(0, 1, Ncurves))
+logICmin=-2
+logICmax=2
+ICmin=pow(10,logICmin)
+ICmax=pow(10,logICmax)
+IC=np.logspace(logICmin,logICmax,Npts,endpoint=True,base=10.0)
+
+ib=np.zeros(Npts)
+
+for m in range(0,Ncurves):
+    IClim[m]=fsolve(flim,IClim0,args=(lambdac[m],theta))[0]
+#    print(IClim[m])
+    for k in range(0,Npts):
+        if IC[k]<IClim[m]:
+            ib[k]=float("nan")
+        else:
+            ib[k]=IC[k]/(gms_ic(IC[k],lambdac[m])-theta)
+    plt.loglog(IC, ib, color=colors[m], label='$\\lambda_c =$' + f'{lambdac[m]:.1f}')
+
+plt.loglog([IClim0,IClim0],[1,1e2],'k--', linewidth=lw)
+plt.loglog([1,1e2],[1,1e1],'k--', linewidth=lw)
+plt.loglog([1,1e2],[1,1e2],'k--', linewidth=lw)
+plt.xlim(ICmin,ICmax)
+#plt.xticks(np.arange(0,11,1))
+plt.xlabel('$IC$')
+plt.ylim(1,1e2)
+#plt.yticks(np.arange(0,1.1,0.1))
+plt.ylabel('Normalized bias current $i_b$')
+#plt.legend(loc='lower right')
+plt.legend(loc='center left', fontsize=10, bbox_to_anchor=(1, 0.5))
+textstr='With VS and for $\\Theta = $' + f'{theta:.1f}'
+plt.text(0.5, 0.95, textstr, ha='center', va='top', size=10, transform=plt.gca().transAxes,
+         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+#saveFigures(savePath, 'CS_opt_ib_vs_IC_with_VS')
+plt.show()
+```
+
+
+```{python}
+#| label: fig-icopt_theta_gbw_short_channel
+#| fig-cap: "Optimum inversion coefficient versus $\\Theta$ for different velocity saturation parameter $\\lambda_c$."
+
+from scipy.optimize import fmin
+
+def ICopt_theta(theta):
+    return (sqrt(theta*(1+theta))+theta+0.5)**2-0.25
+
+def ICmin(IC,lc,theta):
+    num=IC
+    den=gms_ic(IC,lc)-theta
+    return num/den
+
+lambdac=[0.1,0.2,0.3,0.4,0.5,0.6,0.7]
+Ncurves=len(lambdac)
+colors=plt.cm.rainbow(np.linspace(0, 1, Ncurves))
+Npts=101
+logthetamin=-2
+logthetamax=0
+thetamin=pow(10,logthetamin)
+thetamax=pow(10,logthetamax)
+theta=np.logspace(logthetamin,logthetamax,Npts,endpoint=True,base=10.0)
+
+ICopt0=np.zeros(Npts)
+ICopt=np.zeros(Npts)
+
+for k in range(0,Npts):
+    ICopt0[k]=ICopt_theta(theta[k])
+
+plt.loglog(theta, ICopt0, 'k--', linewidth=2, label='$\\lambda_c = 0$')
+
+for m in range(0,Ncurves):
+    for k in range(0,Npts):
+        ICopt[k]=fmin(ICmin,ICopt0[k],args=(lambdac[m],theta[k]),xtol=1e-3,ftol=1e-6,disp=0)[0]
+#        print(ICopt[k])
+    plt.loglog(theta, ICopt, color=colors[m], linewidth=1, label='$\\lambda_c =$' + f'{lambdac[m]:.1f}')
+
+plt.xlim(thetamin,thetamax)
+#plt.xticks(np.arange(0,11,1))
+plt.xlabel('$\\Theta$')
+plt.ylim(1e-1,1e1)
+#plt.yticks(np.arange(0,1.1,0.1))
+plt.ylabel('$IC_{opt}$')
+#plt.legend(loc='lower right')
+plt.legend(loc='center left', fontsize=10, bbox_to_anchor=(1, 0.5))
+#saveFigures(savePath, 'CS_ICopt_theta_with_VS')
+plt.show()
+```
+
+
+## Examples
+### Process
+We want to size a CS gain stage to achieve a certain gain-bandwidth $GBW$ for a given transistor length $L$ and constant load capacitance  $C_{L0}$. We select the open source IHP 130nm CMOS technology @bib:ihp:2025. The PDK uses the PSP 103.6 MOSFET compact model for the MOS part of the technology @bib:psp103.6:2017. The process parameters are given in @tbl-process_param and the transistor parameters in @tbl-mos_param.
+
+::: {.callout-note}
+The parameters given in @tbl-mos_param are a mix of parameters taken from the PSP model library and others (mostly the sEKV parameters) extracted from $I_D$-$V_G$ and $I_D$-$V_D$ data (this is done in another notebook).
+:::
+
+```{python}
+#| label: tbl-process_param
+#| tbl-cap: Process parameters.
+
+#%run ihp130g2_sekv.py
+from ihp130g2_sekv import *
+
+table = [["$t_{{ox}}$",f'{tox/1e-9:.3f}',"$nm$","SiO~2~ oxyde thickness"],
+         ["$C_{{ox}}$",f'{Cox*1e3:.3f}',"$\\frac{{fF}}{{\\mu m^2}}$","Oxyde capacitance per unit area"],
+         ["$V_{{DD}}$",f'{VDD:.1f}',"$V$", "Nominal supply voltage"],
+         ["$L_{{min}}$",f'{Lmin/1e-9:.0f}',"$nm$","Minimum drawn gate length"],
+         ["$W_{{min}}$",f'{Wmin/1e-9:.0f}',"$nm$","Minimum drawn gate width"],
+         ["$z_1$",f'{z1/1e-9:.0f}',"$nm$","Minimum outer diffusion width"],
+         ["$z_2$",f'{z2/1e-9:.0f}',"$nm$","Minimum diffusion width between two fingers"]
+        ]
+Markdown(tabulate(
+  table,
+  headers=["Parameter","Value","Unit","Comment"],
+  numalign="center",
+  stralign="center",
+  colalign=("center", "center", "center","left")
+))
+```
+
+```{python}
+#| label: tbl-mos_param
+#| tbl-cap: Transistors parameters.
+
+table = [["Length and width correction parameters for current"],
+         ["$DL$",f'{DLn/1e-9:.0f}',f'{DLp/1e-9:.0f}',"$nm$"],
+         ["$DW$",f'{DWn/1e-9:.0f}',f'{DWp/1e-9:.0f}',"$nm$"],
+         ["Length and width correction for intrinsic and overlap capacitances"],
+         ["$DLCV$",f'{DLCVn/1e-9:.0f}',f'{DLCVp/1e-9:.0f}',"$nm$"],
+         ["$DWCV$",f'{DWCVn/1e-9:.0f}',f'{DWCVp/1e-9:.0f}',"$nm$"],
+         ["Length and width correction parameter for fringing capacitances"],
+         ["$DLGCV$",f'{DLGCVn/1e-9:.0f}',f'{DLGCVp/1e-9:.0f}',"$nm$"],
+         ["$DWGCV$",f'{DWGCVn/1e-9:.0f}',f'{DWGCVp/1e-9:.0f}',"$nm$"],
+         ["Long-channel sEKV parameters parameters"],
+         ["$n$",f'{n0n:.2f}',f'{n0p:.2f}',"-"],
+         ["$I_{{spec\\Box}}$",f'{Ispecsqn/1e-9:.0f}',f'{Ispecsqp/1e-9:.0f}',"$nA$"],
+         ["$V_{{T0}}$",f'{VT0n/1e-3:.0f}',f'{VT0p/1e-3:.0f}',"$mV$"],
+         ["Short-channel sEKV parameters parameters"],
+         ["$L_{{sat}}$",f'{Lsatn/1e-9:.3f}',f'{Lsatp/1e-9:.3f}',"$nm$"],
+         ["$\\lambda$",f'{lambdan*1e-6:.3f}',f'{lambdap*1e-6:.3f}',"$\\frac{{V}}{{\\mu m}}$"],
+         ["Junction capacitances parameters"],
+         ["$C_J$",f'{CJn*1e3:.3f}',f'{CJp*1e3:.3f}',"$\\frac{{fF}}{{\mu m^2}}$"],
+         ["$C_{{JSWSTI}}$",f'{CJSWSTIn*1e9:.3f}',f'{CJSWSTIp*1e9:.3f}',"$\\frac{{fF}}{{\\mu m}}$"],
+         ["$C_{{JSWGAT}}$",f'{CJSWGATn*1e9:.3f}',f'{CJSWGATp*1e9:.3f}',"$\\frac{{fF}}{{\\mu m}}$"],
+         ["Overlap capacitances parameters"],
+         ["$C_{{GSo}}$",f'{CGSOn*1e9:.3f}',f'{CGSOp*1e9:.3f}',"$\\frac{{fF}}{{\\mu m}}$"],
+         ["$C_{{GDo}}$",f'{CGDOn*1e9:.3f}',f'{CGDOp*1e9:.3f}',"$\\frac{{fF}}{{\\mu m}}$"],
+         ["$C_{{GBo}}$",f'{CGBOn*1e9:.3f}',f'{CGBOp*1e9:.3f}',"$\\frac{{fF}}{{\\mu m}}$"],
+         ["Fringing capacitances parameters"],
+         ["$C_{{GSf}}$",f'{CGSFn*1e9:.3f}',f'{CGSFp*1e9:.3f}',"$\\frac{{fF}}{{\\mu m}}$"],
+         ["$C_{{GDf}}$",f'{CGDFn*1e9:.3f}',f'{CGDFp*1e9:.3f}',"$\\frac{{fF}}{{\\mu m}}$"],
+         ["Flicker noise parameters"],
+         ["$K_F$",f'{KFn:.3e}',f'{KFp:.3e}',"$V A s$"],
+         ["$AF$",f'{AFn:.1f}',f'{AFp:.1f}',"-"],
+         ["$\\rho$",f'{rhon:.3e}',f'{rhop:.3e}',"$\\frac{{V m^2}}{{A s}}$"]
+        ]
+Markdown(tabulate(
+  table,
+  headers=["Parameter","nMOS","pMOS","Unit"],
+  numalign="center",
+  stralign="center",
+  colalign=("right", "center", "center","left")
+))
+```
+
+We start below with the nMOS case.
+
+### nMOS
+#### Design
+
+![Schematic of the open-loop common-source (CS) gain stage used for simulation.](Figures/CS_OL_sim_sch.png){#fig-cs_ol_sim_schematic}
+
+The schematic that is used for the simulations is shown in @fig-cs_ol_sim_schematic. Note that a bias transistor M~2~ has been added to correctly set the DC gate voltage of M~1~ so that its drain current is equal to $I_b$ by means of a VCVS as shown in @fig-cs_ol_sim_schematic 
+
+Since the transistor is biased in saturation, the intrinsic gate-to-drain capacitance $C_{GDi}$ can be considered as zero. The feedback capacitance $C_F$ is therefore made of the overlap $C_{GDo}$ and fringing capacitances $C_{GDf}$, so that $C_F \cong C_{GDo} + C_{GDf}$. Note that, since the DC gate voltage is constant it is an AC ground and hence $C_F$ adds to the total load capacitance. Since both $C_{GDo}$ and $C_{GDf}$ scale with $W$, we need to add it to $C_{DW}$ which is now given by
+\begin{equation}
+  C_{DW} = Z_{dif} \cdot C_J + C_{JSWSTI} + C_{JSWGAT} + C_{GDo} + C_{GDf}.
+\end{equation}
+Since we don't know the drain voltage across the junction capacitance, we will use its zero-bias values which is anyway larger than the actual value. The technology parameters we will need are summarized in @tbl-process_summary_gbw_nmos. From @tbl-process_summary_gbw_nmos, we observe that $C_{D0}$ is actuall very small.
+
+The specifications are given in @tbl-specs_gbw_nmos, where we have chosen a long-channel transistor to be consistent with the theory and the resulting design equations. Note that, as shown in @fig-ib_ic_gbw_short_channel and @fig-icopt_theta_gbw_short_channel, short-channel effects like velocity saturation have a m^limited impact on the value of $IC_{opt}$. We can therefore use the long-channel expressions even for short-channel transistors still getting close to the minimum bias current.
+
+```{python}
+#| label: tbl-process_summary_gbw_nmos
+#| tbl-cap: Required process parameters (nMOS).
+
+n=n0n
+nUT=n*UT
+Ispecsq=Ispecsqn
+lambdaL=lambdan
+Zdif = z1
+CDBJW = Zdif*CJn + CJSWSTIn + CJSWGATn
+CDBJ0 = 2*Zdif*CJSWSTIn
+CDW = Zdif*CJn + CJSWSTIn + CJSWGATn + CGDOn + CGDFn
+CD0 = 2*Zdif*CJSWSTIn
+
+table = [["$V_{DD}$",f'{VDD:.1f}',"$V$"],
+         ["$n$",f'{n:.2f}',"-"],
+         ["$I_{spec\Box}$",f'{Ispecsq/1e-9:.0f}',"$nA$"],
+         ["$C_{DW}$",f'{CDW/1e-9:.3f}',"$\\frac{fF}{um}$"],
+         ["$C_{D0}$",f'{CD0/1e-15:.3f}',"$fF$"]
+         ]
+Markdown(tabulate(
+  table,
+  headers=["Parameter","Value","Unit"],
+  numalign="center",
+  stralign="center",
+  colalign=("center", "center", "center")
+))
+```
+
+```{python}
+#| label: tbl-specs_gbw_nmos
+#| tbl-cap: Specifications.
+
+fu=100e6
+wu=2*pi*fu
+CL0=20e-15
+#L=180e-9
+L=1e-6
+CL=CL0+CD0
+
+table = [["$GBW$",f'{fu/1e6:.0f}',"$MHz$"],
+         ["$L$",f'{L/1e-6:.0f}',"$\\mu m$"],
+         ["$C_{L0}$",f'{CL0/1e-15:.0f}',"$fF$"],
+         ["$C_L$",f'{CL/1e-15:.3f}',"$fF$"]
+         ]
+Markdown(tabulate(
+  table,
+  headers=["Parameter","Value","Unit"],
+  numalign="center",
+  stralign="center",
+  colalign=("center", "center", "center")
+))
+```
+
+We can now calculate the optimum inversion coefficient, optimum bias current and optimum width. The calculated parameters are given in @tbl-calc_param_gbw_nmos.
+
+```{python}
+#| label: tbl-calc_param_gbw_nmos
+#| tbl-cap: Calculated parameters (nMOS).
+
+def ICopt_theta(theta):
+    return (sqrt(theta*(1+theta))+theta+0.5)**2-0.25
+
+def ibopt_theta(theta):
+    return 1+2*theta+2*sqrt(theta*(1+theta))
+
+def ARopt_theta(theta):
+    return 1/sqrt(theta*(1+theta))
+
+wL=Ispecsq/(nUT*CL)
+wW=Ispecsq/(nUT*CDW*L)
+Omega=wu/wL
+theta=wu/wW
+kappa=wW/wL
+ICopt=ICopt_theta(theta)
+ibopt=ibopt_theta(theta)
+ARopt=ARopt_theta(theta)
+Ibopt=ibopt*Ispecsq*Omega
+WoverLopt=ARopt*Omega
+Wopt=WoverLopt*L
+Gmopt=Ispecsq/nUT*WoverLopt*gms_ic_long(ICopt)
+CDopt=Wopt*CDW
+Cout=CL+CDopt
+AD=Wopt*Zdif
+PD=2*(Wopt+Zdif)
+CDBJ=AD*CJn+(PD-Wopt)*CJSWSTIn+Wopt*CJSWGATn
+CGDo=Wopt*CGDOn
+CGDf=Wopt*CGDFn
+CGDe=CGDo+CGDf
+CF=CGDe
+wz=Gmopt/CF
+fzthe=wz/(2*pi)
+
+table = [["$f_L$",f'{wL/(2*pi*1e6):.3f}',"$MHz$"],
+         ["$f_W$",f'{wW/(2*pi*1e9):.3f}',"$GHz$"],
+         ["$\\Omega$",f'{Omega:.3f}',"-"],
+         ["$\\theta$",f'{theta:.3f}',"-"],
+#         ["$\kappa$",f'{kappa:.3f}',"-"],
+         ["$IC_{opt}$",f'{ICopt:.3f}',"-"],
+         ["$i_{b,opt}$",f'{ibopt:.3f}',"-"],
+         ["$AR_{opt}$",f'{ARopt:.3f}',"-"],
+         ["$\\left(\\frac{W}{L}\\right)_{opt}$",f'{WoverLopt:.3f}',"-"],
+         ["$I_{b,opt}$",f'{Ibopt/1e-9:.0f}',"$nA$"],
+         ["$W_{opt}$",f'{Wopt/1e-6:.2f}',"$\\mu m$"],
+         ["$G_{m,opt}$",f'{Gmopt/1e-6:.3f}',"$\\frac{\mu A}{V}$"],
+         ["$C_{D,opt}$",f'{CDopt/1e-15:.3f}',"$fF$"],
+         ["$AD$",f'{AD/1e-12:.3f}',"$\\mu m^2$"],
+         ["$PD$",f'{PD/1e-6:.3f}',"$\\mu m$"],
+         ["$C_{DBJ}$",f'{CDBJ/1e-15:.3f}',"$fF$"],
+         ["$C_{DBJ,bot}$",f'{AD*CJn/1e-15:.3f}',"$fF$"],
+         ["$C_{DBJ,SWSTI}$",f'{(PD-Wopt)*CJSWSTIn/1e-15:.3f}',"$fF$"],
+         ["$C_{DBJ,SWGAT}$",f'{Wopt*CJSWGATn/1e-15:.3f}',"$fF$"],
+         ["$C_{GDo}$",f'{CGDo/1e-15:.3f}',"$fF$"],
+         ["$C_{GDf}$",f'{CGDf/1e-15:.3f}',"$fF$"],
+         ["$C_{GDe}$",f'{CGDe/1e-15:.3f}',"$fF$"],
+         ["$C_F$",f'{CF/1e-15:.3f}',"$fF$"],
+         ["$C_{out}$",f'{Cout/1e-15:.3f}',"$fF$"],
+         ["$f_z$",f'{fzthe/1e9:.3f}',"$GHz$"]
+        ]
+Markdown(tabulate(
+  table,
+  headers=["Parameter","Value","Unit"],
+  numalign="center",
+  stralign="center",
+  colalign=("center", "center", "center")
+))
+```
+
+From @tbl-calc_param_gbw_nmos, we see that the optimum inversion coefficient for a minimum bias current is in the lower side of moderate inversion. We also end-up with a large transistor, but still an acceptable value.
+
+```{python}
+VM=lambdaL*L
+Gds=Ibopt/VM
+Adcthe=Gmopt/Gds
+AdcdBthe=20*log(Adcthe)
+```
+
+We can now estimate the output conductance
+
+$G_{{ds}} =$ `{python} f'{Gds/1e-9:.3f}'` $nA/V$
+
+and the DC gain
+
+$A_{{dc}} =$ `{python} f'{Adcthe:.3e}'` or in dB
+
+$A_{{dc}} =$ `{python} f'{AdcdBthe:.1f}'` $dB$.
+
+The CS estimated open-loop transfer function is shown in @fig-cs_ol_tf_gbw_the_nmos.
+
+```{python}
+#| label: fig-cs_ol_tf_gbw_the_nmos
+#| fig-cap: "Transfer function (nMOS)."
+
+def Avnocf(s,Adc,wp):
+    num=Adc
+    den=1+s/wp
+    return num/den
+
+def Av(s,Adc,wp,wz):
+    num=Adc*(1-s/wz)
+    den=1+s/wp
+    return num/den
+
+GBWthe=fu
+fcthe=fu/Adcthe
+wpthe=2*pi*fcthe
+wzthe=Gmopt/CF
+wuthenocf=Gmopt/(CDBJ+CL)
+wpthenocf=wuthenocf/Adcthe
+AinfdB=20*log(abs(CF/(Cout+CF)))
+
+Npts=201
+logfmin=4
+logfmax=10
+fmin=pow(10,logfmin)
+fmax=pow(10,logfmax)
+fthe=np.logspace(logfmin,logfmax,Npts,endpoint=True,base=10.0)
+
+AmagdBthe=np.zeros(Npts)
+Aphidegthe=np.zeros(Npts)
+AmagdBthenocf=np.zeros(Npts)
+Aphidegthenocf=np.zeros(Npts)
+
+for k in range(0,Npts):
+    jw=1j*2*pi*fthe[k]
+    AmagdBthe[k]=20*log(abs(Av(jw,Adcthe,wpthe,wzthe)))
+    Aphidegthe[k]=np.angle(Av(jw,Adcthe,wpthe,wzthe),deg=True)
+    AmagdBthenocf[k]=20*log(abs(Avnocf(jw,Adcthe,wpthenocf)))
+    Aphidegthenocf[k]=np.angle(Avnocf(jw,Adcthe,wpthenocf),deg=True)
+
+fig, axs = plt.subplots(ncols=1, nrows=2, figsize=(5, 6), sharex=True)
+
+axs[0].semilogx([fmin,fcthe],[AdcdBthe-3,AdcdBthe-3],'k--', linewidth=lw)
+axs[0].semilogx([fcthe,fcthe],[-40,AdcdBthe-3],'k--', linewidth=lw)
+axs[0].semilogx([fmin,fmax],[AinfdB,AinfdB],'k--', linewidth=lw)
+axs[0].semilogx([fmin,GBWthe],[0,0],'k--', linewidth=lw)
+axs[0].semilogx([GBWthe,GBWthe],[-40,0],'k--', linewidth=lw)
+axs[0].semilogx(fthe,AmagdBthe,'r',label='Theory')
+axs[0].semilogx(fthe,AmagdBthenocf,'r--',label='Without $C_F$')
+axs[0].set(xlim=(fmin,fmax), ylim=(-30,40), ylabel='$|A_v|$ [dB]')
+axs[0].set_yticks(range(-30,50,10))
+#axs[0].set_yticks([-25,-20,-15,-10,-5,0,5,10,15,20,25])
+axs[0].legend(loc='upper right', fontsize=10)
+textstr1 = '\n'.join((
+    f'$A_{{dc}} =$ {AdcdBthe:.1f} dB',
+    f'$A_{{\\infty}} =$ {AinfdB:.1f} dB',
+    f'$GBW =$ {GBWthe/1e6:.0f} MHz',
+    f'$f_c =$ {fcthe/1e6:.2f} MHz',
+    f'$f_z =$ {fzthe/1e9:.2f} GHz'))
+axs[0].text(0.03, 0.05, textstr1, ha='left', va='bottom', transform=axs[0].transAxes, size=10,
+         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+#axs[0].text(0.5, 0.05, 'No VS ($\\lambda_c = 0$)', ha='center', va='bottom', transform=axs[0].transAxes, size=10,
+#         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+
+axs[1].semilogx([fmin,fcthe],[-45,-45],'k--', linewidth=lw)
+axs[1].semilogx([fcthe,fcthe],[-45,0],'k--', linewidth=lw)
+axs[1].semilogx([fmin,GBWthe],[-90,-90],'k--', linewidth=lw)
+axs[1].semilogx([GBWthe,GBWthe],[-90,0],'k--', linewidth=lw)
+axs[1].semilogx(fthe,Aphidegthe,'b-',label='Theory')
+axs[1].semilogx(fthe,Aphidegthenocf,'b--',label='Without $C_F$')
+axs[1].set(xlim=(fmin,fmax), ylim=(-180,0), xlabel='Frequency [Hz]', ylabel='$arg\\{A_v\\}$ [degree]')
+axs[1].set_yticks([-180,-135,-90,-45,0])
+axs[1].legend(loc='upper right', fontsize=10)
+textstr2 = '\n'.join((
+    f'$L =$ {L/1e-6:.2f} $\\mu m$',
+    f'$C_L =$ {CL0/1e-15:.0f} fF',
+    f'$IC_{{opt}} =$ {ICopt:.2f}',
+    f'$I_{{b,opt}} =$ {Ibopt/1e-9:.0f} nA',
+    f'$W_{{opt}} =$ {Wopt/1e-6:.2f} $\\mu m$'))
+axs[1].text(0.03, 0.05, textstr2, ha='left', va='bottom', transform=axs[1].transAxes, size=10,
+         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+plt.subplots_adjust(hspace=0.1)
+
+plt.show()
+```
+
+We can now proceed with the simulations.
+
+#### ngspice simulations
+We start checking the DC operating point by first looking at the drain current $I_D$, gate transcondcutance $G_m$, output conductance $G_{ds}$ and DC gain $A_{dc}$. The values extracted from the simulation (PSP) are compared to the theoretical prediction in @tbl-gbw_op_comp1_nmos.
+
+```{python}
+#| label: tbl-gbw_op_comp1_nmos
+#| tbl-cap: Simulated drain current and small-signal parameter values compared to theoretical values.
+
+simulationPath="./Simulations/nmos/Optimization for GBW/"
+dataPath="./Data/nmos/Optimization for GBW/"
+fileName = "CS_GBW.op"
+dataFile = dataPath + fileName + ".dat"
+opFile = simulationPath + fileName + ".dat"
+paramFile = simulationPath + fileName + ".par"
+simulationFile = simulationPath + fileName + ".cir"
+simulationLog = simulationPath + fileName + ".log"
+simulationData = simulationPath + fileName + ".dat"
+
+# We set AS in order for the PDK to take our values of AD and PD for calculating the junction caps and avoid the automatic calculation
+if newSim:
+    paramstr = '\n'.join((
+        f'.param CL={CL0/1e-15:.3f}f W1={Wopt/1e-6:.3f}u L1={L/1e-6:.3f}u AS1={AD:.3e} PS1={PD:.3e} AD1={AD:.3e} PD1={PD:.3e}',
+        f'.param VDD={VDD:.1f} Ib={Ibopt/1e-9:.0f}n'
+    ))
+    print(paramstr)
+    with open(paramFile, 'w') as f:
+        f.write(paramstr)
+    print('Starting ngspice simulation...\n')
+    result = subprocess.run(f"""ngspice_con -b -o "{simulationLog}" "{simulationFile}" """, shell=True, capture_output=True, text=True)
+    if result.stderr == '':
+        print("Simulation executed successfully.\n")
+    else:
+        print("Simulation failed with return code", result.stderr)
+    print(result.stdout)
+    f = open(simulationLog, 'r')
+    log_contents = f.read()
+    print("Contents of the log file:")
+    print("‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾\n")
+    print (log_contents)
+    # We copy the simulation results to the dat folder
+    shutil.copy2(simulationData, dataFile)
+
+op_df=pd.read_table(dataFile, sep=r'\s+', skiprows=[2], dtype=np.float64, engine='python')
+op_df=op_df.rename(columns={'@n.x1.nsg13_lv_nmos[ids]': 'Transistor',
+                              '@n.x1.Nsg13_lv_nmos[ids]': 'ID',
+                              '@n.x1.Nsg13_lv_nmos[gm]': 'Gm',
+                              '@n.x1.Nsg13_lv_nmos[gds]': 'Gds',
+                              '@n.x1.Nsg13_lv_nmos[cgdol]': 'CGDe',
+                              '@n.x1.Nsg13_lv_nmos[cgsol]': 'CGSe',
+                              '@n.x1.Nsg13_lv_nmos[lp_cgov]': 'CGov',
+                              '@n.x1.Nsg13_lv_nmos[lp_cfr]': 'CGfr',
+                              '@n.x1.Nsg13_lv_nmos[cjd]': 'CJtot',
+                              '@n.x1.Nsg13_lv_nmos[cjdbot]': 'CJbot',
+                              '@n.x1.Nsg13_lv_nmos[cjdgat]': 'CJSWgate',
+                              '@n.x1.Nsg13_lv_nmos[cjdsti]': 'CJSWsti',
+                              '@n.x1.Nsg13_lv_nmos[cjosbot]': 'CJbot0',
+                              '@n.x1.Nsg13_lv_nmos[cjossti]': 'CJSWsti0',
+                              '@n.x1.Nsg13_lv_nmos[cjosgat]': 'CJSWgate0',
+                              '@n.x1.Nsg13_lv_nmos[fug]': 'fu'})
+
+op_df['Transistor'] = op_df['Transistor'].astype(str)
+op_df.at[0, 'Transistor'] = 'M1'
+op_df.at[1, 'Transistor'] = 'M2'
+op_df.set_index('Transistor', inplace=True)
+op_df.rename_axis(index=None, inplace=True)
+pd.set_option('display.float_format', '{:.3e}'.format)
+#op_df
+
+IDthe=Ibopt
+Gmthe=Gmopt
+Gdsthe=Gds
+
+IDsim=op_df.at['M1','ID']
+Gmsim=op_df.at['M1','Gm']
+Gdssim=op_df.at['M1','Gds']
+
+comp1 = {'ID [nA]': [f'{IDthe/1e-9:.0f}', f'{IDsim/1e-9:.0f}'],
+        'Gm [uA/V]': [f'{Gmthe/1e-6:.3f}', f'{Gmsim/1e-6:.3f}'],
+        'Gds [nA/V]': [f'{Gdsthe/1e-9:.3f}', f'{Gdssim/1e-9:.3f}'],
+        'Av [dB]': [f'{20*log(Gmthe/Gdsthe):.3f}', f'{20*log(Gmsim/Gdssim):.3f}']
+        }
+
+index_list = ['Theory','PSP']
+
+comp1_df = pd.DataFrame(comp1,index_list)
+
+Markdown( 
+  tabulate(comp1_df,
+  showindex=True,
+  headers=["$I_D\,[nA]$","$G_m\,[\mu A/V]$","$G_{ds}\,[nA/V]$","$A_v$"],
+  numalign="center",
+  stralign="center",
+  colalign=("center","center")
+))
+```
+
+From @tbl-gbw_op_comp1_nmos, we see that the values extracted from PSP are very close to the theoretical values, except for the output conductance. We now compare the simulated values of the overlap and fringing capacitances to the theoretical estimation in @tbl-gbw_op_comp2_nmos.
+
+```{python}
+#| label: tbl-gbw_op_comp2_nmos
+#| tbl-cap: Simulated overlap and fringing capacitances values compared to theoretical values.
+
+WECV=Wopt+DWCVn
+CGSothe=WECV*CGSOn
+CGDothe=WECV*CGDOn
+WGCV=Wopt+DWGCVn
+CGSfthe=WGCV*CGSFn
+CGDfthe=WGCV*CGDFn
+CGDethe=CGDothe+CGDfthe
+CGSethe=CGSothe+CGSfthe
+
+CGSosim=op_df.at['M1','CGov']
+CGDosim=op_df.at['M1','CGov']
+CGSfsim=op_df.at['M1','CGfr']
+CGDfsim=op_df.at['M1','CGfr']
+CGDesim=op_df.at['M1','CGDe']
+CGSesim=op_df.at['M1','CGSe']
+#CGDfsim=CGDesim-CGDosim
+#CGSfsim=CGSesim-CGSosim
+
+comp2 = {'CGSo [fF]': [f'{CGSothe/1e-15:.3f}', f'{CGSosim/1e-15:.3f}'],
+        'CGDo [fF]': [f'{CGDothe/1e-15:.3f}', f'{CGDosim/1e-15:.3f}'],
+        'CGSf [fF]': [f'{CGSfthe/1e-15:.3f}', f'{CGSfsim/1e-15:.3f}'],
+        'CGDf [fF]': [f'{CGDfthe/1e-15:.3f}', f'{CGDfsim/1e-15:.3f}'],
+        'CGSe [fF]': [f'{CGSethe/1e-15:.3f}', f'{CGSesim/1e-15:.3f}'],
+        'CGDe [fF]': [f'{CGDethe/1e-15:.3f}', f'{CGDesim/1e-15:.3f}']
+        }
+
+index_list = ['Theory','PSP']
+
+comp2_df = pd.DataFrame(comp2,index_list)
+
+Markdown( 
+  tabulate(comp2_df,
+  showindex=True,
+  headers=["$C_{GSo}\,[fF]$","$C_{GDo}\,[fF]$","$C_{GSf}\,[fF]$","$C_{GDf}\,[fF]$","$C_{GSe}\,[fF]$","$C_{GDe}\,[fF]$"],
+  numalign="center",
+  stralign="center",
+  colalign=("center","center")
+))
+```
+
+The two first columns $C_{GSo}$ and $C_{GDo}$ correspond to the zero-bias overlap capacitances, whereas the third and fourth columns $C_{GSf}$ and $C_{GDf}$ correspond to the zero-bias fringing capacitances. Finally, the theoretical $C_{GSe}$ and $C_{GDe}$ correspond to the sum of the zero-bias overlap and fringing capacitances, whereas for PSP it includes the bias dependence. We see that the estimated zero-bias values of the overlap and fringing capacitance are very close to those extracted from PSP, whereas the bias-dependent values of the total extrinsic capacitances extracted from PSP are slightly smaller and asymmetrical (this is certainly due to the bias dependence which is very different for the drain and the source).
+
+We finally look at the junction capacitances. The theoretical values of the junction capacitances are compared to the values extracted from PSP in @tbl-gbw_op_comp3_nmos and @tbl-gbw_op_comp4_nmos. @tbl-gbw_op_comp3_nmos compares the zero-bias values whereas @tbl-gbw_op_comp4_nmos compares the theoretical zero-bias values to the actual values accounting for the junction bias voltage extracted from PSP.
+
+```{python}
+#| label: tbl-gbw_op_comp3_nmos
+#| tbl-cap: Simulated zero-bias junction capacitances values compared to theoretical values.
+
+AD=Zdif*WECV
+PD=2*(Zdif+WECV)
+
+CJbot0the=AD*CJn
+CJswsti0the=(PD-WECV)*CJSWSTIn
+CJswgat0the=Wopt*CJSWGATn
+CJtot0the=CJbot0the+CJswsti0the+CJswgat0the
+CJbotthe=AD*CJn
+CJswstithe=(PD-WECV)*CJSWSTIn
+CJswgatthe=WECV*CJSWGATn
+CJtotthe=CJbotthe+CJswstithe+CJswgatthe
+
+CJbot0sim=op_df.at['M1','CJbot0']
+CJswsti0sim=op_df.at['M1','CJSWsti0']
+CJswgat0sim=op_df.at['M1','CJSWgate0']
+CJtot0sim=CJbot0sim+CJswsti0sim+CJswgat0sim
+CJbotsim=op_df.at['M1','CJbot']
+CJswstisim=op_df.at['M1','CJSWsti']
+CJswgatsim=op_df.at['M1','CJSWgate']
+CJtotsim=op_df.at['M1','CJtot']
+
+comp3 = {'CJbot0 [fF]': [f'{CJbot0the/1e-15:.3f}', f'{CJbot0sim/1e-15:.3f}'],
+        'CJswsti0 [fF]': [f'{CJswsti0the/1e-15:.3f}', f'{CJswsti0sim/1e-15:.3f}'],
+        'CJswgat0 [fF]': [f'{CJswgat0the/1e-15:.3f}', f'{CJswgat0sim/1e-15:.3f}'],
+        'CJtot0 [fF]': [f'{CJtot0the/1e-15:.3f}', f'{CJtot0sim/1e-15:.3f}']
+        }
+
+index_list = ['Theory','PSP']
+
+comp3_df = pd.DataFrame(comp3,index_list)
+
+Markdown( 
+  tabulate(comp3_df,
+  showindex=True,
+  headers=["$C_{Jbot}(0)\,[fF]$","$C_{JSWSTI}(0)\,[fF]$","$C_{JSWGAT}(0)\,[fF]$","$C_{Jtot}(0)\,[fF]$"],
+  numalign="center",
+  stralign="center",
+  colalign=("center","center")
+))
+```
+
+```{python}
+#| label: tbl-gbw_op_comp4_nmos
+#| tbl-cap: Simulated actual junction capacitances values compared to theoretical zero-bias values.
+
+comp4 = {'CJbot [fF]': [f'{CJbotthe/1e-15:.3f}', f'{CJbotsim/1e-15:.3f}'],
+        'CJswsti [fF]': [f'{CJswstithe/1e-15:.3f}', f'{CJswstisim/1e-15:.3f}'],
+        'CJswgat [fF]': [f'{CJswgatthe/1e-15:.3f}', f'{CJswgatsim/1e-15:.3f}'],
+        'CJtot [fF]': [f'{CJtotthe/1e-15:.3f}', f'{CJtotsim/1e-15:.3f}']
+        }
+
+index_list = ['Theory','PSP']
+
+comp4_df = pd.DataFrame(comp4,index_list)
+
+Markdown( 
+  tabulate(comp4_df,
+  showindex=True,
+  headers=["$C_{Jbot}\,[fF]$","$C_{JSWSTI}\,[fF]$","$C_{JSWGAT}\,[fF]$","$C_{Jtot}\,[fF]$"],
+  numalign="center",
+  stralign="center",
+  colalign=("center","center")
+))
+```
+
+From @tbl-gbw_op_comp3_nmos, we see that the estimated zero-bias junction capacitances, including bottom and side-wall components, are very close to those extracted from PSP. As expected, the actual values including the effect of bias in PSP and shown in @tbl-gbw_op_comp4_nmos, are slightly lower than the zero-bias theoretical values.
+
+From the values of the transconductance and capacitances, we can now estimate the $GBW$.
+
+```{python}
+#| label: tbl-gbw_op_comp5_nmos
+#| tbl-cap: Comparison of the simulated and predicted values of the gain-bandwidth and zero frequency.
+
+Coutthe=CL+CJtotthe+CGDethe
+CFthe=CGDethe
+futhe=Gmthe/(2*pi*Coutthe)
+fzthe=Gmthe/CFthe
+Ainfthe=20*log(CFthe/(CFthe+Coutthe))
+
+Coutsim=CL+CJtotsim+CGDesim
+CFsim=CGDesim
+fusim=Gmsim/(2*pi*Coutsim)
+fzsim=Gmthe/CFsim
+Ainfsim=20*log(CFsim/(CFsim+Coutsim))
+
+comp5 = {'Gm [uA/V]': [f'{Gmthe/1e-6:.3f}', f'{Gmsim/1e-6:.3f}'],
+         'Cout [fF]': [f'{Coutthe/1e-15:.3f}', f'{Coutsim/1e-15:.3f}'],
+        'CF [fF]': [f'{CFthe/1e-15:.3f}', f'{CFsim/1e-15:.3f}'],
+        'fu [MHz]': [f'{futhe/1e6:.3f}', f'{fusim/1e6:.3f}'],
+        'fz [GHz]': [f'{fzthe/1e9:.3f}', f'{fzsim/1e9:.3f}'],
+        'Ainf [dB]': [f'{Ainfthe:.3f}', f'{Ainfsim:.3f}']
+        }
+
+index_list = ['Theory','PSP']
+
+comp5_df = pd.DataFrame(comp5,index_list)
+
+Markdown( 
+  tabulate(comp5_df,
+  showindex=True,
+  headers=["$G_m\,[\mu A/V]$","$C_{out}\,[fF]$","$C_F\,[fF]$","$GBW\,[MHz]$","$f_z\,[GHz]$","$A_{\infty}\,[dB]$"],
+  numalign="center",
+  stralign="center",
+  colalign=("center","center")
+))
+```
+
+The theoretical and simulated values shown in @tbl-gbw_op_comp5_nmos are very close. The theoretical $GBW$ is almost on target as it should be (the slight difference comes from the recalculations of the effective width). Because of the smaller capacitance values extracted from PSP, the $GBW$ for PSP is larger than the estimated and the target values.
+
+We can now proceed with the AC simulation.
+
+```{python}
+#| label: fig-cs_ol_tf_gbw_sim_nmos
+#| fig-cap: CS simulated open-loop transfer function compared to the theoretical prediction.
+
+simulationPath="./Simulations/nmos/Optimization for GBW/"
+dataPath="./Data/nmos/Optimization for GBW/"
+fileName = "CS_GBW.ac"
+dataFile = dataPath + fileName + ".dat"
+opFile = simulationPath + fileName + ".dat"
+paramFile = simulationPath + fileName + ".par"
+simulationFile = simulationPath + fileName + ".cir"
+simulationLog = simulationPath + fileName + ".log"
+simulationData = simulationPath + fileName + ".dat"
+
+if newSim:
+    paramstr = '\n'.join((
+        f'.param CL={CL0/1e-15:.3f}f W1={Wopt/1e-6:.3f}u L1={L/1e-6:.3f}u AS1={AD:.3e} PS1={PD:.3e} AD1={AD:.3e} PD1={PD:.3e}',
+        f'.param VDD={VDD:.1f} Ib={Ibopt/1e-9:.0f}n'
+    ))
+    print(paramstr)
+    with open(paramFile, 'w') as f:
+        f.write(paramstr)
+    print('Starting ngspice simulation...\n')
+    result = subprocess.run(f"""ngspice_con -b -o "{simulationLog}" "{simulationFile}" """, shell=True, capture_output=True, text=True)
+    if result.stderr == '':
+        print("Simulation executed successfully.\n")
+    else:
+        print("Simulation failed with return code", result.stderr)
+    print(result.stdout)
+    f = open(simulationLog, 'r')
+    log_contents = f.read()
+    print("Contents of the log file:")
+    print("‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾\n")
+    print (log_contents)
+    # We copy the simulation results to the dat folder
+    shutil.copy2(simulationData, dataFile)
+
+df_sim=pd.read_table(dataFile, sep=' +', engine='python')
+fsim=df_sim['frequency'].to_numpy()
+AmagdBsim=df_sim['AmagdB'].to_numpy()
+Aphidegsim=df_sim['Aphdeg'].to_numpy()-180
+Npts=len(fsim)
+fmin=fsim[0]
+#fmin=10
+fmax=fsim[Npts-1]
+
+regexp = re.compile(r'adc.*?([0-9.\+-]+e[0-9.\+-]+)')
+with open(simulationLog) as f:
+    for line in f:
+        match = re.match(regexp, line)
+        if match:
+            AdcdBsim=float(match.group(1))
+
+regexp = re.compile(r'gbw.*?([0-9.\+-]+e[0-9.\+-]+)')
+with open(simulationLog) as f:
+    for line in f:
+        match = re.match(regexp, line)
+        if match:
+            GBWsim=float(match.group(1))
+
+regexp = re.compile(r'fc.*?([0-9.\+-]+e[0-9.\+-]+)')
+with open(simulationLog) as f:
+    for line in f:
+        match = re.match(regexp, line)
+        if match:
+            fcsim=float(match.group(1))
+
+regexp = re.compile(r'fz.*?([0-9.\+-]+e[0-9.\+-]+)')
+with open(simulationLog) as f:
+    for line in f:
+        match = re.match(regexp, line)
+        if match:
+            fzsim=float(match.group(1))
+
+CFext=Gmsim/(2*pi*fzsim)
+
+#print(f'Adc = {AdcdBsim:.3f} dB')
+#print(f'GBW = {GBWsim:.3e} Hz')
+#print(f'fc = {fcsim/1e6:.3f} MHz')
+#print(f'fz = {fzsim/1e6:.3f} MHz')
+#print(f'CFext = {CFext/1e-15:.3f} fF')
+
+fig, axs = plt.subplots(ncols=1, nrows=2, figsize=(5, 6), sharex=True)
+
+axs[0].semilogx([fmin,fcsim],[AdcdBsim-3,AdcdBsim-3],'k--', linewidth=lw)
+axs[0].semilogx([fcsim,fcsim],[-40,AdcdBsim-3],'k--', linewidth=lw)
+axs[0].semilogx([fmin,GBWsim],[0,0],'k--', linewidth=lw)
+axs[0].semilogx([GBWsim,GBWsim],[-40,0],'k--', linewidth=lw)
+axs[0].semilogx(fsim,AmagdBsim, color='r', label='Simulation',
+                marker='o', markersize=msize, markevery=12, linestyle='None')
+axs[0].semilogx(fthe,AmagdBthe,'r-',label='Theory')
+axs[0].semilogx(fthe,AmagdBthenocf,'r--',label='Without $C_F$')
+axs[0].set(xlim=(fmin,fmax), ylim=(-30,40), ylabel='$|A_v|$ [dB]')
+axs[0].set_yticks(range(-30,50,10))
+#axs[0].set_yticks([-25,-20,-15,-10,-5,0,5,10,15,20,25])
+axs[0].legend(loc='upper right')
+textstr1 = '\n'.join((
+    f'$A_{{dc}} =$ {AdcdBthe:.1f} dB (theory)',
+    f'$A_{{dc}} =$ {AdcdBsim:.1f} dB (sim.)',
+    f'$f_c =$ {fcthe/1e6:.3f} MHz (theory)',
+    f'$f_c =$ {fcsim/1e6:.3f} MHz (sim.)',
+    f'$GBW =$ {GBWthe/1e6:.1f} MHz (theory)',
+    f'$GBW =$ {GBWsim/1e6:.1f} MHz (sim.)'))
+axs[0].text(0.03, 0.05, textstr1, ha='left', va='bottom', transform=axs[0].transAxes, size=10,
+         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+
+axs[1].semilogx([fmin,fcsim],[-45,-45],'k--', linewidth=lw)
+axs[1].semilogx([fcsim,fcsim],[-45,0],'k--', linewidth=lw)
+axs[1].semilogx([fmin,GBWsim],[-90,-90],'k--', linewidth=lw)
+axs[1].semilogx([GBWsim,GBWsim],[-90,0],'k--', linewidth=lw)
+axs[1].semilogx(fsim,Aphidegsim, color='b', label='Simulation',
+                marker='o', markersize=msize, markevery=12, linestyle='None')
+axs[1].semilogx(fthe,Aphidegthe,'b-',label='Theory')
+axs[1].semilogx(fthe,Aphidegthenocf,'b--',label='Without $C_F$')
+axs[1].set(xlim=(fmin,fmax), ylim=(-135,0), xlabel='Frequency [Hz]', ylabel='$arg\\{A_v\\}$ [degree]')
+#axs[1].set_xticks([1e1,1e2,1e3,1e4,1e5,1e6,1e7,1e8])
+axs[1].set_yticks([-180,-135,-90,-45,0])
+axs[1].legend(loc='best')
+textstr2 = '\n'.join((
+    f'$L =$ {L/1e-6:.2f} $\\mu m$',
+    f'$C_L =$ {CL0/1e-15:.0f} fF',
+    f'$IC_{{opt}} =$ {ICopt:.2f}',
+    f'$I_{{b,opt}} =$ {Ibopt/1e-9:.0f} nA',
+    f'$W_{{opt}} =$ {Wopt/1e-6:.2f} $\\mu m$'))
+axs[1].text(0.03, 0.05, textstr2, ha='left', va='bottom', transform=axs[1].transAxes, size=10,
+         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+plt.subplots_adjust(hspace=0.1)
+#saveFigures(savePath, 'CS_GBW_long_gain_response')
+plt.show()
+```
+
+The result of the AC simulation is compared to the theoretical estimation in @fig-cs_ol_tf_gbw_sim_nmos. We see that the simulated $GBW$ is slightly higher than the spec due to the lower extrinsic capacitances. We also see that the simulated DC gain is lower than the estimated one. This is due to the high output conductance of the nMOS transistor in this technology even for long-channel transistors. The zero is also lower than the theoretical value. This is a bit surpising because the simulated extrinsic capacitance that are extracted from the DC operating point is lower than the theoretical estimation. We will come back to this discrepancy in the next Section when looking at the pMOS implementation.
+
+### pMOS
+#### Design
+We now design the same CS gain stage but with a pMOS transistor. We use the same process with the pMOS parameters given in @tbl-mos_param. $C_{DW}$ and $C_{D0}$ need to be recalculated for the pMOS transistor and are given in @tbl-process_summary_gbw_pmos.
+
+```{python}
+#| label: tbl-process_summary_gbw_pmos
+#| tbl-cap: Required process parameters (pMOS).
+
+n=n0p
+nUT=n*UT
+Ispecsq=Ispecsqp
+lambdaL=lambdap
+Zdif = z1
+CDBJW = Zdif*CJp + CJSWSTIp + CJSWGATp
+CDBJ0 = 2*Zdif*CJSWSTIp
+CDW = Zdif*CJp + CJSWSTIp + CJSWGATp + CGDOp + CGDFp
+CD0 = 2*Zdif*CJSWSTIp
+
+table = [["$V_{DD}$",f'{VDD:.1f}',"$V$"],
+         ["$n$",f'{n:.2f}',"-"],
+         ["$I_{spec\Box}$",f'{Ispecsq/1e-9:.0f}',"$nA$"],
+         ["$C_{DW}$",f'{CDW/1e-9:.3f}',"$\\frac{fF}{um}$"],
+         ["$C_{D0}$",f'{CD0/1e-15:.3f}',"$fF$"]
+         ]
+Markdown(tabulate(
+  table,
+  headers=["Parameter","Value","Unit"],
+  numalign="center",
+  stralign="center",
+  colalign=("center", "center", "center")
+))
+```
+
+The specifications are the same than for the nMOS case. They are recalled in @tbl-specs_gbw_pmos.
+
+```{python}
+#| label: tbl-specs_gbw_pmos
+#| tbl-cap: Specifications.
+
+fu=100e6
+wu=2*pi*fu
+CL0=20e-15
+#L=180e-9
+L=1e-6
+CL=CL0+CD0
+
+table = [["$GBW$",f'{fu/1e6:.0f}',"$MHz$"],
+         ["$L$",f'{L/1e-6:.0f}',"$\\mu m$"],
+         ["$C_{L0}$",f'{CL0/1e-15:.0f}',"$fF$"],
+         ["$C_L$",f'{CL/1e-15:.3f}',"$fF$"]
+         ]
+Markdown(tabulate(
+  table,
+  headers=["Parameter","Value","Unit"],
+  numalign="center",
+  stralign="center",
+  colalign=("center", "center", "center")
+))
+```
+
+We can now calculate the optimum inversion coefficient, optimum bias current and optimum width. The calculated parameters are given in @tbl-calc_param_gbw_pmos.
+
+```{python}
+#| label: tbl-calc_param_gbw_pmos
+#| tbl-cap: Calculated parameters (pMOS).
+
+def ICopt_theta(theta):
+    return (sqrt(theta*(1+theta))+theta+0.5)**2-0.25
+
+def ibopt_theta(theta):
+    return 1+2*theta+2*sqrt(theta*(1+theta))
+
+def ARopt_theta(theta):
+    return 1/sqrt(theta*(1+theta))
+
+wL=Ispecsq/(nUT*CL)
+wW=Ispecsq/(nUT*CDW*L)
+Omega=wu/wL
+theta=wu/wW
+kappa=wW/wL
+ICopt=ICopt_theta(theta)
+ibopt=ibopt_theta(theta)
+ARopt=ARopt_theta(theta)
+Ibopt=ibopt*Ispecsq*Omega
+WoverLopt=ARopt*Omega
+Wopt=WoverLopt*L
+Gmopt=Ispecsq/nUT*WoverLopt*gms_ic_long(ICopt)
+CDopt=Wopt*CDW
+Cout=CL+CDopt
+AD=Wopt*Zdif
+PD=2*(Wopt+Zdif)
+CDBJ=AD*CJp+(PD-Wopt)*CJSWSTIp+Wopt*CJSWGATp
+CGDo=Wopt*CGDOp
+CGDf=Wopt*CGDFp
+CGDe=CGDo+CGDf
+CF=CGDe
+wz=Gmopt/CF
+fzthe=wz/(2*pi)
+
+table = [["$f_L$",f'{wL/(2*pi*1e6):.3f}',"$MHz$"],
+         ["$f_W$",f'{wW/(2*pi*1e9):.3f}',"$GHz$"],
+         ["$\\Omega$",f'{Omega:.3f}',"-"],
+         ["$\\theta$",f'{theta:.3f}',"-"],
+#         ["$\kappa$",f'{kappa:.3f}',"-"],
+         ["$IC_{opt}$",f'{ICopt:.3f}',"-"],
+         ["$i_{b,opt}$",f'{ibopt:.3f}',"-"],
+         ["$AR_{opt}$",f'{ARopt:.3f}',"-"],
+         ["$\\left(\\frac{W}{L}\\right)_{opt}$",f'{WoverLopt:.3f}',"-"],
+         ["$I_{b,opt}$",f'{Ibopt/1e-9:.0f}',"$nA$"],
+         ["$W_{opt}$",f'{Wopt/1e-6:.2f}',"$\\mu m$"],
+         ["$G_{m,opt}$",f'{Gmopt/1e-6:.3f}',"$\\frac{\mu A}{V}$"],
+         ["$C_{D,opt}$",f'{CDopt/1e-15:.3f}',"$fF$"],
+         ["$AD$",f'{AD/1e-12:.3f}',"$\\mu m^2$"],
+         ["$PD$",f'{PD/1e-6:.3f}',"$\\mu m$"],
+         ["$C_{DBJ}$",f'{CDBJ/1e-15:.3f}',"$fF$"],
+         ["$C_{DBJ,bot}$",f'{AD*CJn/1e-15:.3f}',"$fF$"],
+         ["$C_{DBJ,SWSTI}$",f'{(PD-Wopt)*CJSWSTIn/1e-15:.3f}',"$fF$"],
+         ["$C_{DBJ,SWGAT}$",f'{Wopt*CJSWGATn/1e-15:.3f}',"$fF$"],
+         ["$C_{GDo}$",f'{CGDo/1e-15:.3f}',"$fF$"],
+         ["$C_{GDf}$",f'{CGDf/1e-15:.3f}',"$fF$"],
+         ["$C_{GDe}$",f'{CGDe/1e-15:.3f}',"$fF$"],
+         ["$C_F$",f'{CF/1e-15:.3f}',"$fF$"],
+         ["$C_{out}$",f'{Cout/1e-15:.3f}',"$fF$"],
+         ["$f_z$",f'{fzthe/1e9:.3f}',"$GHz$"]
+        ]
+Markdown(tabulate(
+  table,
+  headers=["Parameter","Value","Unit"],
+  numalign="center",
+  stralign="center",
+  colalign=("center", "center", "center")
+))
+```
+
+Because of the smaller $I_{spec\Box}$ of the pMOS, we get a larger bias current and wider transistor than for the nMOS case.
+
+```{python}
+VM=lambdaL*L
+Gds=Ibopt/VM
+Adcthe=Gmopt/Gds
+AdcdBthe=20*log(Adcthe)
+```
+
+We can now estimate the output conductance
+
+$G_{{ds}} =$ `{python} f'{Gds/1e-9:.3f}'` $nA/V$
+
+and the DC gain
+
+$A_{{dc}} =$ `{python} f'{Adcthe:.3e}'` or in dB
+
+$A_{{dc}} =$ `{python} f'{AdcdBthe:.1f}'` $dB$.
+
+We see that the DC gain of the pMOS is much higher than what we obtained for the nMOS.
+
+The CS estimated open-loop transfer function for the pMOS implementation is shown in @fig-cs_ol_tf_gbw_the_pmos.
+
+```{python}
+#| label: fig-cs_ol_tf_gbw_the_pmos
+#| fig-cap: "Theoretical transfer function (pMOS)."
+
+def Avnocf(s,Adc,wp):
+    num=Adc
+    den=1+s/wp
+    return num/den
+
+def Av(s,Adc,wp,wz):
+    num=Adc*(1-s/wz)
+    den=1+s/wp
+    return num/den
+
+GBWthe=fu
+fcthe=fu/Adcthe
+wpthe=2*pi*fcthe
+wzthe=Gmopt/CF
+wuthenocf=Gmopt/(CDBJ+CL)
+wpthenocf=wuthenocf/Adcthe
+AinfdB=20*log(abs(CF/(Cout+CF)))
+
+Npts=201
+logfmin=4
+logfmax=10
+fmin=pow(10,logfmin)
+fmax=pow(10,logfmax)
+fthe=np.logspace(logfmin,logfmax,Npts,endpoint=True,base=10.0)
+
+AmagdBthe=np.zeros(Npts)
+Aphidegthe=np.zeros(Npts)
+AmagdBthenocf=np.zeros(Npts)
+Aphidegthenocf=np.zeros(Npts)
+
+for k in range(0,Npts):
+    jw=1j*2*pi*fthe[k]
+    AmagdBthe[k]=20*log(abs(Av(jw,Adcthe,wpthe,wzthe)))
+    Aphidegthe[k]=np.angle(Av(jw,Adcthe,wpthe,wzthe),deg=True)
+    AmagdBthenocf[k]=20*log(abs(Avnocf(jw,Adcthe,wpthenocf)))
+    Aphidegthenocf[k]=np.angle(Avnocf(jw,Adcthe,wpthenocf),deg=True)
+
+fig, axs = plt.subplots(ncols=1, nrows=2, figsize=(5, 6), sharex=True)
+
+axs[0].semilogx([fmin,fcthe],[AdcdBthe-3,AdcdBthe-3],'k--', linewidth=lw)
+axs[0].semilogx([fcthe,fcthe],[-40,AdcdBthe-3],'k--', linewidth=lw)
+axs[0].semilogx([fmin,fmax],[AinfdB,AinfdB],'k--', linewidth=lw)
+axs[0].semilogx([fmin,GBWthe],[0,0],'k--', linewidth=lw)
+axs[0].semilogx([GBWthe,GBWthe],[-40,0],'k--', linewidth=lw)
+axs[0].semilogx(fthe,AmagdBthe,'r',label='Theory')
+axs[0].semilogx(fthe,AmagdBthenocf,'r--',label='Without $C_F$')
+axs[0].set(xlim=(fmin,fmax), ylim=(-20,60), ylabel='$|A_v|$ [dB]')
+axs[0].set_yticks(range(-20,70,10))
+#axs[0].set_yticks([-25,-20,-15,-10,-5,0,5,10,15,20,25])
+axs[0].legend(loc='upper right', fontsize=10)
+textstr1 = '\n'.join((
+    f'$A_{{dc}} =$ {AdcdBthe:.1f} dB',
+    f'$A_{{\\infty}} =$ {AinfdB:.1f} dB',
+    f'$GBW =$ {GBWthe/1e6:.0f} MHz',
+    f'$f_c =$ {fcthe/1e6:.2f} MHz',
+    f'$f_z =$ {fzthe/1e9:.2f} GHz'))
+axs[0].text(0.03, 0.05, textstr1, ha='left', va='bottom', transform=axs[0].transAxes, size=10,
+         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+#axs[0].text(0.5, 0.05, 'No VS ($\\lambda_c = 0$)', ha='center', va='bottom', transform=axs[0].transAxes, size=10,
+#         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+
+axs[1].semilogx([fmin,fcthe],[-45,-45],'k--', linewidth=lw)
+axs[1].semilogx([fcthe,fcthe],[-45,0],'k--', linewidth=lw)
+axs[1].semilogx([fmin,GBWthe],[-90,-90],'k--', linewidth=lw)
+axs[1].semilogx([GBWthe,GBWthe],[-90,0],'k--', linewidth=lw)
+axs[1].semilogx(fthe,Aphidegthe,'b-',label='Theory')
+axs[1].semilogx(fthe,Aphidegthenocf,'b--',label='Without $C_F$')
+axs[1].set(xlim=(fmin,fmax), ylim=(-180,0), xlabel='Frequency [Hz]', ylabel='$arg\\{A_v\\}$ [degree]')
+axs[1].set_yticks([-180,-135,-90,-45,0])
+axs[1].legend(loc='upper right', fontsize=10)
+textstr2 = '\n'.join((
+    f'$L =$ {L/1e-6:.2f} $\\mu m$',
+    f'$C_L =$ {CL0/1e-15:.0f} fF',
+    f'$IC_{{opt}} =$ {ICopt:.2f}',
+    f'$I_{{b,opt}} =$ {Ibopt/1e-9:.0f} nA',
+    f'$W_{{opt}} =$ {Wopt/1e-6:.2f} $\\mu m$'))
+axs[1].text(0.03, 0.05, textstr2, ha='left', va='bottom', transform=axs[1].transAxes, size=10,
+         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+plt.subplots_adjust(hspace=0.1)
+
+plt.show()
+```
+
+We can now proceed with the simulations.
+
+#### ngspice simulations
+We start checking the DC operating point by first looking at the drain current $I_D$, gate transconductance $G_m$, output conductance $G_{ds}$ and DC gain $A_{dc}$. The values extracted from the simulation (PSP) are compared to the theoretical prediction in @tbl-gbw_op_comp1_pmos.
+
+```{python}
+#| label: tbl-gbw_op_comp1_pmos
+#| tbl-cap: Simulated drain current and small-signal parameter values compared to theoretical values (pMOS).
+
+simulationPath="./Simulations/pmos/Optimization for GBW/"
+dataPath="./Data/pmos/Optimization for GBW/"
+fileName = "CS_GBW.op"
+dataFile = dataPath + fileName + ".dat"
+opFile = simulationPath + fileName + ".dat"
+paramFile = simulationPath + fileName + ".par"
+simulationFile = simulationPath + fileName + ".cir"
+simulationLog = simulationPath + fileName + ".log"
+simulationData = simulationPath + fileName + ".dat"
+
+# We set AS in order for the PDK to take our values of AD and PD for calculating the junction caps and avoid the automatic calculation
+if newSim:
+    paramstr = '\n'.join((
+        f'.param CL={CL0/1e-15:.3f}f W1={Wopt/1e-6:.3f}u L1={L/1e-6:.3f}u AS1={AD:.3e} PS1={PD:.3e} AD1={AD:.3e} PD1={PD:.3e}',
+        f'.param VDD={VDD:.1f} Ib={Ibopt/1e-9:.0f}n'
+    ))
+    print(paramstr)
+    with open(paramFile, 'w') as f:
+        f.write(paramstr)
+    print('Starting ngspice simulation...\n')
+    result = subprocess.run(f"""ngspice_con -b -o "{simulationLog}" "{simulationFile}" """, shell=True, capture_output=True, text=True)
+    if result.stderr == '':
+        print("Simulation executed successfully.\n")
+    else:
+        print("Simulation failed with return code", result.stderr)
+    print(result.stdout)
+    f = open(simulationLog, 'r')
+    log_contents = f.read()
+    print("Contents of the log file:")
+    print("‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾\n")
+    print (log_contents)
+    # We copy the simulation results to the dat folder
+    shutil.copy2(simulationData, dataFile)
+
+op_df=pd.read_table(dataFile, sep=r'\s+', skiprows=[2], dtype=np.float64, engine='python')
+op_df=op_df.rename(columns={'@n.x1.nsg13_lv_pmos[ids]': 'Transistor',
+                              '@n.x1.Nsg13_lv_pmos[ids]': 'ID',
+                              '@n.x1.Nsg13_lv_pmos[gm]': 'Gm',
+                              '@n.x1.Nsg13_lv_pmos[gds]': 'Gds',
+                              '@n.x1.Nsg13_lv_pmos[cgdol]': 'CGDe',
+                              '@n.x1.Nsg13_lv_pmos[cgsol]': 'CGSe',
+                              '@n.x1.Nsg13_lv_pmos[lp_cgov]': 'CGov',
+                              '@n.x1.Nsg13_lv_pmos[lp_cfr]': 'CGfr',
+                              '@n.x1.Nsg13_lv_pmos[cjd]': 'CJtot',
+                              '@n.x1.Nsg13_lv_pmos[cjdbot]': 'CJbot',
+                              '@n.x1.Nsg13_lv_pmos[cjdgat]': 'CJSWgate',
+                              '@n.x1.Nsg13_lv_pmos[cjdsti]': 'CJSWsti',
+                              '@n.x1.Nsg13_lv_pmos[cjosbot]': 'CJbot0',
+                              '@n.x1.Nsg13_lv_pmos[cjossti]': 'CJSWsti0',
+                              '@n.x1.Nsg13_lv_pmos[cjosgat]': 'CJSWgate0',
+                              '@n.x1.Nsg13_lv_pmos[fug]': 'fu'})
+
+op_df['Transistor'] = op_df['Transistor'].astype(str)
+op_df.at[0, 'Transistor'] = 'M1'
+op_df.at[1, 'Transistor'] = 'M2'
+op_df.set_index('Transistor', inplace=True)
+op_df.rename_axis(index=None, inplace=True)
+pd.set_option('display.float_format', '{:.3e}'.format)
+#op_df
+
+IDthe=Ibopt
+Gmthe=Gmopt
+Gdsthe=Gds
+
+IDsim=op_df.at['M1','ID']
+Gmsim=op_df.at['M1','Gm']
+Gdssim=op_df.at['M1','Gds']
+
+comp1 = {'ID [nA]': [f'{IDthe/1e-9:.0f}', f'{IDsim/1e-9:.0f}'],
+        'Gm [uA/V]': [f'{Gmthe/1e-6:.3f}', f'{Gmsim/1e-6:.3f}'],
+        'Gds [nA/V]': [f'{Gdsthe/1e-9:.3f}', f'{Gdssim/1e-9:.3f}'],
+        'Av [dB]': [f'{20*log(Gmthe/Gdsthe):.3f}', f'{20*log(Gmsim/Gdssim):.3f}']
+        }
+
+index_list = ['Theory','PSP']
+
+comp1_df = pd.DataFrame(comp1,index_list)
+
+Markdown( 
+  tabulate(comp1_df,
+  showindex=True,
+  headers=["$I_D\,[nA]$","$G_m\,[\mu A/V]$","$G_{ds}\,[nA/V]$","$A_v$"],
+  numalign="center",
+  stralign="center",
+  colalign=("center","center")
+))
+```
+
+From @tbl-gbw_op_comp1_pmos, we see that the values extracted from PSP are very close to the theoretical values, even for the output conductance. We now compare the simulated values of the overlap and fringing capacitances to the theoretical estimation in @tbl-gbw_op_comp2_pmos.
+
+```{python}
+#| label: tbl-gbw_op_comp2_pmos
+#| tbl-cap: Simulated overlap and fringing capacitances values compared to theoretical values (pMOS).
+
+WECV=Wopt+DWCVp
+CGSothe=WECV*CGSOp
+CGDothe=WECV*CGDOp
+WGCV=Wopt+DWGCVp
+CGSfthe=WGCV*CGSFp
+CGDfthe=WGCV*CGDFp
+CGDethe=CGDothe+CGDfthe
+CGSethe=CGSothe+CGSfthe
+
+CGSosim=op_df.at['M1','CGov']
+CGDosim=op_df.at['M1','CGov']
+CGSfsim=op_df.at['M1','CGfr']
+CGDfsim=op_df.at['M1','CGfr']
+CGDesim=op_df.at['M1','CGDe']
+CGSesim=op_df.at['M1','CGSe']
+#CGDfsim=CGDesim-CGDosim
+#CGSfsim=CGSesim-CGSosim
+
+comp2 = {'CGSo [fF]': [f'{CGSothe/1e-15:.3f}', f'{CGSosim/1e-15:.3f}'],
+        'CGDo [fF]': [f'{CGDothe/1e-15:.3f}', f'{CGDosim/1e-15:.3f}'],
+        'CGSf [fF]': [f'{CGSfthe/1e-15:.3f}', f'{CGSfsim/1e-15:.3f}'],
+        'CGDf [fF]': [f'{CGDfthe/1e-15:.3f}', f'{CGDfsim/1e-15:.3f}'],
+        'CGSe [fF]': [f'{CGSethe/1e-15:.3f}', f'{CGSesim/1e-15:.3f}'],
+        'CGDe [fF]': [f'{CGDethe/1e-15:.3f}', f'{CGDesim/1e-15:.3f}']
+        }
+
+index_list = ['Theory','PSP']
+
+comp2_df = pd.DataFrame(comp2,index_list)
+
+Markdown( 
+  tabulate(comp2_df,
+  showindex=True,
+  headers=["$C_{GSo}\,[fF]$","$C_{GDo}\,[fF]$","$C_{GSf}\,[fF]$","$C_{GDf}\,[fF]$","$C_{GSe}\,[fF]$","$C_{GDe}\,[fF]$"],
+  numalign="center",
+  stralign="center",
+  colalign=("center","center")
+))
+```
+
+We see that the estimated zero-bias values of the overlap and fringing capacitance are very close to the values extracted from PSP, whereas the bias-dependent values of the total extrinsic capacitances extracted from PSP are slightly smaller and asymmetrical (this is due to the bias dependence which is very different for the drain and the source).
+
+We finally look at the junction capacitances. The theoretical values of the junction capacitances are compared to the values extracted from PSP in @tbl-gbw_op_comp3_pmos and @tbl-gbw_op_comp4_pmos. @tbl-gbw_op_comp3_pmos compares the zero-bias values whereas @tbl-gbw_op_comp4_pmos compares the theoretical zero-bias values to the actual values accounting for the junction bias voltage extracted from PSP.
+
+```{python}
+#| label: tbl-gbw_op_comp3_pmos
+#| tbl-cap: Simulated zero-bias junction capacitances values compared to theoretical values.
+
+AD=Zdif*WECV
+PD=2*(Zdif+WECV)
+
+CJbot0the=AD*CJp
+CJswsti0the=(PD-WECV)*CJSWSTIp
+CJswgat0the=Wopt*CJSWGATp
+CJtot0the=CJbot0the+CJswsti0the+CJswgat0the
+CJbotthe=AD*CJp
+CJswstithe=(PD-WECV)*CJSWSTIp
+CJswgatthe=WECV*CJSWGATp
+CJtotthe=CJbotthe+CJswstithe+CJswgatthe
+
+CJbot0sim=op_df.at['M1','CJbot0']
+CJswsti0sim=op_df.at['M1','CJSWsti0']
+CJswgat0sim=op_df.at['M1','CJSWgate0']
+CJtot0sim=CJbot0sim+CJswsti0sim+CJswgat0sim
+CJbotsim=op_df.at['M1','CJbot']
+CJswstisim=op_df.at['M1','CJSWsti']
+CJswgatsim=op_df.at['M1','CJSWgate']
+CJtotsim=op_df.at['M1','CJtot']
+
+comp3 = {'CJbot0 [fF]': [f'{CJbot0the/1e-15:.3f}', f'{CJbot0sim/1e-15:.3f}'],
+        'CJswsti0 [fF]': [f'{CJswsti0the/1e-15:.3f}', f'{CJswsti0sim/1e-15:.3f}'],
+        'CJswgat0 [fF]': [f'{CJswgat0the/1e-15:.3f}', f'{CJswgat0sim/1e-15:.3f}'],
+        'CJtot0 [fF]': [f'{CJtot0the/1e-15:.3f}', f'{CJtot0sim/1e-15:.3f}']
+        }
+
+index_list = ['Theory','PSP']
+
+comp3_df = pd.DataFrame(comp3,index_list)
+
+Markdown( 
+  tabulate(comp3_df,
+  showindex=True,
+  headers=["$C_{Jbot}(0)\,[fF]$","$C_{JSWSTI}(0)\,[fF]$","$C_{JSWGAT}(0)\,[fF]$","$C_{Jtot}(0)\,[fF]$"],
+  numalign="center",
+  stralign="center",
+  colalign=("center","center")
+))
+```
+
+```{python}
+#| label: tbl-gbw_op_comp4_pmos
+#| tbl-cap: Simulated actual junction capacitances values compared to theoretical zero-bias values.
+
+comp4 = {'CJbot [fF]': [f'{CJbotthe/1e-15:.3f}', f'{CJbotsim/1e-15:.3f}'],
+        'CJswsti [fF]': [f'{CJswstithe/1e-15:.3f}', f'{CJswstisim/1e-15:.3f}'],
+        'CJswgat [fF]': [f'{CJswgatthe/1e-15:.3f}', f'{CJswgatsim/1e-15:.3f}'],
+        'CJtot [fF]': [f'{CJtotthe/1e-15:.3f}', f'{CJtotsim/1e-15:.3f}']
+        }
+
+index_list = ['Theory','PSP']
+
+comp4_df = pd.DataFrame(comp4,index_list)
+
+Markdown( 
+  tabulate(comp4_df,
+  showindex=True,
+  headers=["$C_{Jbot}\,[fF]$","$C_{JSWSTI}\,[fF]$","$C_{JSWGAT}\,[fF]$","$C_{Jtot}\,[fF]$"],
+  numalign="center",
+  stralign="center",
+  colalign=("center","center")
+))
+```
+
+From @tbl-gbw_op_comp3_pmos and @tbl-gbw_op_comp4_pmos, we observe that the estimated values of the zero-bias junction capacitances, including bottom and side-wall components, are almost equal to the values extracted from PSP. As expected, the actual values including the effect of bias in PSP are slightly lower than the zero-bias zero-bias theoretical values.
+
+From the values of transconductance and capacitances, we can now estimate the $GBW$.
+
+
+```{python}
+#| label: tbl-gbw_op_comp5_pmos
+#| tbl-cap: Comparison of the simulated and predicted values of the gain-bandwidth and zero frequency.
+
+Coutthe=CL+CJtotthe+CGDethe
+CFthe=CGDethe
+futhe=Gmthe/(2*pi*Coutthe)
+fzthe=Gmthe/CFthe
+Ainfthe=20*log(CFthe/(CFthe+Coutthe))
+
+Coutsim=CL+CJtotsim+CGDesim
+CFsim=CGDesim
+fusim=Gmsim/(2*pi*Coutsim)
+fzsim=Gmthe/CFsim
+Ainfsim=20*log(CFsim/(CFsim+Coutsim))
+
+comp5 = {'Gm [uA/V]': [f'{Gmthe/1e-6:.3f}', f'{Gmsim/1e-6:.3f}'],
+         'Cout [fF]': [f'{Coutthe/1e-15:.3f}', f'{Coutsim/1e-15:.3f}'],
+        'CF [fF]': [f'{CFthe/1e-15:.3f}', f'{CFsim/1e-15:.3f}'],
+        'fu [MHz]': [f'{futhe/1e6:.3f}', f'{fusim/1e6:.3f}'],
+        'fz [GHz]': [f'{fzthe/1e9:.3f}', f'{fzsim/1e9:.3f}'],
+        'Ainf [dB]': [f'{Ainfthe:.3f}', f'{Ainfsim:.3f}']
+        }
+
+index_list = ['Theory','PSP']
+
+comp5_df = pd.DataFrame(comp5,index_list)
+
+Markdown( 
+  tabulate(comp5_df,
+  showindex=True,
+  headers=["$G_m\,[\mu A/V]$","$C_{out}\,[fF]$","$C_F\,[fF]$","$GBW\,[MHz]$","$f_z\,[GHz]$","$A_{\infty}\,[dB]$"],
+  numalign="center",
+  stralign="center",
+  colalign=("center","center")
+))
+```
+
+The theoretical and simulated values shown in @tbl-gbw_op_comp5_pmos are very close. The theoretical $GBW$ is almost on target as it should be (the slight difference comes from the recalculations of the effective width).
+
+We can now proceed with the AC simulation.
+
+```{python}
+#| label: fig-cs_ol_tf_gbw_sim_pmos
+#| fig-cap: CS simulated open-loop transfer function compared to the theoretical prediction (pMOS).
+
+simulationPath="./Simulations/pmos/Optimization for GBW/"
+dataPath="./Data/pmos/Optimization for GBW/"
+fileName = "CS_GBW.ac"
+dataFile = dataPath + fileName + ".dat"
+opFile = simulationPath + fileName + ".dat"
+paramFile = simulationPath + fileName + ".par"
+simulationFile = simulationPath + fileName + ".cir"
+simulationLog = simulationPath + fileName + ".log"
+simulationData = simulationPath + fileName + ".dat"
+
+if newSim:
+    paramstr = '\n'.join((
+        f'.param CL={CL0/1e-15:.3f}f W1={Wopt/1e-6:.3f}u L1={L/1e-6:.3f}u AS1={AD:.3e} PS1={PD:.3e} AD1={AD:.3e} PD1={PD:.3e}',
+        f'.param VDD={VDD:.1f} Ib={Ibopt/1e-9:.0f}n'
+    ))
+    print(paramstr)
+    with open(paramFile, 'w') as f:
+        f.write(paramstr)
+    print('Starting ngspice simulation...\n')
+    result = subprocess.run(f"""ngspice_con -b -o "{simulationLog}" "{simulationFile}" """, shell=True, capture_output=True, text=True)
+    if result.stderr == '':
+        print("Simulation executed successfully.\n")
+    else:
+        print("Simulation failed with return code", result.stderr)
+    print(result.stdout)
+    f = open(simulationLog, 'r')
+    log_contents = f.read()
+    print("Contents of the log file:")
+    print("‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾\n")
+    print (log_contents)
+    # We copy the simulation results to the dat folder
+    shutil.copy2(simulationData, dataFile)
+
+df_sim=pd.read_table(dataFile, sep=' +', engine='python')
+fsim=df_sim['frequency'].to_numpy()
+AmagdBsim=df_sim['AmagdB'].to_numpy()
+Aphidegsim=df_sim['Aphdeg'].to_numpy()-180
+Npts=len(fsim)
+fmin=fsim[0]
+#fmin=10
+fmax=fsim[Npts-1]
+
+regexp = re.compile(r'adc.*?([0-9.\+-]+e[0-9.\+-]+)')
+with open(simulationLog) as f:
+    for line in f:
+        match = re.match(regexp, line)
+        if match:
+            AdcdBsim=float(match.group(1))
+
+regexp = re.compile(r'gbw.*?([0-9.\+-]+e[0-9.\+-]+)')
+with open(simulationLog) as f:
+    for line in f:
+        match = re.match(regexp, line)
+        if match:
+            GBWsim=float(match.group(1))
+
+regexp = re.compile(r'fc.*?([0-9.\+-]+e[0-9.\+-]+)')
+with open(simulationLog) as f:
+    for line in f:
+        match = re.match(regexp, line)
+        if match:
+            fcsim=float(match.group(1))
+
+regexp = re.compile(r'fz.*?([0-9.\+-]+e[0-9.\+-]+)')
+with open(simulationLog) as f:
+    for line in f:
+        match = re.match(regexp, line)
+        if match:
+            fzsim=float(match.group(1))
+
+CFext=Gmsim/(2*pi*fzsim)
+
+#print(f'Adc = {AdcdBsim:.3f} dB')
+#print(f'GBW = {GBWsim:.3e} Hz')
+#print(f'fc = {fcsim/1e6:.3f} MHz')
+#print(f'fz = {fzsim/1e6:.3f} MHz')
+#print(f'CFext = {CFext/1e-15:.3f} fF')
+
+fig, axs = plt.subplots(ncols=1, nrows=2, figsize=(5, 6), sharex=True)
+
+axs[0].semilogx([fmin,fcsim],[AdcdBsim-3,AdcdBsim-3],'k--', linewidth=lw)
+axs[0].semilogx([fcsim,fcsim],[-40,AdcdBsim-3],'k--', linewidth=lw)
+axs[0].semilogx([fmin,GBWsim],[0,0],'k--', linewidth=lw)
+axs[0].semilogx([GBWsim,GBWsim],[-40,0],'k--', linewidth=lw)
+axs[0].semilogx(fsim,AmagdBsim, color='r', label='Simulation',
+                marker='o', markersize=msize, markevery=12, linestyle='None')
+axs[0].semilogx(fthe,AmagdBthe,'r-',label='Theory')
+axs[0].semilogx(fthe,AmagdBthenocf,'r--',label='Without $C_F$')
+axs[0].set(xlim=(fmin,fmax), ylim=(-20,60), ylabel='$|A_v|$ [dB]')
+#axs[0].set_yticks([-25,-20,-15,-10,-5,0,5,10,15,20,25])
+axs[0].legend(loc='upper right')
+textstr1 = '\n'.join((
+    f'$A_{{dc}} =$ {AdcdBthe:.1f} dB (theory)',
+    f'$A_{{dc}} =$ {AdcdBsim:.1f} dB (sim.)',
+    f'$f_c =$ {fcthe/1e6:.3f} MHz (theory)',
+    f'$f_c =$ {fcsim/1e6:.3f} MHz (sim.)',
+    f'$GBW =$ {GBWthe/1e6:.1f} MHz (theory)',
+    f'$GBW =$ {GBWsim/1e6:.1f} MHz (sim.)'))
+axs[0].text(1.03, 0.5, textstr1, ha='left', va='center', transform=axs[0].transAxes, size=10,
+         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+
+axs[1].semilogx([fmin,fcsim],[-45,-45],'k--', linewidth=lw)
+axs[1].semilogx([fcsim,fcsim],[-45,0],'k--', linewidth=lw)
+axs[1].semilogx([fmin,GBWsim],[-90,-90],'k--', linewidth=lw)
+axs[1].semilogx([GBWsim,GBWsim],[-90,0],'k--', linewidth=lw)
+axs[1].semilogx(fsim,Aphidegsim, color='b', label='Simulation',
+                marker='o', markersize=msize, markevery=12, linestyle='None')
+axs[1].semilogx(fthe,Aphidegthe,'b-',label='Theory')
+axs[1].semilogx(fthe,Aphidegthenocf,'b--',label='Without $C_F$')
+axs[1].set(xlim=(fmin,fmax), ylim=(-135,0), xlabel='Frequency [Hz]', ylabel='$arg\\{A_v\\}$ [degree]')
+#axs[1].set_xticks([1e1,1e2,1e3,1e4,1e5,1e6,1e7,1e8])
+axs[1].set_yticks([-180,-135,-90,-45,0])
+axs[1].legend(loc='best')
+textstr2 = '\n'.join((
+    f'$L =$ {L/1e-6:.2f} $\\mu m$',
+    f'$C_L =$ {CL0/1e-15:.0f} fF',
+    f'$IC_{{opt}} =$ {ICopt:.2f}',
+    f'$I_{{b,opt}} =$ {Ibopt/1e-9:.0f} nA',
+    f'$W_{{opt}} =$ {Wopt/1e-6:.2f} $\\mu m$'))
+axs[1].text(0.03, 0.05, textstr2, ha='left', va='bottom', transform=axs[1].transAxes, size=10,
+         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+plt.subplots_adjust(hspace=0.1)
+#saveFigures(savePath, 'CS_GBW_long_gain_response')
+plt.show()
+```
+
+From @fig-cs_ol_tf_gbw_sim_pmos, we see that the simulated $GBW$ is slightly higher than the estimated value and the spec. This is probably due to the effect of the nearby zero and the lower extrinsic capacitances. We also see that the simulated DC gain is slightly lower than the estimated one. The zero is also lower than the theoretical value. This is coming from the fact that we have a rather long pMOS transistor and therefore the quasi-static frequency, which is scaling like $1/L^2$, is probably at the level of the zero introduced by the feedback capacitor. We can have a better estimation of the transfer function accounting for the quasi-static time constant by replacing $G_m$ by
+\begin{equation}
+  Y_m(s) = G_m \cdot (1 - s \cdot \tau_{qs}) = G_m \cdot \left(1 - \frac{s}{\omega_{qs}}\right),
+\end{equation}
+where $\tau_{qs} = 1/\omega_{qs}$ is the quasi-static time constant and $\omega_{qs}$ the quasi-static frequency which delimits the frequency range above which the operation of the transistor can no more be considered as quasi-static, but becomes non-quasi-static (NQS). The quasi-static time constant $\tau_{qs}$ is given by
+\begin{equation}
+  \tau_{qs} = \frac{C_m}{G_m},
+\end{equation}
+where $C_m$ is the gate transcapacitance which is a fraction of the total gate capacitance $W\,L\,C_{ox}$ given by
+\begin{equation}
+  \frac{C_m}{W\,L\,C_{ox}} = \frac{q_s-q_d}{15} \cdot\frac{4 q_s^2 + 4 q_d^2 + 12 q_s q_d + 10 q_s + 10 q_d + 5}{(q_s + q_d + 1)^3}.
+\end{equation}
+
+In saturation $q_d = 0$ and $C_m$ reduces to
+\begin{equation}
+  \frac{C_m}{W\,L\,C_{ox}} = \frac{q_s}{15}\,\frac{4 q_s^2 + 10 q_s + 5}{(q_s + 1)^3}
+\end{equation}
+In strong inversion $q_s \gg 1$ and $C_m$ saturates to
+\begin{equation}
+  \frac{C_m}{W\,L\,C_{ox}} \cong \frac{4}{15},
+\end{equation}
+whereas in weak inversion $q_s \ll 1$ and $C_m$ simplifies to
+\begin{equation}
+  \frac{C_m}{W\,L\,C_{ox}} \cong \frac{q_s}{3}.
+\end{equation}
+Since the transconductance in weak inversion is given by
+\begin{equation}
+  G_m = \frac{G_{spec}}{n} \cdot q_s,
+\end{equation}
+the quasi-static time constant $\tau_{qs}$ in weak inversion becomes bias independent
+\begin{equation}
+  \tau_{qs} \cong \frac{L^2}{6\mu\,U_T}
+\end{equation}
+and scales as $L^2$ and is inversely proportionnal to the mobility $\mu$. This explains why for a long-channel pMOS transistor, the quasi-static frequency may become low.
+
+```{python}
+# Intrinsic gate transcapacitance (long-channel)
+def cm_qs_qd(qs,qd):
+    num=(qs-qd)*(4*qs**2+4*q**2+12*qs*qd+10*qs+10*qd+5)
+    den=15*(qs+qd+1)**3
+    return num/den
+
+# Intrinsic gate transcapacitance in saturation (long-channel)
+def cm_ic(ic):
+    qs=qi(ic)
+    qd=0
+    return cm_qs_qd(qs,qd)
+
+Cm=Wopt*L*Cox*cm_ic(ICopt)
+wqs=Gmopt/Cm
+fqs=wqs/(2*pi)
+```
+
+We can now estimate the transcapacitance for this particular design as
+
+$C_m =$ `{python} f'{Cm/1e-15:.3f} $fF$'`
+
+and the corresponding quasi-static frequency as
+
+$f_{{qs}} =$ `{python} f'{fqs/1e6:.3f} $MHz$'`.
+
+We see that $C_m$ is even larger than the extrinsic feedback capacitance and therefore cannot be neglected. The quasi-static frequency is just 3 times the target $GBW$ and hence the transcapacitance cannot be neglected.
+
+The transfer function accounting for the transcapacitance is still given by the same expression, which is repeated below
+\begin{equation}
+  A(s) \triangleq \frac{\Delta V_{out}}{\Delta V_{in}} = A_{dc} \cdot \frac{1-s/\omega_z}{1+s/\omega_p}.
+\end{equation}
+However $\omega_z$ now includes the effect of the transcapacitance according to
+\begin{align}
+  A_{dc} &= -G_m \cdot R_{ds},\\
+  \omega_z &= \frac{G_m}{C_F+C_m},\\
+  \omega_p &= \frac{1}{R_{ds}\,(C_F+C_L)}.
+\end{align}
+We see that $C_m$ directly adds to $C_F$. This of course changes the position of the zero, but also the asymptotic high frequency value which now becomes
+\begin{equation}
+  A_{\infty} \triangleq \lim_{s \to \infty} A(s) = \frac{C_F+C_m}{C_L+C_F} = \frac{1+C_m/C_F}{1 + C_L/C_F},
+\end{equation}
+
+
+
+```{python}
+Ainfqs=(1+Cm/CF)/(1+Cout/CF)
+AinfqsdB=20*log(Ainfqs)
+```
+
+$A_{\infty}$ can be estimated as
+
+$A_{\infty} =$ `{python} f'{Ainfqs:.3e}'`
+
+or in dB
+
+$A_{\infty} =$ `{python} f'{AinfqsdB:.3f} $dB$'`
+
+We can now compare the simulations to the improved model accounting for the transcapacitance. The result is shown in @fig-cs_ol_tf_gbw_sim_pmos_qs.
+
+```{python}
+#| label: fig-cs_ol_tf_gbw_sim_pmos_qs
+#| fig-cap: CS simulated open-loop transfer function compared to the theoretical prediction including the transcapacitance $C_m$.
+
+def Av(s,Adc,wp,wz):
+    num=Adc*(1-s/wz)
+    den=1+s/wp
+    return num/den
+
+def Avqs(s,Adc,wp,wz):
+    num=Adc*(1-s/wz)
+    den=1+s/wp
+    return num/den
+
+GBWthe=fu
+fcthe=fu/Adcthe
+wpthe=2*pi*fcthe
+wzthe=Gmopt/CF
+wztheqs=Gmopt/(CF+Cm)
+
+Npts=len(fsim)
+fmin=fsim[0]
+fmax=fsim[Npts-1]
+
+Npts=201
+logfmin=log(fmin)
+logfmax=log(fmax)
+fthe=np.logspace(logfmin,logfmax,Npts,endpoint=True,base=10.0)
+
+AmagdBthe=np.zeros(Npts)
+Aphidegthe=np.zeros(Npts)
+AmagdBtheqs=np.zeros(Npts)
+Aphidegtheqs=np.zeros(Npts)
+
+for k in range(0,Npts):
+    jw=1j*2*pi*fthe[k]
+    AmagdBthe[k]=20*log(abs(Av(jw,Adcthe,wpthe,wzthe)))
+    Aphidegthe[k]=np.angle(Av(jw,Adcthe,wpthe,wzthe),deg=True)
+    AmagdBtheqs[k]=20*log(abs(Av(jw,Adcthe,wpthe,wztheqs)))
+    Aphidegtheqs[k]=np.angle(Av(jw,Adcthe,wpthe,wztheqs),deg=True)
+
+fig, axs = plt.subplots(ncols=1, nrows=2, figsize=(5, 6), sharex=True)
+
+axs[0].semilogx([fmin,fcsim],[AdcdBsim-3,AdcdBsim-3],'k--', linewidth=lw)
+axs[0].semilogx([fcsim,fcsim],[-40,AdcdBsim-3],'k--', linewidth=lw)
+axs[0].semilogx([fmin,GBWsim],[0,0],'k--', linewidth=lw)
+axs[0].semilogx([GBWsim,GBWsim],[-40,0],'k--', linewidth=lw)
+axs[0].semilogx(fsim,AmagdBsim, color='r', label='Simulation',
+                marker='o', markersize=msize, markevery=12, linestyle='None')
+axs[0].semilogx(fthe,AmagdBthe,'r--',label='Without $C_m$')
+axs[0].semilogx(fthe,AmagdBtheqs,'r-',label='With $C_m$')
+axs[0].set(xlim=(fmin,fmax), ylim=(-20,60), ylabel='$|A_v|$ [dB]')
+#axs[0].set_yticks([-25,-20,-15,-10,-5,0,5,10,15,20,25])
+axs[0].legend(loc='upper right')
+textstr1 = '\n'.join((
+    f'$A_{{dc}} =$ {AdcdBthe:.1f} dB (theory)',
+    f'$A_{{dc}} =$ {AdcdBsim:.1f} dB (sim.)',
+    f'$f_c =$ {fcthe/1e6:.3f} MHz (theory)',
+    f'$f_c =$ {fcsim/1e6:.3f} MHz (sim.)',
+    f'$GBW =$ {GBWthe/1e6:.1f} MHz (theory)',
+    f'$GBW =$ {GBWsim/1e6:.1f} MHz (sim.)'))
+axs[0].text(1.03, 0.5, textstr1, ha='left', va='center', transform=axs[0].transAxes, size=10,
+         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+
+axs[1].semilogx([fmin,fcsim],[-45,-45],'k--', linewidth=lw)
+axs[1].semilogx([fcsim,fcsim],[-45,0],'k--', linewidth=lw)
+axs[1].semilogx([fmin,GBWsim],[-90,-90],'k--', linewidth=lw)
+axs[1].semilogx([GBWsim,GBWsim],[-90,0],'k--', linewidth=lw)
+axs[1].semilogx(fsim,Aphidegsim, color='b', label='Simulation',
+                marker='o', markersize=msize, markevery=12, linestyle='None')
+axs[1].semilogx(fthe,Aphidegthe,'b--',label='Without $C_m$')
+axs[1].semilogx(fthe,Aphidegtheqs,'b-',label='With $C_m$')
+axs[1].set(xlim=(fmin,fmax), ylim=(-135,0), xlabel='Frequency [Hz]', ylabel='$arg\\{A_v\\}$ [degree]')
+#axs[1].set_xticks([1e1,1e2,1e3,1e4,1e5,1e6,1e7,1e8])
+axs[1].set_yticks([-180,-135,-90,-45,0])
+axs[1].legend(loc='best')
+textstr2 = '\n'.join((
+    f'$L =$ {L/1e-6:.2f} $\\mu m$',
+    f'$C_L =$ {CL0/1e-15:.0f} fF',
+    f'$IC_{{opt}} =$ {ICopt:.2f}',
+    f'$I_{{b,opt}} =$ {Ibopt/1e-9:.0f} nA',
+    f'$W_{{opt}} =$ {Wopt/1e-6:.2f} $\\mu m$'))
+axs[1].text(0.03, 0.05, textstr2, ha='left', va='bottom', transform=axs[1].transAxes, size=10,
+         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+plt.subplots_adjust(hspace=0.1)
+#saveFigures(savePath, 'CS_GBW_long_gain_response')
+plt.show()
+```
+
+From @fig-cs_ol_tf_gbw_sim_pmos_qs, we see that we have now an almost perfect fit between the theoretical estimation including the effect of the transcapacitance $C_m$ and the simulation.
+
+It is worth mentioning that even if we have a good fit between theory and simulation, in reality the non-quasi-static (NQS) effects make the magnitude of the transadmittance $Y_m$ to decrease fast and its phase to turn quickly with respect to frequency above $\omega_{qs}$. As $Y_m \to 0$, the gain then tends to
+
+\begin{equation}
+  \lim_{s \to \infty} A(s) = \frac{C_F}{C_L+C_F}.
+\end{equation}
+
+This can be verified by simulation by turning on the NQS model in PSP by setting $rfmode=1$.
+
+```{python}
+#| label: fig-cs_ol_tf_gbw_sim_pmos_nqs
+#| fig-cap: CS open-loop transfer function simulated with the NQS option in PSP and compared to the theoretical prediction with and without the transcapacitance $C_m$.
+
+def Av(s,Adc,wp,wz):
+    num=Adc*(1-s/wz)
+    den=1+s/wp
+    return num/den
+
+def Avqs(s,Adc,wp,wz):
+    num=Adc*(1-s/wz)
+    den=1+s/wp
+    return num/den
+
+simulationPath="./Simulations/pmos/Optimization for GBW/"
+dataPath="./Data/pmos/Optimization for GBW/"
+fileName = "CS_GBW_nqs.ac"
+dataFile = dataPath + fileName + ".dat"
+opFile = simulationPath + fileName + ".dat"
+paramFile = simulationPath + fileName + ".par"
+simulationFile = simulationPath + fileName + ".cir"
+simulationLog = simulationPath + fileName + ".log"
+simulationData = simulationPath + fileName + ".dat"
+
+if newSim:
+    paramstr = '\n'.join((
+        f'.param CL={CL0/1e-15:.3f}f W1={Wopt/1e-6:.3f}u L1={L/1e-6:.3f}u AS1={AD:.3e} PS1={PD:.3e} AD1={AD:.3e} PD1={PD:.3e}',
+        f'.param VDD={VDD:.1f} Ib={Ibopt/1e-9:.0f}n'
+    ))
+    print(paramstr)
+    with open(paramFile, 'w') as f:
+        f.write(paramstr)
+    print('Starting ngspice simulation...\n')
+    result = subprocess.run(f"""ngspice_con -b -o "{simulationLog}" "{simulationFile}" """, shell=True, capture_output=True, text=True)
+    if result.stderr == '':
+        print("Simulation executed successfully.\n")
+    else:
+        print("Simulation failed with return code", result.stderr)
+    print(result.stdout)
+    f = open(simulationLog, 'r')
+    log_contents = f.read()
+    print("Contents of the log file:")
+    print("‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾\n")
+    print (log_contents)
+    # We copy the simulation results to the dat folder
+    shutil.copy2(simulationData, dataFile)
+
+
+
+df_sim=pd.read_table(dataFile, sep=' +', engine='python')
+fsim=df_sim['frequency'].to_numpy()
+AmagdBsim=df_sim['AmagdB'].to_numpy()
+Aphidegsim=df_sim['Aphdeg'].to_numpy()-180
+Npts=len(fsim)
+fmin=fsim[0]
+#fmin=10
+fmax=fsim[Npts-1]
+
+regexp = re.compile(r'adc.*?([0-9.\+-]+e[0-9.\+-]+)')
+with open(simulationLog) as f:
+    for line in f:
+        match = re.match(regexp, line)
+        if match:
+            AdcdBsim=float(match.group(1))
+
+regexp = re.compile(r'gbw.*?([0-9.\+-]+e[0-9.\+-]+)')
+with open(simulationLog) as f:
+    for line in f:
+        match = re.match(regexp, line)
+        if match:
+            GBWsim=float(match.group(1))
+
+regexp = re.compile(r'fc.*?([0-9.\+-]+e[0-9.\+-]+)')
+with open(simulationLog) as f:
+    for line in f:
+        match = re.match(regexp, line)
+        if match:
+            fcsim=float(match.group(1))
+
+regexp = re.compile(r'fz.*?([0-9.\+-]+e[0-9.\+-]+)')
+with open(simulationLog) as f:
+    for line in f:
+        match = re.match(regexp, line)
+        if match:
+            fzsim=float(match.group(1))
+
+GBWthe=fu
+fcthe=fu/Adcthe
+wpthe=2*pi*fcthe
+wzthe=Gmopt/CF
+wztheqs=Gmopt/(CF+Cm)
+
+logfmin=log(fmin)
+logfmax=log(fmax)
+fthe=np.logspace(logfmin,logfmax,Npts,endpoint=True,base=10.0)
+
+AmagdBthe=np.zeros(Npts)
+Aphidegthe=np.zeros(Npts)
+AmagdBtheqs=np.zeros(Npts)
+Aphidegtheqs=np.zeros(Npts)
+
+for k in range(0,Npts):
+    jw=1j*2*pi*fthe[k]
+    AmagdBthe[k]=20*log(abs(Av(jw,Adcthe,wpthe,wzthe)))
+    Aphidegthe[k]=np.angle(Av(jw,Adcthe,wpthe,wzthe),deg=True)
+    AmagdBtheqs[k]=20*log(abs(Av(jw,Adcthe,wpthe,wztheqs)))
+    Aphidegtheqs[k]=np.angle(Av(jw,Adcthe,wpthe,wztheqs),deg=True)
+
+fig, axs = plt.subplots(ncols=1, nrows=2, figsize=(5, 6), sharex=True)
+
+axs[0].semilogx([fmin,fcsim],[AdcdBsim-3,AdcdBsim-3],'k--', linewidth=lw)
+axs[0].semilogx([fcsim,fcsim],[-40,AdcdBsim-3],'k--', linewidth=lw)
+axs[0].semilogx([fmin,GBWsim],[0,0],'k--', linewidth=lw)
+axs[0].semilogx([GBWsim,GBWsim],[-40,0],'k--', linewidth=lw)
+axs[0].semilogx(fsim,AmagdBsim, color='r', label='Simulation',
+                marker='o', markersize=msize, markevery=12, linestyle='None')
+axs[0].semilogx(fthe,AmagdBthe,'r--',label='Without $C_m$')
+axs[0].semilogx(fthe,AmagdBtheqs,'r-',label='With $C_m$')
+axs[0].set(xlim=(fmin,fmax), ylim=(-20,60), ylabel='$|A_v|$ [dB]')
+#axs[0].set_yticks([-25,-20,-15,-10,-5,0,5,10,15,20,25])
+axs[0].legend(loc='upper right')
+textstr1 = '\n'.join((
+    f'$A_{{dc}} =$ {AdcdBthe:.1f} dB (theory)',
+    f'$A_{{dc}} =$ {AdcdBsim:.1f} dB (sim.)',
+    f'$f_c =$ {fcthe/1e6:.3f} MHz (theory)',
+    f'$f_c =$ {fcsim/1e6:.3f} MHz (sim.)',
+    f'$GBW =$ {GBWthe/1e6:.1f} MHz (theory)',
+    f'$GBW =$ {GBWsim/1e6:.1f} MHz (sim.)'))
+axs[0].text(1.03, 0.5, textstr1, ha='left', va='center', transform=axs[0].transAxes, size=10,
+         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+
+axs[1].semilogx([fmin,fcsim],[-45,-45],'k--', linewidth=lw)
+axs[1].semilogx([fcsim,fcsim],[-45,0],'k--', linewidth=lw)
+axs[1].semilogx([fmin,GBWsim],[-90,-90],'k--', linewidth=lw)
+axs[1].semilogx([GBWsim,GBWsim],[-90,0],'k--', linewidth=lw)
+axs[1].semilogx(fsim,Aphidegsim, color='b', label='Simulation',
+                marker='o', markersize=msize, markevery=12, linestyle='None')
+axs[1].semilogx(fthe,Aphidegthe,'b--',label='Without $C_m$')
+axs[1].semilogx(fthe,Aphidegtheqs,'b-',label='With $C_m$')
+axs[1].set(xlim=(fmin,fmax), ylim=(-135,0), xlabel='Frequency [Hz]', ylabel='$arg\\{A_v\\}$ [degree]')
+#axs[1].set_xticks([1e1,1e2,1e3,1e4,1e5,1e6,1e7,1e8])
+axs[1].set_yticks([-225,-180,-135,-90,-45,0])
+axs[1].legend(loc='best')
+textstr2 = '\n'.join((
+    f'$L =$ {L/1e-6:.2f} $\\mu m$',
+    f'$C_L =$ {CL0/1e-15:.0f} fF',
+    f'$IC_{{opt}} =$ {ICopt:.2f}',
+    f'$I_{{b,opt}} =$ {Ibopt/1e-9:.0f} nA',
+    f'$W_{{opt}} =$ {Wopt/1e-6:.2f} $\\mu m$'))
+axs[1].text(0.03, 0.05, textstr2, ha='left', va='bottom', transform=axs[1].transAxes, size=10,
+         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+plt.subplots_adjust(hspace=0.1)
+#saveFigures(savePath, 'CS_GBW_long_gain_response')
+plt.show()
+```
+
+@fig-cs_ol_tf_gbw_sim_pmos_nqs shows that now the magnitude tends indeed to $C_F/(C_F+C_L)$ as predicted by the initial model without $C_m$. We also see that the phase is quickly turning and then tending to $-180^{\circ}$. In reality, the phase would continue to turn. This example shows that the PSP compact model without turning on the NQS option, does not give a correct result above $\omega_{qs}$. To evaluate the impact of NQS we need to turn on the NQS option which approximates the NQS effect by splitting the channel into several pieces. This example shows the limit of the quasi-static model.
+
+# Minimum current for given GBW and DC gain
+## Analysis
+We can actually use the additional degree of freedom, namely the transistor length $L$ (which has been chosen arbitrarily in the previous example), to set the DC gain. To this purpose we can use the simple output conductance model (actually corresponding to channel length modulation only) given by
+\begin{equation}
+  G_{ds} \cong \frac{I_D}{\lambda \cdot L}.
+\end{equation}
+We now need to solve the following set of equations
+\begin{align}
+  \omega_u &= \frac{G_m}{C_L} = \frac{G_m}{C_{L0} + C_{DW} \cdot W},\\
+  A_{dc} &= \frac{G_m}{G_{ds}} = \frac{G_m \cdot \lambda \cdot L}{I_b},\\
+  G_m &= \frac{I_{spec\Box}}{n U_T} \cdot \frac{W}{L} \cdot g_{ms}(IC),\\
+  I_b &= I_{spec\Box} \cdot \frac{W}{L} \cdot IC.
+\end{align}
+for $I_b$, $W$, $L$ and $G_m$. This leads to the following normalized results
+\begin{align}
+  i_b &\triangleq \frac{I_b}{I_{norm}} = \frac{g_{ms} \cdot IC}{g_{ms}^2 - \xi \cdot IC}
+  = \frac{g_{ms}/IC}{(g_{ms}/IC)^2 - \xi/IC},\\
+  w &\triangleq \frac{W}{W_{norm}} = \frac{IC}{g_{ms}^2 - \xi \cdot IC},\\
+  \ell &\triangleq \frac{L}{L_{norm}} = \frac{IC}{g_{ms}},
+\end{align}
+where
+\begin{align}
+  \xi &\triangleq \frac{C_{DW} \cdot (n U_T)^2}{I_{spec\Box} \cdot \lambda} \cdot A_{dc} \cdot \omega_u,\\
+  I_{norm} & \triangleq n\,U_T \cdot C_{L0} \cdot \omega_u,\\
+  W_{norm} &\triangleq \frac{C_{L0} \cdot (n U_T)^2}{I_{spec\Box} \cdot \lambda} \cdot A_{dc} \cdot \omega_u,\\
+  L_{norm} & \triangleq \frac{n U_T}{\lambda} \cdot A_{dc}.
+\end{align}
+
+The normalized current $i_b$, width $w$ and length $\ell$ are plotted versus the inversion coefficient $IC$ in @fig-ib_ic_gbw_adc, @fig-w_ic_gbw_adc and @fig-l_ic_gbw_adc, respectively. From @fig-ib_ic_gbw_adc, we observe that similarly to the previous case, there is an optimium $IC$ for which the bias current is minimum.
+
+```{python}
+#| label: fig-ib_ic_gbw_adc
+#| fig-cap: "Normalized bias current versus inversion coefficient including the self-loading capacitances at the drain."
+
+def IClim_xi(xi):
+    return xi/(1-xi)**2
+
+def ICopt_xi(xi):
+    sqrtxi=sqrt(xi)
+    return sqrtxi/(1-sqrtxi)**2
+
+def ibopt_xi(xi):
+    return 1/(1-sqrt(xi))**2
+
+def ibopt_icopt(IC):
+    return (1+2*IC+sqrt(1+4*IC))/2
+
+xi=[0,0.01,0.03,0.1,0.3,0.6]
+Npts=1001
+Ncurves=len(xi)
+IClim=np.zeros(Ncurves)
+colors=plt.cm.rainbow(np.linspace(0, 1, Ncurves))
+logICmin=-2
+logICmax=2
+ICmin=pow(10,logICmin)
+ICmax=pow(10,logICmax)
+IC=np.logspace(logICmin,logICmax,Npts,endpoint=True,base=10.0)
+
+ib=np.zeros(Npts)
+ibopt=np.zeros(Npts)
+
+for m in range(0,Ncurves):
+    IClim[m]=IClim_xi(xi[m])
+    ICop=ICopt_xi(xi[m])
+    ibop=ibopt_xi(xi[m])
+
+    for k in range(0,Npts):
+        ibopt[k]=ibopt_icopt(IC[k])
+        if IC[k]<IClim[m]:
+            ib[k]=float("nan")
+        else:
+            ib[k]=gmsid_ic_long(IC[k])/(gmsid_ic_long(IC[k])**2-xi[m]/IC[k])
+    plt.loglog([IClim[m],IClim[m]],[1,1e2],'k--', linewidth=lw)
+    plt.loglog(IC,ib,color=colors[m], label='$\\xi =$' + f'{xi[m]:.2f}')
+    plt.loglog(ICop,ibop,'ro', markersize=6)
+
+plt.loglog([1,1e2],[1,1e1],'k--', linewidth=lw)
+plt.loglog([1,1e2],[1,1e2],'k--', linewidth=lw)
+plt.loglog(IC,ibopt,'r--')
+plt.xlim(ICmin,ICmax)
+#plt.xticks(np.arange(0,11,1))
+plt.xlabel('$IC$')
+plt.ylim(1,1e2)
+#plt.yticks(np.arange(0,1.1,0.1))
+plt.ylabel('Normalized bias current $i_b$')
+#plt.legend(loc='lower right')
+plt.legend(loc='center left', fontsize=10, bbox_to_anchor=(1, 0.5))
+plt.text(0.74, 0.95, 'No VS ($\\lambda_c = 0$)', ha='left', va='top', size=10, transform=plt.gca().transAxes,
+         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+#saveFigures(savePath, 'CS_OL_ib_vs_IC_GBW_Adc_no_VS')
+plt.show()
+```
+
+```{python}
+#| label: fig-w_ic_gbw_adc
+#| fig-cap: "Normalized width versus inversion coefficient including the self-loading capacitances at the drain."
+
+def IClim_xi(xi):
+    return xi/(1-xi)**2
+
+def ICopt_xi(xi):
+    sqrtxi=sqrt(xi)
+    return sqrtxi/(1-sqrtxi)**2
+
+def wopt_xi(xi):
+    sqrtxi=sqrt(xi)
+    if xi<=0:
+        wopt=float("nan")
+    else:
+        wopt=1/(sqrtxi*(1-sqrtxi))
+    return wopt
+
+def wopt_icopt(IC):
+    num=1+3*IC+(1+IC)*sqrt(4*IC+1)
+    den=2*IC
+    return num/den
+
+xi=[0,0.01,0.03,0.1,0.3,0.6]
+Npts=1001
+Ncurves=len(xi)
+IClim=np.zeros(Ncurves)
+colors=plt.cm.rainbow(np.linspace(0, 1, Ncurves))
+logICmin=-2
+logICmax=2
+ICmin=pow(10,logICmin)
+ICmax=pow(10,logICmax)
+IC=np.logspace(logICmin,logICmax,Npts,endpoint=True,base=10.0)
+
+w=np.zeros(Npts)
+wopt=np.zeros(Npts)
+
+for m in range(0,Ncurves):
+    IClim[m]=IClim_xi(xi[m])
+    ICop=ICopt_xi(xi[m])
+    wop=wopt_xi(xi[m])
+    for k in range(0,Npts):
+        wopt[k]=wopt_icopt(IC[k])
+        if IC[k]<IClim[m]:
+            w[k]=float("nan")
+        else:
+            w[k]=IC[k]/(gms_ic_long(IC[k])**2-xi[m]*IC[k])
+    plt.loglog([IClim[m],IClim[m]],[1,1e2],'k--', linewidth=lw)
+    plt.loglog(IC,w,color=colors[m], label='$\\xi =$' + f'{xi[m]:.2f}')
+    plt.loglog(ICop,wop,'ro', markersize=6)
+
+plt.loglog([1,1e2],[1,1e1],'k--', linewidth=lw)
+plt.loglog([1e-2,1],[1e2,1],'k--', linewidth=lw)
+plt.loglog(IC,wopt,'r--')
+plt.xlim(ICmin,ICmax)
+#plt.xticks(np.arange(0,11,1))
+plt.xlabel('$IC$')
+plt.ylim(1,1e2)
+#plt.yticks(np.arange(0,1.1,0.1))
+plt.ylabel('Normalized width $w$')
+#plt.legend(loc='lower right')
+plt.legend(loc='center left', fontsize=10, bbox_to_anchor=(1, 0.5))
+plt.text(0.74, 0.95, 'No VS ($\\lambda_c = 0$)', ha='left', va='top', size=10, transform=plt.gca().transAxes,
+         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+#saveFigures(savePath, 'CS_OL_ib_vs_IC_GBW_Adc_no_VS')
+plt.show()
+```
+
+```{python}
+#| label: fig-l_ic_gbw_adc
+#| fig-cap: "Normalized length versus inversion coefficient including the self-loading capacitances at the drain."
+
+def IClim_xi(xi):
+    return xi/(1-xi)**2
+
+def ICopt_xi(xi):
+    sqrtxi=sqrt(xi)
+    return sqrtxi/(1-sqrtxi)**2
+
+def lopt_xi(xi):
+    return 1/(1-sqrt(xi))
+
+def lopt_icopt(IC):
+    return (1+sqrt(4*IC+1))/2
+
+xi=[0.01,0.03,0.1,0.3,0.6]
+Npts=1001
+
+
+logICmin=-2
+logICmax=2
+ICmin=pow(10,logICmin)
+ICmax=pow(10,logICmax)
+IC=np.logspace(logICmin,logICmax,Npts,endpoint=True,base=10.0)
+l=np.zeros(Npts)
+
+for k in range(0,Npts):
+    l[k]=IC[k]/gms_ic_long(IC[k])
+
+plt.loglog(IC,l,'r-')
+    
+Ncurves=len(xi)
+for m in range(0,Ncurves):
+    ICop=ICopt_xi(xi[m])
+    lop=lopt_xi(xi[m])
+    plt.loglog(ICop,lop,'ro', markersize=6)
+    plt.text(ICop, lop, '$\\xi =$' + f'{xi[m]:.2f}', ha='right', va='bottom', size=10)
+
+
+plt.loglog([1,1e2],[1,1e1],'k--', linewidth=lw)
+plt.xlim(ICmin,ICmax)
+#plt.xticks(np.arange(0,11,1))
+plt.xlabel('$IC$')
+plt.ylim(1,1e1)
+#plt.yticks(np.arange(0,1.1,0.1))
+plt.ylabel('Normalized length $\ell$')
+plt.text(0.04, 0.95, 'No VS ($\\lambda_c = 0$)', ha='left', va='top', size=10, transform=plt.gca().transAxes,
+         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+#saveFigures(savePath, 'CS_OL_ib_vs_IC_GBW_Adc_no_VS')
+plt.show()
+```
+
+## Examples
+We now will design a CS stage imposing the GBW and the DC gain at the same time. We use the same technology with the parameters given in @tbl-process_param and @tbl-mos_param. We start with the case where the CS transistor is implemented with an nMOS transistor.
+
+### nMOS
+#### Design
+The process parameters that are needed to achieve the specifications given in @tbl-specs_gbw_adc_nmos are given in @tbl-process_summary_gbw_adc_nmos. Notice that because of the high output conductance of nMOS transistors in this particular technology, we have chosen a moderate DC gain. The optimum inversion coefficient, optimum bias current, optimum width and optimum length are calculated in @tbl-calc_param_gbw_adc_nmos.
+
+```{python}
+#| label: tbl-process_summary_gbw_adc_nmos
+#| tbl-cap: Required process parameters (nMOS).
+
+n=n0n
+nUT=n*UT
+Ispecsq=Ispecsqn
+lambdaL=lambdan
+Zdif = z1
+CDBJW = Zdif*CJn + CJSWSTIn + CJSWGATn
+CDBJ0 = 2*Zdif*CJSWSTIn
+CDW = Zdif*CJn + CJSWSTIn + CJSWGATn + CGDOn + CGDFn
+CD0 = 2*Zdif*CJSWSTIn
+
+table = [["$V_{DD}$",f'{VDD:.1f}',"$V$"],
+         ["$n$",f'{n:.2f}',"-"],
+         ["$I_{spec\Box}$",f'{Ispecsq/1e-9:.0f}',"$nA$"],
+         ["$\lambda$",f'{lambdaL/1e6:.2f}',"$\\frac{V}{\\mu m}$"],
+         ["$C_{DW}$",f'{CDW/1e-9:.3f}',"$\\frac{fF}{um}$"],
+         ["$C_{D0}$",f'{CD0/1e-15:.3f}',"$fF$"]
+         ]
+Markdown(tabulate(
+  table,
+  headers=["Parameter","Value","Unit"],
+  numalign="center",
+  stralign="center",
+  colalign=("center", "center", "center")
+))
+```
+
+
+```{python}
+#| label: tbl-specs_gbw_adc_nmos
+#| tbl-cap: Specifications.
+
+fu=100e6
+wu=2*pi*fu
+AdcdB=25
+Adc=pow(10,AdcdB/20)
+CL0=20e-15
+CL=CL0+CD0
+
+table = [["$GBW$",f'{fu/1e6:.0f}',"$MHz$"],
+         ["$A_{dc}$",f'{AdcdB:.0f}',"$dB$"],
+         ["$C_{L0}$",f'{CL0/1e-15:.0f}',"$fF$"],
+         ["$C_L$",f'{CL/1e-15:.3f}',"$fF$"]
+         ]
+Markdown(tabulate(
+  table,
+  headers=["Parameter","Value","Unit"],
+  numalign="center",
+  stralign="center",
+  colalign=("center", "center", "center")
+))
+```
+
+```{python}
+#| label: tbl-calc_param_gbw_adc_nmos
+#| tbl-cap: Calculated parameters (nMOS).
+
+def IClim_xi(xi):
+    return xi/(1-xi)**2
+
+def ICopt_xi(xi):
+    sqrtxi=sqrt(xi)
+    return sqrtxi/(1-sqrtxi)**2
+
+def ibopt_xi(xi):
+    return 1/(1-sqrt(xi))**2
+
+def wopt_xi(xi):
+    sqrtxi=sqrt(xi)
+    if xi<=0:
+        wopt=float("nan")
+    else:
+        wopt=1/(sqrtxi*(1-sqrtxi))
+    return wopt
+
+def lopt_xi(xi):
+    return 1/(1-sqrt(xi))
+
+xi=CDW*nUT**2/(Ispecsq*lambdaL)*Adc*wu
+Inorm=wu*CL*nUT
+Wnorm=CL*nUT**2/(Ispecsq*lambdaL)*Adc*wu
+Lnorm=nUT/lambdaL*Adc
+Gmnorm=CL*wu
+ICopt=ICopt_xi(xi)
+ibopt=ibopt_xi(xi)
+wopt=wopt_xi(xi)
+lopt=lopt_xi(xi)
+gmopt=lopt
+Ibopt=ibopt*Inorm
+Wopt=wopt*Wnorm
+Lopt=lopt*Lnorm
+Gmopt=gmopt*Gmnorm
+CDopt=Wopt*CDW
+Cout=CL+CDopt
+AD=Wopt*Zdif
+PD=2*(Wopt+Zdif)
+CDBJ=AD*CJn+(PD-Wopt)*CJSWSTIn+Wopt*CJSWGATn
+CGDo=Wopt*CGDOn
+CGDf=Wopt*CGDFn
+CGDe=CGDo+CGDf
+CF=CGDe
+wz=Gmopt/CF
+fzthe=wz/(2*pi)
+
+
+table = [["$\\xi$",f'{xi:.3f}',"-"],
+         ["$IC_{opt}$",f'{ICopt:.3f}',"-"],
+         ["$i_{b,opt}$",f'{ibopt:.3f}',"-"],
+         ["$w_{opt}$",f'{wopt:.3f}',"-"],
+         ["$\\ell_{opt}$",f'{lopt:.3f}',"-"],
+         ["$g_{m,opt}$",f'{gmopt:.3f}',"-"],
+         ["$I_{norm}$",f'{Inorm/1e-9:.3f}',"$nA$"],
+         ["$W_{norm}$",f'{Wnorm/1e-6:.3f}',"$\\mu m$"],
+         ["$L_{norm}$",f'{Lnorm/1e-6:.3f}',"$\\mu m$"],
+         ["$G_{m,norm}$",f'{Gmnorm/1e-6:.3f}',"$\\frac{\mu A}{V}$"],
+         ["$I_{b,opt}$",f'{Ibopt/1e-9:.3f}',"$nA$"],
+         ["$W_{opt}$",f'{Wopt/1e-6:.3f}',"$\\mu m$"],
+         ["$L_{opt}$",f'{Lopt/1e-6:.3f}',"$\\mu m$"],
+         ["$G_{m,opt}$",f'{Gmopt/1e-6:.3f}',"$\\frac{\mu A}{V}$"],
+         ["$C_{D,opt}$",f'{CDopt/1e-15:.3f}',"$fF$"],
+         ["$AD$",f'{AD/1e-12:.3f}',"$\\mu m^2$"],
+         ["$PD$",f'{PD/1e-6:.3f}',"$\\mu m$"],
+         ["$C_{DBJ}$",f'{CDBJ/1e-15:.3f}',"$fF$"],
+         ["$C_{DBJ,bot}$",f'{AD*CJn/1e-15:.3f}',"$fF$"],
+         ["$C_{DBJ,SWSTI}$",f'{(PD-Wopt)*CJSWSTIn/1e-15:.3f}',"$fF$"],
+         ["$C_{DBJ,SWGAT}$",f'{Wopt*CJSWGATn/1e-15:.3f}',"$fF$"],
+         ["$C_{GDo}$",f'{CGDo/1e-15:.3f}',"$fF$"],
+         ["$C_{GDf}$",f'{CGDf/1e-15:.3f}',"$fF$"],
+         ["$C_{GDe}$",f'{CGDe/1e-15:.3f}',"$fF$"],
+         ["$C_F$",f'{CF/1e-15:.3f}',"$fF$"],
+         ["$C_{out}$",f'{Cout/1e-15:.3f}',"$fF$"],
+         ["$f_z$",f'{fzthe/1e9:.3f}',"$GHz$"]
+        ]
+Markdown(tabulate(
+  table,
+  headers=["Parameter","Value","Unit"],
+  numalign="center",
+  stralign="center",
+  colalign=("center", "center", "center")
+))
+```
+
+```{python}
+VM=lambdaL*Lopt
+Gds=Ibopt/VM
+Adcthe=Gmopt/Gds
+AdcdBthe=20*log(Adcthe)
+```
+
+We can now estimate the output conductance
+
+$G_{{ds}} =$ `{python} f'{Gds/1e-9:.3f}'` $nA/V$
+
+and the DC gain
+
+$A_{{dc}} =$ `{python} f'{Adcthe:.3e}'` or in dB
+
+$A_{{dc}} =$ `{python} f'{AdcdBthe:.1f}'` $dB$,
+
+which is expected!
+
+The CS estimated open-loop transfer function is shown in @fig-cs_ol_tf_gbw_adc_the_nmos.
+
+```{python}
+#| label: fig-cs_ol_tf_gbw_adc_the_nmos
+#| fig-cap: "Transfer function (nMOS)."
+
+def Avnocf(s,Adc,wp):
+    num=Adc
+    den=1+s/wp
+    return num/den
+
+def Av(s,Adc,wp,wz):
+    num=Adc*(1-s/wz)
+    den=1+s/wp
+    return num/den
+
+GBWthe=fu
+fcthe=fu/Adcthe
+wpthe=2*pi*fcthe
+wzthe=Gmopt/CF
+wuthenocf=Gmopt/(CDBJ+CL)
+wpthenocf=wuthenocf/Adcthe
+AinfdB=20*log(abs(CF/(Cout+CF)))
+
+Npts=201
+logfmin=4
+logfmax=10
+fmin=pow(10,logfmin)
+fmax=pow(10,logfmax)
+fthe=np.logspace(logfmin,logfmax,Npts,endpoint=True,base=10.0)
+
+AmagdBthe=np.zeros(Npts)
+Aphidegthe=np.zeros(Npts)
+AmagdBthenocf=np.zeros(Npts)
+Aphidegthenocf=np.zeros(Npts)
+
+for k in range(0,Npts):
+    jw=1j*2*pi*fthe[k]
+    AmagdBthe[k]=20*log(abs(Av(jw,Adcthe,wpthe,wzthe)))
+    Aphidegthe[k]=np.angle(Av(jw,Adcthe,wpthe,wzthe),deg=True)
+    AmagdBthenocf[k]=20*log(abs(Avnocf(jw,Adcthe,wpthenocf)))
+    Aphidegthenocf[k]=np.angle(Avnocf(jw,Adcthe,wpthenocf),deg=True)
+
+fig, axs = plt.subplots(ncols=1, nrows=2, figsize=(5, 6), sharex=True)
+
+axs[0].semilogx([fmin,fcthe],[AdcdBthe-3,AdcdBthe-3],'k--', linewidth=lw)
+axs[0].semilogx([fcthe,fcthe],[-40,AdcdBthe-3],'k--', linewidth=lw)
+axs[0].semilogx([fmin,fmax],[AinfdB,AinfdB],'k--', linewidth=lw)
+axs[0].semilogx([fmin,GBWthe],[0,0],'k--', linewidth=lw)
+axs[0].semilogx([GBWthe,GBWthe],[-40,0],'k--', linewidth=lw)
+axs[0].semilogx(fthe,AmagdBthe,'r',label='Theory')
+axs[0].semilogx(fthe,AmagdBthenocf,'r--',label='Without $C_F$')
+axs[0].set(xlim=(fmin,fmax), ylim=(-30,30), ylabel='$|A_v|$ [dB]')
+#axs[0].set_yticks([-25,-20,-15,-10,-5,0,5,10,15,20,25])
+axs[0].legend(loc='upper right', fontsize=10)
+textstr1 = '\n'.join((
+    f'$A_{{dc}} =$ {AdcdBthe:.1f} dB',
+    f'$A_{{\\infty}} =$ {AinfdB:.1f} dB',
+    f'$GBW =$ {GBWthe/1e6:.0f} MHz',
+    f'$f_c =$ {fcthe/1e6:.2f} MHz',
+    f'$f_z =$ {fzthe/1e9:.0f} GHz'))
+axs[0].text(0.03, 0.05, textstr1, ha='left', va='bottom', transform=axs[0].transAxes, size=10,
+         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+#axs[0].text(0.5, 0.05, 'No VS ($\\lambda_c = 0$)', ha='center', va='bottom', transform=axs[0].transAxes, size=10,
+#         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+
+axs[1].semilogx([fmin,fcthe],[-45,-45],'k--', linewidth=lw)
+axs[1].semilogx([fcthe,fcthe],[-45,0],'k--', linewidth=lw)
+axs[1].semilogx([fmin,GBWthe],[-90,-90],'k--', linewidth=lw)
+axs[1].semilogx([GBWthe,GBWthe],[-90,0],'k--', linewidth=lw)
+axs[1].semilogx(fthe,Aphidegthe,'b-',label='Theory')
+axs[1].semilogx(fthe,Aphidegthenocf,'b--',label='Without $C_F$')
+axs[1].set(xlim=(fmin,fmax), ylim=(-180,0), xlabel='Frequency [Hz]', ylabel='$arg\\{A_v\\}$ [degree]')
+axs[1].set_yticks([-180,-135,-90,-45,0])
+axs[1].legend(loc='upper right', fontsize=10)
+textstr2 = '\n'.join((
+    f'$W_{{opt}} =$ {Wopt/1e-6:.2f} $\\mu m$',
+    f'$L_{{opt}} =$ {Lopt/1e-6:.2f} $\\mu m$',
+    f'$IC_{{opt}} =$ {ICopt:.2f}',
+    f'$I_{{b,opt}} =$ {Ibopt/1e-9:.0f} nA',
+    f'$C_L =$ {CL0/1e-15:.0f} fF'))
+axs[1].text(0.03, 0.05, textstr2, ha='left', va='bottom', transform=axs[1].transAxes, size=10,
+         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+plt.subplots_adjust(hspace=0.1)
+
+plt.show()
+```
+
+#### ngspice simulations
+We now simulate the above design to check whether the design meets the specifications. We use the ngspice open source simulator @bib:ngspice:2024.
+
+Similarly to the previous design, we can first check the operating point informations. The drain current, transconductance and output conductance are given in @tbl-gbw_adc_op_comp1_nmos and the various capacitances are shown in @tbl-gbw_adc_op_comp2_nmos, @tbl-gbw_adc_op_comp3_nmos and @tbl-gbw_adc_op_comp4_nmos. Finally, the gain-bandwidth, zero frequency are given in @tbl-gbw_adc_op_comp5_nmos. We observe that the estimated and simulated values are close.
+
+```{python}
+#| label: tbl-gbw_adc_op_comp1_nmos
+#| tbl-cap: Simulated drain current and small-signal parameter values compared to theoretical values.
+
+simulationPath="./Simulations/nmos/Optimization for GBW and Adc/"
+dataPath="./Data/nmos/Optimization for GBW and Adc/"
+fileName = "CS_GBW_Adc.op"
+dataFile = dataPath + fileName + ".dat"
+opFile = simulationPath + fileName + ".dat"
+paramFile = simulationPath + fileName + ".par"
+simulationFile = simulationPath + fileName + ".cir"
+simulationLog = simulationPath + fileName + ".log"
+simulationData = simulationPath + fileName + ".dat"
+
+# We set AS in order for the PDK to take our values of AD and PD for calculating the junction caps and avoid the automatic calculation
+if newSim:
+    paramstr = '\n'.join((
+        f'.param CL={CL0/1e-15:.3f}f W1={Wopt/1e-6:.3f}u L1={Lopt/1e-6:.3f}u AS1={AD:.3e} PS1={PD:.3e} AD1={AD:.3e} PD1={PD:.3e}',
+        f'.param VDD={VDD:.1f} Ib={Ibopt/1e-9:.0f}n'
+    ))
+    print(paramstr)
+    with open(paramFile, 'w') as f:
+        f.write(paramstr)
+    print('Starting ngspice simulation...\n')
+    result = subprocess.run(f"""ngspice_con -b -o "{simulationLog}" "{simulationFile}" """, shell=True, capture_output=True, text=True)
+    if result.stderr == '':
+        print("Simulation executed successfully.\n")
+    else:
+        print("Simulation failed with return code", result.stderr)
+    print(result.stdout)
+    f = open(simulationLog, 'r')
+    log_contents = f.read()
+    print("Contents of the log file:")
+    print("‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾\n")
+    print (log_contents)
+    # We copy the simulation results to the dat folder
+    shutil.copy2(simulationData, dataFile)
+
+op_df=pd.read_table(dataFile, sep=r'\s+', skiprows=[2], dtype=np.float64, engine='python')
+op_df=op_df.rename(columns={'@n.x1.nsg13_lv_nmos[ids]': 'Transistor',
+                              '@n.x1.Nsg13_lv_nmos[ids]': 'ID',
+                              '@n.x1.Nsg13_lv_nmos[gm]': 'Gm',
+                              '@n.x1.Nsg13_lv_nmos[gds]': 'Gds',
+                              '@n.x1.Nsg13_lv_nmos[cgdol]': 'CGDe',
+                              '@n.x1.Nsg13_lv_nmos[cgsol]': 'CGSe',
+                              '@n.x1.Nsg13_lv_nmos[lp_cgov]': 'CGov',
+                              '@n.x1.Nsg13_lv_nmos[lp_cfr]': 'CGfr',
+                              '@n.x1.Nsg13_lv_nmos[cjd]': 'CJtot',
+                              '@n.x1.Nsg13_lv_nmos[cjdbot]': 'CJbot',
+                              '@n.x1.Nsg13_lv_nmos[cjdgat]': 'CJSWgate',
+                              '@n.x1.Nsg13_lv_nmos[cjdsti]': 'CJSWsti',
+                              '@n.x1.Nsg13_lv_nmos[cjosbot]': 'CJbot0',
+                              '@n.x1.Nsg13_lv_nmos[cjossti]': 'CJSWsti0',
+                              '@n.x1.Nsg13_lv_nmos[cjosgat]': 'CJSWgate0',
+                              '@n.x1.Nsg13_lv_nmos[fug]': 'fu'})
+
+op_df['Transistor'] = op_df['Transistor'].astype(str)
+op_df.at[0, 'Transistor'] = 'M1'
+op_df.at[1, 'Transistor'] = 'M2'
+op_df.set_index('Transistor', inplace=True)
+op_df.rename_axis(index=None, inplace=True)
+pd.set_option('display.float_format', '{:.3e}'.format)
+
+IDthe=Ibopt
+Gmthe=Gmopt
+Gdsthe=Gds
+
+IDsim=op_df.at['M1','ID']
+Gmsim=op_df.at['M1','Gm']
+Gdssim=op_df.at['M1','Gds']
+
+comp1 = {'ID [nA]': [f'{IDthe/1e-9:.3f}', f'{IDsim/1e-9:.3f}'],
+        'Gm [uA/V]': [f'{Gmthe/1e-6:.3f}', f'{Gmsim/1e-6:.3f}'],
+        'Gds [nA/V]': [f'{Gdsthe/1e-9:.3f}', f'{Gdssim/1e-9:.3f}'],
+        'Av [dB]': [f'{20*log(Gmthe/Gdsthe):.3f}', f'{20*log(Gmsim/Gdssim):.3f}']
+        }
+
+index_list = ['Theory','PSP']
+
+comp1_df = pd.DataFrame(comp1,index_list)
+
+Markdown( 
+  tabulate(comp1_df,
+  showindex=True,
+  headers=["$I_D\,[nA]$","$G_m\,[\mu A/V]$","$G_{ds}\,[nA/V]$","$A_v$"],
+  numalign="center",
+  stralign="center",
+  colalign=("center","center")
+))
+```
+
+```{python}
+#| label: tbl-gbw_adc_op_comp2_nmos
+#| tbl-cap: Simulated overlap and fringing capacitances values compared to theoretical values.
+
+WECV=Wopt+DWCVn
+CGSothe=WECV*CGSOn
+CGDothe=WECV*CGDOn
+WGCV=Wopt+DWGCVn
+CGSfthe=WGCV*CGSFn
+CGDfthe=WGCV*CGDFn
+CGDethe=CGDothe+CGDfthe
+CGSethe=CGSothe+CGSfthe
+
+CGSosim=op_df.at['M1','CGov']
+CGDosim=op_df.at['M1','CGov']
+CGSfsim=op_df.at['M1','CGfr']
+CGDfsim=op_df.at['M1','CGfr']
+CGDesim=op_df.at['M1','CGDe']
+CGSesim=op_df.at['M1','CGSe']
+#CGDfsim=CGDesim-CGDosim
+#CGSfsim=CGSesim-CGSosim
+
+comp2 = {'CGSo [fF]': [f'{CGSothe/1e-15:.3f}', f'{CGSosim/1e-15:.3f}'],
+        'CGDo [fF]': [f'{CGDothe/1e-15:.3f}', f'{CGDosim/1e-15:.3f}'],
+        'CGSf [fF]': [f'{CGSfthe/1e-15:.3f}', f'{CGSfsim/1e-15:.3f}'],
+        'CGDf [fF]': [f'{CGDfthe/1e-15:.3f}', f'{CGDfsim/1e-15:.3f}'],
+        'CGSe [fF]': [f'{CGSethe/1e-15:.3f}', f'{CGSesim/1e-15:.3f}'],
+        'CGDe [fF]': [f'{CGDethe/1e-15:.3f}', f'{CGDesim/1e-15:.3f}']
+        }
+
+index_list = ['Theory','PSP']
+
+comp2_df = pd.DataFrame(comp2,index_list)
+
+Markdown( 
+  tabulate(comp2_df,
+  showindex=True,
+  headers=["$C_{GSo}\,[fF]$","$C_{GDo}\,[fF]$","$C_{GSf}\,[fF]$","$C_{GDf}\,[fF]$","$C_{GSe}\,[fF]$","$C_{GDe}\,[fF]$"],
+  numalign="center",
+  stralign="center",
+  colalign=("center","center")
+))
+```
+
+```{python}
+#| label: tbl-gbw_adc_op_comp3_nmos
+#| tbl-cap: Simulated zero-bias junction capacitances values compared to theoretical values.
+
+AD=Zdif*WECV
+PD=2*(Zdif+WECV)
+
+CJbot0the=AD*CJn
+CJswsti0the=(PD-WECV)*CJSWSTIn
+CJswgat0the=Wopt*CJSWGATn
+CJtot0the=CJbot0the+CJswsti0the+CJswgat0the
+CJbotthe=AD*CJn
+CJswstithe=(PD-WECV)*CJSWSTIn
+CJswgatthe=WECV*CJSWGATn
+CJtotthe=CJbotthe+CJswstithe+CJswgatthe
+
+CJbot0sim=op_df.at['M1','CJbot0']
+CJswsti0sim=op_df.at['M1','CJSWsti0']
+CJswgat0sim=op_df.at['M1','CJSWgate0']
+CJtot0sim=CJbot0sim+CJswsti0sim+CJswgat0sim
+CJbotsim=op_df.at['M1','CJbot']
+CJswstisim=op_df.at['M1','CJSWsti']
+CJswgatsim=op_df.at['M1','CJSWgate']
+CJtotsim=op_df.at['M1','CJtot']
+
+comp3 = {'CJbot0 [fF]': [f'{CJbot0the/1e-15:.3f}', f'{CJbot0sim/1e-15:.3f}'],
+        'CJswsti0 [fF]': [f'{CJswsti0the/1e-15:.3f}', f'{CJswsti0sim/1e-15:.3f}'],
+        'CJswgat0 [fF]': [f'{CJswgat0the/1e-15:.3f}', f'{CJswgat0sim/1e-15:.3f}'],
+        'CJtot0 [fF]': [f'{CJtot0the/1e-15:.3f}', f'{CJtot0sim/1e-15:.3f}']
+        }
+
+index_list = ['Theory','PSP']
+
+comp3_df = pd.DataFrame(comp3,index_list)
+
+Markdown( 
+  tabulate(comp3_df,
+  showindex=True,
+  headers=["$C_{Jbot}(0)\,[fF]$","$C_{JSWSTI}(0)\,[fF]$","$C_{JSWGAT}(0)\,[fF]$","$C_{Jtot}(0)\,[fF]$"],
+  numalign="center",
+  stralign="center",
+  colalign=("center","center")
+))
+```
+
+```{python}
+#| label: tbl-gbw_adc_op_comp4_nmos
+#| tbl-cap: Simulated actual junction capacitances values compared to theoretical zero-bias values.
+
+comp4 = {'CJbot [fF]': [f'{CJbotthe/1e-15:.3f}', f'{CJbotsim/1e-15:.3f}'],
+        'CJswsti [fF]': [f'{CJswstithe/1e-15:.3f}', f'{CJswstisim/1e-15:.3f}'],
+        'CJswgat [fF]': [f'{CJswgatthe/1e-15:.3f}', f'{CJswgatsim/1e-15:.3f}'],
+        'CJtot [fF]': [f'{CJtotthe/1e-15:.3f}', f'{CJtotsim/1e-15:.3f}']
+        }
+
+index_list = ['Theory','PSP']
+
+comp4_df = pd.DataFrame(comp4,index_list)
+
+Markdown( 
+  tabulate(comp4_df,
+  showindex=True,
+  headers=["$C_{Jbot}\,[fF]$","$C_{JSWSTI}\,[fF]$","$C_{JSWGAT}\,[fF]$","$C_{Jtot}\,[fF]$"],
+  numalign="center",
+  stralign="center",
+  colalign=("center","center")
+))
+```
+
+```{python}
+#| label: tbl-gbw_adc_op_comp5_nmos
+#| tbl-cap: Comparison of the simulated and predicted values of the gain-bandwidth and zero frequency.
+
+Coutthe=CL+CJtotthe+CGDethe
+CFthe=CGDethe
+futhe=Gmthe/(2*pi*Coutthe)
+fzthe=Gmthe/CFthe
+Ainfthe=20*log(CFthe/(CFthe+Coutthe))
+
+Coutsim=CL+CJtotsim+CGDesim
+CFsim=CGDesim
+fusim=Gmsim/(2*pi*Coutsim)
+fzsim=Gmthe/CFsim
+Ainfsim=20*log(CFsim/(CFsim+Coutsim))
+
+comp5 = {'Gm [uA/V]': [f'{Gmthe/1e-6:.3f}', f'{Gmsim/1e-6:.3f}'],
+         'Cout [fF]': [f'{Coutthe/1e-15:.3f}', f'{Coutsim/1e-15:.3f}'],
+        'CF [fF]': [f'{CFthe/1e-15:.3f}', f'{CFsim/1e-15:.3f}'],
+        'fu [MHz]': [f'{futhe/1e6:.3f}', f'{fusim/1e6:.3f}'],
+        'fz [GHz]': [f'{fzthe/1e9:.3f}', f'{fzsim/1e9:.3f}'],
+        'Ainf [dB]': [f'{Ainfthe:.3f}', f'{Ainfsim:.3f}']
+        }
+
+index_list = ['Theory','PSP']
+
+comp5_df = pd.DataFrame(comp5,index_list)
+
+Markdown( 
+  tabulate(comp5_df,
+  showindex=True,
+  headers=["$G_m\,[\mu A/V]$","$C_{out}\,[fF]$","$C_F\,[fF]$","$GBW\,[MHz]$","$f_z\,[GHz]$","$A_{\infty}\,[dB]$"],
+  numalign="center",
+  stralign="center",
+  colalign=("center","center")
+))
+```
+
+We can now proceed with the AC simulation. The simulation result is compared to the theoretical prediction in @fig-cs_ol_tf_gbw_adc_sim_nmos. We see that the simulated GBW is slightly lower than the spec. This is due to the lower transconductance of PSP compared to sEKV. On the other hand the simulated DC gain and gain at high frequency are perfectly matching the theoretical estimations.
+
+```{python}
+#| label: fig-cs_ol_tf_gbw_adc_sim_nmos
+#| fig-cap: CS simulated open-loop transfer function compared to the theoretical prediction.
+
+simulationPath="./Simulations/nmos/Optimization for GBW and Adc/"
+dataPath="./Data/nmos/Optimization for GBW and Adc/"
+fileName = "CS_GBW_Adc.ac"
+dataFile = dataPath + fileName + ".dat"
+opFile = simulationPath + fileName + ".dat"
+paramFile = simulationPath + fileName + ".par"
+simulationFile = simulationPath + fileName + ".cir"
+simulationLog = simulationPath + fileName + ".log"
+simulationData = simulationPath + fileName + ".dat"
+
+if newSim:
+    paramstr = '\n'.join((
+        f'.param CL={CL0/1e-15:.3f}f W1={Wopt/1e-6:.3f}u L1={Lopt/1e-6:.3f}u AS1={AD:.3e} PS1={PD:.3e} AD1={AD:.3e} PD1={PD:.3e}',
+        f'.param VDD={VDD:.1f} Ib={Ibopt/1e-9:.0f}n'
+    ))
+    print(paramstr)
+    with open(paramFile, 'w') as f:
+        f.write(paramstr)
+    print('Starting ngspice simulation...\n')
+    result = subprocess.run(f"""ngspice_con -b -o "{simulationLog}" "{simulationFile}" """, shell=True, capture_output=True, text=True)
+    if result.stderr == '':
+        print("Simulation executed successfully.\n")
+    else:
+        print("Simulation failed with return code", result.stderr)
+    print(result.stdout)
+    f = open(simulationLog, 'r')
+    log_contents = f.read()
+    print("Contents of the log file:")
+    print("‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾\n")
+    print (log_contents)
+    # We copy the simulation results to the dat folder
+    shutil.copy2(simulationData, dataFile)
+
+df_sim=pd.read_table(dataFile, sep=' +', engine='python')
+fsim=df_sim['frequency'].to_numpy()
+AmagdBsim=df_sim['AmagdB'].to_numpy()
+Aphidegsim=df_sim['Aphdeg'].to_numpy()
+Npts=len(fsim)
+fmin=fsim[0]
+#fmin=10
+fmax=fsim[Npts-1]
+
+regexp = re.compile(r'adc.*?([0-9.\+-]+e[0-9.\+-]+)')
+with open(simulationLog) as f:
+    for line in f:
+        match = re.match(regexp, line)
+        if match:
+            AdcdBsim=float(match.group(1))
+
+regexp = re.compile(r'gbw.*?([0-9.\+-]+e[0-9.\+-]+)')
+with open(simulationLog) as f:
+    for line in f:
+        match = re.match(regexp, line)
+        if match:
+            GBWsim=float(match.group(1))
+
+regexp = re.compile(r'fc.*?([0-9.\+-]+e[0-9.\+-]+)')
+with open(simulationLog) as f:
+    for line in f:
+        match = re.match(regexp, line)
+        if match:
+            fcsim=float(match.group(1))
+
+regexp = re.compile(r'fz.*?([0-9.\+-]+e[0-9.\+-]+)')
+with open(simulationLog) as f:
+    for line in f:
+        match = re.match(regexp, line)
+        if match:
+            fzsim=float(match.group(1))
+
+CFext=Gmsim/(2*pi*fzsim)
+
+#print(f'Adc = {AdcdBsim:.3f} dB')
+#print(f'GBW = {GBWsim:.3e} Hz')
+#print(f'fc = {fcsim/1e6:.3f} MHz')
+#print(f'fz = {fzsim/1e6:.3f} MHz')
+#print(f'CFext = {CFext/1e-15:.3f} fF')
+
+fig, axs = plt.subplots(ncols=1, nrows=2, figsize=(5, 6), sharex=True)
+
+axs[0].semilogx([fmin,fcsim],[AdcdBsim-3,AdcdBsim-3],'k--', linewidth=lw)
+axs[0].semilogx([fcsim,fcsim],[-40,AdcdBsim-3],'k--', linewidth=lw)
+axs[0].semilogx([fmin,GBWsim],[0,0],'k--', linewidth=lw)
+axs[0].semilogx([GBWsim,GBWsim],[-40,0],'k--', linewidth=lw)
+axs[0].semilogx(fsim,AmagdBsim, color='r', label='Simulation',
+                marker='o', markersize=msize, markevery=12, linestyle='None')
+axs[0].semilogx(fthe,AmagdBthe,'r-',label='Theory')
+axs[0].semilogx(fthe,AmagdBthenocf,'r--',label='Without $C_F$')
+axs[0].set(xlim=(fmin,fmax), ylim=(-30,30), ylabel='$|A_v|$ [dB]')
+#axs[0].set_yticks([-25,-20,-15,-10,-5,0,5,10,15,20,25])
+axs[0].legend(loc='upper right')
+textstr1 = '\n'.join((
+    f'$A_{{dc}} =$ {AdcdBthe:.1f} dB (theory)',
+    f'$A_{{dc}} =$ {AdcdBsim:.1f} dB (sim.)',
+    f'$GBW =$ {GBWthe/1e6:.1f} MHz (theory)',
+    f'$GBW =$ {GBWsim/1e6:.1f} MHz (sim.)',
+    f'$f_c =$ {fcthe/1e6:.3f} MHz (theory)',
+    f'$f_c =$ {fcsim/1e6:.3f} MHz (sim.)',
+    f'$f_z =$ {fzthe/1e9:.3f} GHz (theory)',
+    f'$f_z =$ {fzsim/1e9:.3f} GHz (sim.)'))
+axs[0].text(1.03, 0.5, textstr1, ha='left', va='center', transform=axs[0].transAxes, size=10,
+         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+
+axs[1].semilogx([fmin,fcsim],[-45,-45],'k--', linewidth=lw)
+axs[1].semilogx([fcsim,fcsim],[-45,0],'k--', linewidth=lw)
+axs[1].semilogx([fmin,fzsim],[-135,-135],'k--', linewidth=lw)
+axs[1].semilogx([fzsim,fzsim],[-135,0],'k--', linewidth=lw)
+axs[1].semilogx(fsim,Aphidegsim, color='b', label='Simulation',
+                marker='o', markersize=msize, markevery=12, linestyle='None')
+axs[1].semilogx(fthe,Aphidegthe,'b-',label='Theory')
+axs[1].semilogx(fthe,Aphidegthenocf,'b--',label='Without $C_F$')
+axs[1].set(xlim=(fmin,fmax), ylim=(-135,0), xlabel='Frequency [Hz]', ylabel='$arg\\{A_v\\}$ [degree]')
+#axs[1].set_xticks([1e1,1e2,1e3,1e4,1e5,1e6,1e7,1e8])
+axs[1].set_yticks([-180,-135,-90,-45,0])
+axs[1].legend(loc='best')
+textstr2 = '\n'.join((
+    f'$C_L =$ {CL0/1e-15:.0f} $fF$',
+    f'$IC_{{opt}} =$ {ICopt:.2f}',
+    f'$I_{{b,opt}} =$ {Ibopt/1e-9:.0f} $nA$',
+    f'$W_{{opt}} =$ {Wopt/1e-6:.2f} $\\mu m$',
+    f'$L_{{opt}} =$ {Lopt/1e-6:.2f} $\\mu m$'))
+axs[1].text(0.03, 0.05, textstr2, ha='left', va='bottom', transform=axs[1].transAxes, size=10,
+         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+plt.subplots_adjust(hspace=0.1)
+#saveFigures(savePath, 'CS_GBW_long_gain_response')
+plt.show()
+```
+
+
+### pMOS
+We now design the same CS gain stage but with a pMOS transistor. Note that all the design equations remain the same.
+
+#### Design
+The process parameters that are needed to achieve the specifications given in @tbl-specs_gbw_adc_pmos are given in @tbl-process_summary_gbw_adc_pmos. The optimum inversion coefficient, optimum bias current, optimum width and optimum length are calculated in @tbl-calc_param_gbw_adc_pmos.
+
+```{python}
+#| label: tbl-process_summary_gbw_adc_pmos
+#| tbl-cap: Required process parameters (nMOS).
+
+n=n0p
+nUT=n*UT
+Ispecsq=Ispecsqp
+lambdaL=lambdap
+Zdif = z1
+CDBJW = Zdif*CJp + CJSWSTIp + CJSWGATp
+CDBJ0 = 2*Zdif*CJSWSTIp
+CDW = Zdif*CJp + CJSWSTIp + CJSWGATp + CGDOp + CGDFp
+CD0 = 2*Zdif*CJSWSTIp
+
+table = [["$V_{DD}$",f'{VDD:.1f}',"$V$"],
+         ["$n$",f'{n:.2f}',"-"],
+         ["$I_{spec\Box}$",f'{Ispecsq/1e-9:.0f}',"$nA$"],
+         ["$\lambda$",f'{lambdaL/1e6:.2f}',"$\\frac{V}{\\mu m}$"],
+         ["$C_{DW}$",f'{CDW/1e-9:.3f}',"$\\frac{fF}{um}$"],
+         ["$C_{D0}$",f'{CD0/1e-15:.3f}',"$fF$"]
+         ]
+Markdown(tabulate(
+  table,
+  headers=["Parameter","Value","Unit"],
+  numalign="center",
+  stralign="center",
+  colalign=("center", "center", "center")
+))
+```
+
+```{python}
+#| label: tbl-specs_gbw_adc_pmos
+#| tbl-cap: Specifications.
+
+fu=100e6
+wu=2*pi*fu
+AdcdB=50
+Adc=pow(10,AdcdB/20)
+CL0=20e-15
+CL=CL0+CD0
+
+table = [["$GBW$",f'{fu/1e6:.0f}',"$MHz$"],
+         ["$A_{dc}$",f'{AdcdB:.0f}',"$dB$"],
+         ["$C_{L0}$",f'{CL0/1e-15:.0f}',"$fF$"],
+         ["$C_L$",f'{CL/1e-15:.3f}',"$fF$"]
+         ]
+Markdown(tabulate(
+  table,
+  headers=["Parameter","Value","Unit"],
+  numalign="center",
+  stralign="center",
+  colalign=("center", "center", "center")
+))
+```
+
+```{python}
+#| label: tbl-calc_param_gbw_adc_pmos
+#| tbl-cap: Calculated parameters (nMOS).
+
+def IClim_xi(xi):
+    return xi/(1-xi)**2
+
+def ICopt_xi(xi):
+    sqrtxi=sqrt(xi)
+    return sqrtxi/(1-sqrtxi)**2
+
+def ibopt_xi(xi):
+    return 1/(1-sqrt(xi))**2
+
+def wopt_xi(xi):
+    sqrtxi=sqrt(xi)
+    if xi<=0:
+        wopt=float("nan")
+    else:
+        wopt=1/(sqrtxi*(1-sqrtxi))
+    return wopt
+
+def lopt_xi(xi):
+    return 1/(1-sqrt(xi))
+
+xi=CDW*nUT**2/(Ispecsq*lambdaL)*Adc*wu
+Inorm=wu*CL*nUT
+Wnorm=CL*nUT**2/(Ispecsq*lambdaL)*Adc*wu
+Lnorm=nUT/lambdaL*Adc
+Gmnorm=CL*wu
+ICopt=ICopt_xi(xi)
+ibopt=ibopt_xi(xi)
+wopt=wopt_xi(xi)
+lopt=lopt_xi(xi)
+gmopt=lopt
+Ibopt=ibopt*Inorm
+Wopt=wopt*Wnorm
+Lopt=lopt*Lnorm
+Gmopt=gmopt*Gmnorm
+CDopt=Wopt*CDW
+Cout=CL+CDopt
+AD=Wopt*Zdif
+PD=2*(Wopt+Zdif)
+CDBJ=AD*CJp+(PD-Wopt)*CJSWSTIp+Wopt*CJSWGATp
+CGDo=Wopt*CGDOp
+CGDf=Wopt*CGDFp
+CGDe=CGDo+CGDf
+CF=CGDe
+wz=Gmopt/CF
+fzthe=wz/(2*pi)
+
+
+table = [["$\\xi$",f'{xi:.3f}',"-"],
+         ["$IC_{opt}$",f'{ICopt:.3f}',"-"],
+         ["$i_{b,opt}$",f'{ibopt:.3f}',"-"],
+         ["$w_{opt}$",f'{wopt:.3f}',"-"],
+         ["$\\ell_{opt}$",f'{lopt:.3f}',"-"],
+         ["$g_{m,opt}$",f'{gmopt:.3f}',"-"],
+         ["$I_{norm}$",f'{Inorm/1e-9:.3f}',"$nA$"],
+         ["$W_{norm}$",f'{Wnorm/1e-6:.3f}',"$\\mu m$"],
+         ["$L_{norm}$",f'{Lnorm/1e-6:.3f}',"$\\mu m$"],
+         ["$G_{m,norm}$",f'{Gmnorm/1e-6:.3f}',"$\\frac{\mu A}{V}$"],
+         ["$I_{b,opt}$",f'{Ibopt/1e-9:.3f}',"$nA$"],
+         ["$W_{opt}$",f'{Wopt/1e-6:.3f}',"$\\mu m$"],
+         ["$L_{opt}$",f'{Lopt/1e-6:.3f}',"$\\mu m$"],
+         ["$G_{m,opt}$",f'{Gmopt/1e-6:.3f}',"$\\frac{\mu A}{V}$"],
+         ["$C_{D,opt}$",f'{CDopt/1e-15:.3f}',"$fF$"],
+         ["$AD$",f'{AD/1e-12:.3f}',"$\\mu m^2$"],
+         ["$PD$",f'{PD/1e-6:.3f}',"$\\mu m$"],
+         ["$C_{DBJ}$",f'{CDBJ/1e-15:.3f}',"$fF$"],
+         ["$C_{DBJ,bot}$",f'{AD*CJn/1e-15:.3f}',"$fF$"],
+         ["$C_{DBJ,SWSTI}$",f'{(PD-Wopt)*CJSWSTIn/1e-15:.3f}',"$fF$"],
+         ["$C_{DBJ,SWGAT}$",f'{Wopt*CJSWGATn/1e-15:.3f}',"$fF$"],
+         ["$C_{GDo}$",f'{CGDo/1e-15:.3f}',"$fF$"],
+         ["$C_{GDf}$",f'{CGDf/1e-15:.3f}',"$fF$"],
+         ["$C_{GDe}$",f'{CGDe/1e-15:.3f}',"$fF$"],
+         ["$C_F$",f'{CF/1e-15:.3f}',"$fF$"],
+         ["$C_{out}$",f'{Cout/1e-15:.3f}',"$fF$"],
+         ["$f_z$",f'{fzthe/1e9:.3f}',"$GHz$"]
+        ]
+Markdown(tabulate(
+  table,
+  headers=["Parameter","Value","Unit"],
+  numalign="center",
+  stralign="center",
+  colalign=("center", "center", "center")
+))
+```
+
+
+```{python}
+VM=lambdaL*Lopt
+Gds=Ibopt/VM
+Adcthe=Gmopt/Gds
+AdcdBthe=20*log(Adcthe)
+```
+
+We can now estimate the output conductance
+
+$G_{{ds}} =$ `{python} f'{Gds/1e-9:.3f}'` $nA/V$
+
+and the DC gain
+
+$A_{{dc}} =$ `{python} f'{Adcthe:.3e}'` or in dB
+
+$A_{{dc}} =$ `{python} f'{AdcdBthe:.1f}'` $dB$,
+
+which is expected!
+
+The CS estimated open-loop transfer function is shown in @fig-cs_ol_tf_gbw_adc_the_pmos.
+
+```{python}
+#| label: fig-cs_ol_tf_gbw_adc_the_pmos
+#| fig-cap: "Transfer function (pMOS)."
+
+def Avnocf(s,Adc,wp):
+    num=Adc
+    den=1+s/wp
+    return num/den
+
+def Av(s,Adc,wp,wz):
+    num=Adc*(1-s/wz)
+    den=1+s/wp
+    return num/den
+
+GBWthe=fu
+fcthe=fu/Adcthe
+wpthe=2*pi*fcthe
+wzthe=Gmopt/CF
+wuthenocf=Gmopt/(CDBJ+CL)
+wpthenocf=wuthenocf/Adcthe
+AinfdB=20*log(abs(CF/(Cout+CF)))
+
+Npts=201
+logfmin=3
+logfmax=10
+fmin=pow(10,logfmin)
+fmax=pow(10,logfmax)
+fthe=np.logspace(logfmin,logfmax,Npts,endpoint=True,base=10.0)
+
+AmagdBthe=np.zeros(Npts)
+Aphidegthe=np.zeros(Npts)
+AmagdBthenocf=np.zeros(Npts)
+Aphidegthenocf=np.zeros(Npts)
+
+for k in range(0,Npts):
+    jw=1j*2*pi*fthe[k]
+    AmagdBthe[k]=20*log(abs(Av(jw,Adcthe,wpthe,wzthe)))
+    Aphidegthe[k]=np.angle(Av(jw,Adcthe,wpthe,wzthe),deg=True)
+    AmagdBthenocf[k]=20*log(abs(Avnocf(jw,Adcthe,wpthenocf)))
+    Aphidegthenocf[k]=np.angle(Avnocf(jw,Adcthe,wpthenocf),deg=True)
+
+fig, axs = plt.subplots(ncols=1, nrows=2, figsize=(5, 6), sharex=True)
+
+axs[0].semilogx([fmin,fcthe],[AdcdBthe-3,AdcdBthe-3],'k--', linewidth=lw)
+axs[0].semilogx([fcthe,fcthe],[-40,AdcdBthe-3],'k--', linewidth=lw)
+axs[0].semilogx([fmin,fmax],[AinfdB,AinfdB],'k--', linewidth=lw)
+axs[0].semilogx([fmin,GBWthe],[0,0],'k--', linewidth=lw)
+axs[0].semilogx([GBWthe,GBWthe],[-40,0],'k--', linewidth=lw)
+axs[0].semilogx(fthe,AmagdBthe,'r',label='Theory')
+axs[0].semilogx(fthe,AmagdBthenocf,'r--',label='Without $C_F$')
+axs[0].set(xlim=(fmin,fmax), ylim=(-20,60), ylabel='$|A_v|$ [dB]')
+#axs[0].set_yticks([-25,-20,-15,-10,-5,0,5,10,15,20,25])
+axs[0].legend(loc='upper right', fontsize=10)
+textstr1 = '\n'.join((
+    f'$A_{{dc}} =$ {AdcdBthe:.1f} dB',
+    f'$A_{{\\infty}} =$ {AinfdB:.1f} dB',
+    f'$GBW =$ {GBWthe/1e6:.0f} MHz',
+    f'$f_c =$ {fcthe/1e6:.2f} MHz',
+    f'$f_z =$ {fzthe/1e9:.0f} GHz'))
+axs[0].text(0.03, 0.05, textstr1, ha='left', va='bottom', transform=axs[0].transAxes, size=10,
+         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+axs[0].text(0.5, 0.05, 'No VS ($\\lambda_c = 0$)', ha='center', va='bottom', transform=axs[0].transAxes, size=10,
+         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+
+axs[1].semilogx([fmin,fcthe],[-45,-45],'k--', linewidth=lw)
+axs[1].semilogx([fcthe,fcthe],[-45,0],'k--', linewidth=lw)
+axs[1].semilogx([fmin,GBWthe],[-90,-90],'k--', linewidth=lw)
+axs[1].semilogx([GBWthe,GBWthe],[-90,0],'k--', linewidth=lw)
+axs[1].semilogx(fthe,Aphidegthe,'b-',label='Theory')
+axs[1].semilogx(fthe,Aphidegthenocf,'b--',label='Without $C_F$')
+axs[1].set(xlim=(fmin,fmax), ylim=(-180,0), xlabel='Frequency [Hz]', ylabel='$arg\\{A_v\\}$ [degree]')
+axs[1].set_yticks([-180,-135,-90,-45,0])
+axs[1].legend(loc='upper right', fontsize=10)
+textstr2 = '\n'.join((
+    f'$W_{{opt}} =$ {Wopt/1e-6:.2f} $\\mu m$',
+    f'$L_{{opt}} =$ {Lopt/1e-6:.2f} $\\mu m$',
+    f'$IC_{{opt}} =$ {ICopt:.2f}',
+    f'$I_{{b,opt}} =$ {Ibopt/1e-9:.0f} nA',
+    f'$C_L =$ {CL0/1e-15:.0f} fF'))
+axs[1].text(0.03, 0.05, textstr2, ha='left', va='bottom', transform=axs[1].transAxes, size=10,
+         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+plt.subplots_adjust(hspace=0.1)
+
+plt.show()
+```
+
+#### ngspice simulations
+
+We now simulate the above design to check whether the design meets the specifications. We now simulate the above design to check whether the design meets the specifications.
+
+Similarly to the previous design, we can first check the operating point informations. The drain current, transconductance and output conductance are given in @tbl-gbw_adc_op_comp1_pmos and the various capacitances are shown in @tbl-gbw_adc_op_comp2_pmos, @tbl-gbw_adc_op_comp3_pmos and @tbl-gbw_adc_op_comp4_pmos. Finally, the gain-bandwidth, zero frequency are given in @tbl-gbw_adc_op_comp5_pmos. We observe that the estimated and simulated values are close.
+
+```{python}
+#| label: tbl-gbw_adc_op_comp1_pmos
+#| tbl-cap: Simulated drain current and small-signal parameter values compared to theoretical values.
+
+simulationPath="./Simulations/pmos/Optimization for GBW and Adc/"
+dataPath="./Data/pmos/Optimization for GBW and Adc/"
+fileName = "CS_GBW_Adc.op"
+dataFile = dataPath + fileName + ".dat"
+opFile = simulationPath + fileName + ".dat"
+paramFile = simulationPath + fileName + ".par"
+simulationFile = simulationPath + fileName + ".cir"
+simulationLog = simulationPath + fileName + ".log"
+simulationData = simulationPath + fileName + ".dat"
+
+# We set AS in order for the PDK to take our values of AD and PD for calculating the junction caps and avoid the automatic calculation
+if newSim:
+    paramstr = '\n'.join((
+        f'.param CL={CL0/1e-15:.3f}f W1={Wopt/1e-6:.3f}u L1={Lopt/1e-6:.3f}u AS1={AD:.3e} PS1={PD:.3e} AD1={AD:.3e} PD1={PD:.3e}',
+        f'.param VDD={VDD:.1f} Ib={Ibopt/1e-9:.0f}n'
+    ))
+    print(paramstr)
+    with open(paramFile, 'w') as f:
+        f.write(paramstr)
+    print('Starting ngspice simulation...\n')
+    result = subprocess.run(f"""ngspice_con -b -o "{simulationLog}" "{simulationFile}" """, shell=True, capture_output=True, text=True)
+    if result.stderr == '':
+        print("Simulation executed successfully.\n")
+    else:
+        print("Simulation failed with return code", result.stderr)
+    print(result.stdout)
+    f = open(simulationLog, 'r')
+    log_contents = f.read()
+    print("Contents of the log file:")
+    print("‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾\n")
+    print (log_contents)
+    # We copy the simulation results to the dat folder
+    shutil.copy2(simulationData, dataFile)
+
+op_df=pd.read_table(dataFile, sep=r'\s+', skiprows=[2], dtype=np.float64, engine='python')
+op_df=op_df.rename(columns={'@n.x1.nsg13_lv_pmos[ids]': 'Transistor',
+                              '@n.x1.Nsg13_lv_pmos[ids]': 'ID',
+                              '@n.x1.Nsg13_lv_pmos[gm]': 'Gm',
+                              '@n.x1.Nsg13_lv_pmos[gds]': 'Gds',
+                              '@n.x1.Nsg13_lv_pmos[cgdol]': 'CGDe',
+                              '@n.x1.Nsg13_lv_pmos[cgsol]': 'CGSe',
+                              '@n.x1.Nsg13_lv_pmos[lp_cgov]': 'CGov',
+                              '@n.x1.Nsg13_lv_pmos[lp_cfr]': 'CGfr',
+                              '@n.x1.Nsg13_lv_pmos[cjd]': 'CJtot',
+                              '@n.x1.Nsg13_lv_pmos[cjdbot]': 'CJbot',
+                              '@n.x1.Nsg13_lv_pmos[cjdgat]': 'CJSWgate',
+                              '@n.x1.Nsg13_lv_pmos[cjdsti]': 'CJSWsti',
+                              '@n.x1.Nsg13_lv_pmos[cjosbot]': 'CJbot0',
+                              '@n.x1.Nsg13_lv_pmos[cjossti]': 'CJSWsti0',
+                              '@n.x1.Nsg13_lv_pmos[cjosgat]': 'CJSWgate0',
+                              '@n.x1.Nsg13_lv_pmos[fug]': 'fu'})
+
+op_df['Transistor'] = op_df['Transistor'].astype(str)
+op_df.at[0, 'Transistor'] = 'M1'
+op_df.at[1, 'Transistor'] = 'M2'
+op_df.set_index('Transistor', inplace=True)
+op_df.rename_axis(index=None, inplace=True)
+pd.set_option('display.float_format', '{:.3e}'.format)
+#op_df
+
+IDthe=Ibopt
+Gmthe=Gmopt
+Gdsthe=Gds
+
+IDsim=op_df.at['M1','ID']
+Gmsim=op_df.at['M1','Gm']
+Gdssim=op_df.at['M1','Gds']
+
+comp1 = {'ID [nA]': [f'{IDthe/1e-9:.0f}', f'{IDsim/1e-9:.0f}'],
+        'Gm [uA/V]': [f'{Gmthe/1e-6:.3f}', f'{Gmsim/1e-6:.3f}'],
+        'Gds [nA/V]': [f'{Gdsthe/1e-9:.3f}', f'{Gdssim/1e-9:.3f}'],
+        'Av [dB]': [f'{20*log(Gmthe/Gdsthe):.3f}', f'{20*log(Gmsim/Gdssim):.3f}']
+        }
+
+index_list = ['Theory','PSP']
+
+comp1_df = pd.DataFrame(comp1,index_list)
+
+Markdown( 
+  tabulate(comp1_df,
+  showindex=True,
+  headers=["$I_D\,[nA]$","$G_m\,[\mu A/V]$","$G_{ds}\,[nA/V]$","$A_v$"],
+  numalign="center",
+  stralign="center",
+  colalign=("center","center")
+))
+```
+
+```{python}
+#| label: tbl-gbw_adc_op_comp2_pmos
+#| tbl-cap: Simulated overlap and fringing capacitances values compared to theoretical values (pMOS).
+
+WECV=Wopt+DWCVp
+CGSothe=WECV*CGSOp
+CGDothe=WECV*CGDOp
+WGCV=Wopt+DWGCVp
+CGSfthe=WGCV*CGSFp
+CGDfthe=WGCV*CGDFp
+CGDethe=CGDothe+CGDfthe
+CGSethe=CGSothe+CGSfthe
+
+CGSosim=op_df.at['M1','CGov']
+CGDosim=op_df.at['M1','CGov']
+CGSfsim=op_df.at['M1','CGfr']
+CGDfsim=op_df.at['M1','CGfr']
+CGDesim=op_df.at['M1','CGDe']
+CGSesim=op_df.at['M1','CGSe']
+#CGDfsim=CGDesim-CGDosim
+#CGSfsim=CGSesim-CGSosim
+
+comp2 = {'CGSo [fF]': [f'{CGSothe/1e-15:.3f}', f'{CGSosim/1e-15:.3f}'],
+        'CGDo [fF]': [f'{CGDothe/1e-15:.3f}', f'{CGDosim/1e-15:.3f}'],
+        'CGSf [fF]': [f'{CGSfthe/1e-15:.3f}', f'{CGSfsim/1e-15:.3f}'],
+        'CGDf [fF]': [f'{CGDfthe/1e-15:.3f}', f'{CGDfsim/1e-15:.3f}'],
+        'CGSe [fF]': [f'{CGSethe/1e-15:.3f}', f'{CGSesim/1e-15:.3f}'],
+        'CGDe [fF]': [f'{CGDethe/1e-15:.3f}', f'{CGDesim/1e-15:.3f}']
+        }
+
+index_list = ['Theory','PSP']
+
+comp2_df = pd.DataFrame(comp2,index_list)
+
+Markdown( 
+  tabulate(comp2_df,
+  showindex=True,
+  headers=["$C_{GSo}\,[fF]$","$C_{GDo}\,[fF]$","$C_{GSf}\,[fF]$","$C_{GDf}\,[fF]$","$C_{GSe}\,[fF]$","$C_{GDe}\,[fF]$"],
+  numalign="center",
+  stralign="center",
+  colalign=("center","center")
+))
+```
+
+```{python}
+#| label: tbl-gbw_adc_op_comp3_pmos
+#| tbl-cap: Simulated zero-bias junction capacitances values compared to theoretical values.
+
+AD=Zdif*WECV
+PD=2*(Zdif+WECV)
+
+CJbot0the=AD*CJp
+CJswsti0the=(PD-WECV)*CJSWSTIp
+CJswgat0the=Wopt*CJSWGATp
+CJtot0the=CJbot0the+CJswsti0the+CJswgat0the
+CJbotthe=AD*CJp
+CJswstithe=(PD-WECV)*CJSWSTIp
+CJswgatthe=WECV*CJSWGATp
+CJtotthe=CJbotthe+CJswstithe+CJswgatthe
+
+CJbot0sim=op_df.at['M1','CJbot0']
+CJswsti0sim=op_df.at['M1','CJSWsti0']
+CJswgat0sim=op_df.at['M1','CJSWgate0']
+CJtot0sim=CJbot0sim+CJswsti0sim+CJswgat0sim
+CJbotsim=op_df.at['M1','CJbot']
+CJswstisim=op_df.at['M1','CJSWsti']
+CJswgatsim=op_df.at['M1','CJSWgate']
+CJtotsim=op_df.at['M1','CJtot']
+
+comp3 = {'CJbot0 [fF]': [f'{CJbot0the/1e-15:.3f}', f'{CJbot0sim/1e-15:.3f}'],
+        'CJswsti0 [fF]': [f'{CJswsti0the/1e-15:.3f}', f'{CJswsti0sim/1e-15:.3f}'],
+        'CJswgat0 [fF]': [f'{CJswgat0the/1e-15:.3f}', f'{CJswgat0sim/1e-15:.3f}'],
+        'CJtot0 [fF]': [f'{CJtot0the/1e-15:.3f}', f'{CJtot0sim/1e-15:.3f}']
+        }
+
+index_list = ['Theory','PSP']
+
+comp3_df = pd.DataFrame(comp3,index_list)
+
+Markdown( 
+  tabulate(comp3_df,
+  showindex=True,
+  headers=["$C_{Jbot}(0)\,[fF]$","$C_{JSWSTI}(0)\,[fF]$","$C_{JSWGAT}(0)\,[fF]$","$C_{Jtot}(0)\,[fF]$"],
+  numalign="center",
+  stralign="center",
+  colalign=("center","center")
+))
+```
+
+```{python}
+#| label: tbl-gbw_adc_op_comp4_pmos
+#| tbl-cap: Simulated actual junction capacitances values compared to theoretical zero-bias values.
+
+comp4 = {'CJbot [fF]': [f'{CJbotthe/1e-15:.3f}', f'{CJbotsim/1e-15:.3f}'],
+        'CJswsti [fF]': [f'{CJswstithe/1e-15:.3f}', f'{CJswstisim/1e-15:.3f}'],
+        'CJswgat [fF]': [f'{CJswgatthe/1e-15:.3f}', f'{CJswgatsim/1e-15:.3f}'],
+        'CJtot [fF]': [f'{CJtotthe/1e-15:.3f}', f'{CJtotsim/1e-15:.3f}']
+        }
+
+index_list = ['Theory','PSP']
+
+comp4_df = pd.DataFrame(comp4,index_list)
+
+Markdown( 
+  tabulate(comp4_df,
+  showindex=True,
+  headers=["$C_{Jbot}\,[fF]$","$C_{JSWSTI}\,[fF]$","$C_{JSWGAT}\,[fF]$","$C_{Jtot}\,[fF]$"],
+  numalign="center",
+  stralign="center",
+  colalign=("center","center")
+))
+```
+
+```{python}
+#| label: tbl-gbw_adc_op_comp5_pmos
+#| tbl-cap: Comparison of the simulated and predicted values of the gain-bandwidth and zero frequency.
+
+Coutthe=CL+CJtotthe+CGDethe
+CFthe=CGDethe
+futhe=Gmthe/(2*pi*Coutthe)
+fzthe=Gmthe/CFthe
+Ainfthe=20*log(CFthe/(CFthe+Coutthe))
+
+Coutsim=CL+CJtotsim+CGDesim
+CFsim=CGDesim
+fusim=Gmsim/(2*pi*Coutsim)
+fzsim=Gmthe/CFsim
+Ainfsim=20*log(CFsim/(CFsim+Coutsim))
+
+comp5 = {'Gm [uA/V]': [f'{Gmthe/1e-6:.3f}', f'{Gmsim/1e-6:.3f}'],
+         'Cout [fF]': [f'{Coutthe/1e-15:.3f}', f'{Coutsim/1e-15:.3f}'],
+        'CF [fF]': [f'{CFthe/1e-15:.3f}', f'{CFsim/1e-15:.3f}'],
+        'fu [MHz]': [f'{futhe/1e6:.3f}', f'{fusim/1e6:.3f}'],
+        'fz [GHz]': [f'{fzthe/1e9:.3f}', f'{fzsim/1e9:.3f}'],
+        'Ainf [dB]': [f'{Ainfthe:.3f}', f'{Ainfsim:.3f}']
+        }
+
+index_list = ['Theory','PSP']
+
+comp5_df = pd.DataFrame(comp5,index_list)
+
+Markdown( 
+  tabulate(comp5_df,
+  showindex=True,
+  headers=["$G_m\,[\mu A/V]$","$C_{out}\,[fF]$","$C_F\,[fF]$","$GBW\,[MHz]$","$f_z\,[GHz]$","$A_{\infty}\,[dB]$"],
+  numalign="center",
+  stralign="center",
+  colalign=("center","center")
+))
+```
+
+We can now proceed with the AC simulation. The simulation result is compared to the theoretical prediction in @fig-cs_ol_tf_gbw_adc_sim_pmos. 
+
+```{python}
+#| label: fig-cs_ol_tf_gbw_adc_sim_pmos
+#| fig-cap: CS simulated open-loop transfer function compared to the theoretical prediction.
+
+simulationPath="./Simulations/pmos/Optimization for GBW and Adc/"
+dataPath="./Data/pmos/Optimization for GBW and Adc/"
+fileName = "CS_GBW_Adc.ac"
+dataFile = dataPath + fileName + ".dat"
+opFile = simulationPath + fileName + ".dat"
+paramFile = simulationPath + fileName + ".par"
+simulationFile = simulationPath + fileName + ".cir"
+simulationLog = simulationPath + fileName + ".log"
+simulationData = simulationPath + fileName + ".dat"
+
+if newSim:
+    paramstr = '\n'.join((
+        f'.param CL={CL0/1e-15:.3f}f CF=0.0 f W1={Wopt/1e-6:.3f}u L1={Lopt/1e-6:.3f}u AS1={AD:.3e} PS1={PD:.3e} AD1={AD:.3e} PD1={PD:.3e}',
+        f'.param VDD={VDD:.1f} Ib={Ibopt/1e-9:.0f}n'
+    ))
+    print(paramstr)
+    with open(paramFile, 'w') as f:
+        f.write(paramstr)
+    print('Starting ngspice simulation...\n')
+    result = subprocess.run(f"""ngspice_con -b -o "{simulationLog}" "{simulationFile}" """, shell=True, capture_output=True, text=True)
+    if result.stderr == '':
+        print("Simulation executed successfully.\n")
+    else:
+        print("Simulation failed with return code", result.stderr)
+    print(result.stdout)
+    f = open(simulationLog, 'r')
+    log_contents = f.read()
+    print("Contents of the log file:")
+    print("‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾\n")
+    print (log_contents)
+    # We copy the simulation results to the dat folder
+    shutil.copy2(simulationData, dataFile)
+
+df_sim=pd.read_table(dataFile, sep=' +', engine='python')
+fsim=df_sim['frequency'].to_numpy()
+AmagdBsim=df_sim['AmagdB'].to_numpy()
+Aphidegsim=df_sim['Aphdeg'].to_numpy()-180
+Npts=len(fsim)
+fmin=fsim[0]
+#fmin=10
+fmax=fsim[Npts-1]
+
+regexp = re.compile(r'adc.*?([0-9.\+-]+e[0-9.\+-]+)')
+with open(simulationLog) as f:
+    for line in f:
+        match = re.match(regexp, line)
+        if match:
+            AdcdBsim=float(match.group(1))
+
+regexp = re.compile(r'gbw.*?([0-9.\+-]+e[0-9.\+-]+)')
+with open(simulationLog) as f:
+    for line in f:
+        match = re.match(regexp, line)
+        if match:
+            GBWsim=float(match.group(1))
+
+regexp = re.compile(r'fc.*?([0-9.\+-]+e[0-9.\+-]+)')
+with open(simulationLog) as f:
+    for line in f:
+        match = re.match(regexp, line)
+        if match:
+            fcsim=float(match.group(1))
+
+regexp = re.compile(r'fz.*?([0-9.\+-]+e[0-9.\+-]+)')
+with open(simulationLog) as f:
+    for line in f:
+        match = re.match(regexp, line)
+        if match:
+            fzsim=float(match.group(1))
+
+CFext=Gmsim/(2*pi*fzsim)
+
+#print(f'Adc = {AdcdBsim:.3f} dB')
+#print(f'GBW = {GBWsim:.3e} Hz')
+#print(f'fc = {fcsim/1e6:.3f} MHz')
+#print(f'fz = {fzsim/1e6:.3f} MHz')
+#print(f'CFext = {CFext/1e-15:.3f} fF')
+
+fig, axs = plt.subplots(ncols=1, nrows=2, figsize=(5, 6), sharex=True)
+
+axs[0].semilogx([fmin,fcsim],[AdcdBsim-3,AdcdBsim-3],'k--', linewidth=lw)
+axs[0].semilogx([fcsim,fcsim],[-40,AdcdBsim-3],'k--', linewidth=lw)
+axs[0].semilogx([fmin,GBWsim],[0,0],'k--', linewidth=lw)
+axs[0].semilogx([GBWsim,GBWsim],[-40,0],'k--', linewidth=lw)
+axs[0].semilogx(fsim,AmagdBsim, color='r', label='Simulation',
+                marker='o', markersize=msize, markevery=12, linestyle='None')
+axs[0].semilogx(fthe,AmagdBthe,'r-',label='Theory')
+axs[0].semilogx(fthe,AmagdBthenocf,'r--',label='Without $C_F$')
+axs[0].set(xlim=(fmin,fmax), ylim=(-20,60), ylabel='$|A_v|$ [dB]')
+#axs[0].set_yticks([-25,-20,-15,-10,-5,0,5,10,15,20,25])
+axs[0].legend(loc='upper right')
+textstr1 = '\n'.join((
+    f'$A_{{dc}} =$ {AdcdBthe:.1f} dB (theory)',
+    f'$A_{{dc}} =$ {AdcdBsim:.1f} dB (sim.)',
+    f'$GBW =$ {GBWthe/1e6:.1f} MHz (theory)',
+    f'$GBW =$ {GBWsim/1e6:.1f} MHz (sim.)',
+    f'$f_c =$ {fcthe/1e6:.3f} MHz (theory)',
+    f'$f_c =$ {fcsim/1e6:.3f} MHz (sim.)',
+    f'$f_z =$ {fzthe/1e9:.3f} GHz (theory)',
+    f'$f_z =$ {fzsim/1e9:.3f} GHz (sim.)'))
+axs[0].text(1.03, 0.5, textstr1, ha='left', va='center', transform=axs[0].transAxes, size=10,
+         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+
+axs[1].semilogx([fmin,fcsim],[-45,-45],'k--', linewidth=lw)
+axs[1].semilogx([fcsim,fcsim],[-45,0],'k--', linewidth=lw)
+axs[1].semilogx([fmin,GBWsim],[-90,-90],'k--', linewidth=lw)
+axs[1].semilogx([GBWsim,GBWsim],[-90,0],'k--', linewidth=lw)
+axs[1].semilogx(fsim,Aphidegsim, color='b', label='Simulation',
+                marker='o', markersize=msize, markevery=12, linestyle='None')
+axs[1].semilogx(fthe,Aphidegthe,'b-',label='Theory')
+axs[1].semilogx(fthe,Aphidegthenocf,'b--',label='Without $C_F$')
+axs[1].set(xlim=(fmin,fmax), ylim=(-135,0), xlabel='Frequency [Hz]', ylabel='$arg\\{A_v\\}$ [degree]')
+#axs[1].set_xticks([1e1,1e2,1e3,1e4,1e5,1e6,1e7,1e8])
+axs[1].set_yticks([-180,-135,-90,-45,0])
+axs[1].legend(loc='best')
+textstr2 = '\n'.join((
+    f'$C_L =$ {CL0/1e-15:.0f} $fF$',
+    f'$IC_{{opt}} =$ {ICopt:.2f}',
+    f'$I_{{b,opt}} =$ {Ibopt/1e-9:.0f} $nA$',
+    f'$W_{{opt}} =$ {Wopt/1e-6:.2f} $\\mu m$',
+    f'$L_{{opt}} =$ {Lopt/1e-6:.2f} $\\mu m$'))
+axs[1].text(0.03, 0.05, textstr2, ha='left', va='bottom', transform=axs[1].transAxes, size=10,
+         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+plt.subplots_adjust(hspace=0.1)
+#saveFigures(savePath, 'CS_GBW_long_gain_response')
+plt.show()
+```
+
+```{python}
+# Intrinsic gate transcapacitance (long-channel)
+def cm_qs_qd(qs,qd):
+    num=(qs-qd)*(4*qs**2+4*q**2+12*qs*qd+10*qs+10*qd+5)
+    den=15*(qs+qd+1)**3
+    return num/den
+
+# Intrinsic gate transcapacitance in saturation (long-channel)
+def cm_ic(ic):
+    qs=qi(ic)
+    qd=0
+    return cm_qs_qd(qs,qd)
+
+Cm=Wopt*Lopt*Cox*cm_ic(ICopt)
+wqs=Gmopt/Cm
+fqs=wqs/(2*pi)
+Ainfqs=(1+Cm/CF)/(1+Cout/CF)
+AinfqsdB=20*log(Ainfqs)
+```
+
+From @fig-cs_ol_tf_gbw_adc_sim_pmos, we see that the simulated GBW is higher than the target. This is due to the influence of the zero which is very low due to the low quasi-static frequency related to the transcapacitance, similarly to the pMOS case in the previous optimization. We can estimate the transcapacitance for this particular design as
+
+$C_m =$ `{python} f'{Cm/1e-15:.3f} $fF$'`
+
+and the corresponding quasi-static frequency as
+
+$f_{{qs}} =$ `{python} f'{fqs/1e6:.3f} $MHz$'`.
+
+We see that $C_m$ is much larger than the extrinsic feedback capacitance and almost equal to the load capacitance. The quasi-static frequency is slightly above the target $GBW$. We can also estimate the asymptotic high frequency gain $A_{\infty}$ as
+
+$A_{\infty} =$ `{python} f'{Ainfqs:.3e}'`
+
+or in dB
+
+$A_{\infty} =$ `{python} f'{AinfqsdB:.3f} $dB$'`
+
+@fig-cs_ol_tf_gbw_adc_sim_pmos_qs compares the simulated transfer function to the theoretical estimations with and without the transcapacitance $C_m$. We now have an almost perfect fit between the theoretical prediciton including the transcapacitance and the simulation.
+
+```{python}
+#| label: fig-cs_ol_tf_gbw_adc_sim_pmos_qs
+#| fig-cap: CS simulated open-loop transfer function compared to the theoretical prediction including the transcapacitance $C_m$.
+
+def Av(s,Adc,wp,wz):
+    num=Adc*(1-s/wz)
+    den=1+s/wp
+    return num/den
+
+def Avqs(s,Adc,wp,wz):
+    num=Adc*(1-s/wz)
+    den=1+s/wp
+    return num/den
+
+GBWthe=fu
+fcthe=fu/Adcthe
+wpthe=2*pi*fcthe
+wzthe=Gmopt/CF
+wztheqs=Gmopt/(CF+Cm)
+
+Npts=len(fsim)
+fmin=fsim[0]
+fmax=fsim[Npts-1]
+logfmin=log(fmin)
+logfmax=log(fmax)
+fthe=np.logspace(logfmin,logfmax,Npts,endpoint=True,base=10.0)
+
+AmagdBthe=np.zeros(Npts)
+Aphidegthe=np.zeros(Npts)
+AmagdBtheqs=np.zeros(Npts)
+Aphidegtheqs=np.zeros(Npts)
+
+for k in range(0,Npts):
+    jw=1j*2*pi*fthe[k]
+    AmagdBthe[k]=20*log(abs(Av(jw,Adcthe,wpthe,wzthe)))
+    Aphidegthe[k]=np.angle(Av(jw,Adcthe,wpthe,wzthe),deg=True)
+    AmagdBtheqs[k]=20*log(abs(Av(jw,Adcthe,wpthe,wztheqs)))
+    Aphidegtheqs[k]=np.angle(Av(jw,Adcthe,wpthe,wztheqs),deg=True)
+
+fig, axs = plt.subplots(ncols=1, nrows=2, figsize=(5, 6), sharex=True)
+
+axs[0].semilogx([fmin,fcsim],[AdcdBsim-3,AdcdBsim-3],'k--', linewidth=lw)
+axs[0].semilogx([fcsim,fcsim],[-40,AdcdBsim-3],'k--', linewidth=lw)
+axs[0].semilogx([fmin,GBWsim],[0,0],'k--', linewidth=lw)
+axs[0].semilogx([GBWsim,GBWsim],[-40,0],'k--', linewidth=lw)
+axs[0].semilogx(fsim,AmagdBsim, color='r', label='Simulation',
+                marker='o', markersize=msize, markevery=12, linestyle='None')
+axs[0].semilogx(fthe,AmagdBthe,'r--',label='Without $C_m$')
+axs[0].semilogx(fthe,AmagdBtheqs,'r-',label='With $C_m$')
+axs[0].set(xlim=(fmin,fmax), ylim=(-20,60), ylabel='$|A_v|$ [dB]')
+#axs[0].set_yticks([-25,-20,-15,-10,-5,0,5,10,15,20,25])
+axs[0].legend(loc='upper right')
+textstr1 = '\n'.join((
+    f'$A_{{dc}} =$ {AdcdBthe:.1f} dB (theory)',
+    f'$A_{{dc}} =$ {AdcdBsim:.1f} dB (sim.)',
+    f'$A_{{\\infty}} =$ {AinfqsdB:.1f} dB (theory)',
+    f'$A_{{\\infty}} =$ {AmagdBsim[Npts-1]:.1f} dB (sim.)',
+    f'$f_c =$ {fcthe/1e6:.3f} MHz (theory)',
+    f'$f_c =$ {fcsim/1e6:.3f} MHz (sim.)',
+    f'$GBW =$ {GBWthe/1e6:.1f} MHz (theory)',
+    f'$GBW =$ {GBWsim/1e6:.1f} MHz (sim.)'))
+axs[0].text(1.03, 0.5, textstr1, ha='left', va='center', transform=axs[0].transAxes, size=10,
+         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+
+axs[1].semilogx([fmin,fcsim],[-45,-45],'k--', linewidth=lw)
+axs[1].semilogx([fcsim,fcsim],[-45,0],'k--', linewidth=lw)
+axs[1].semilogx([fmin,GBWsim],[-90,-90],'k--', linewidth=lw)
+axs[1].semilogx([GBWsim,GBWsim],[-90,0],'k--', linewidth=lw)
+axs[1].semilogx(fsim,Aphidegsim, color='b', label='Simulation',
+                marker='o', markersize=msize, markevery=12, linestyle='None')
+axs[1].semilogx(fthe,Aphidegthe,'b--',label='Without $C_m$')
+axs[1].semilogx(fthe,Aphidegtheqs,'b-',label='With $C_m$')
+axs[1].set(xlim=(fmin,fmax), ylim=(-135,0), xlabel='Frequency [Hz]', ylabel='$arg\\{A_v\\}$ [degree]')
+#axs[1].set_xticks([1e1,1e2,1e3,1e4,1e5,1e6,1e7,1e8])
+axs[1].set_yticks([-180,-135,-90,-45,0])
+axs[1].legend(loc='best')
+textstr2 = '\n'.join((
+    f'$C_L =$ {CL0/1e-15:.0f} fF',
+    f'$IC_{{opt}} =$ {ICopt:.2f}',
+    f'$I_{{b,opt}} =$ {Ibopt/1e-9:.0f} nA',
+    f'$W_{{opt}} =$ {Wopt/1e-6:.2f} $\\mu m$',
+    f'$L_{{opt}} =$ {Lopt/1e-6:.2f} $\\mu m$'))
+axs[1].text(0.03, 0.05, textstr2, ha='left', va='bottom', transform=axs[1].transAxes, size=10,
+         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+plt.subplots_adjust(hspace=0.1)
+#saveFigures(savePath, 'CS_GBW_long_gain_response')
+plt.show()
+```
+
+# Conclusion
+
+In this notebook we have analyzed the common-source gain stage and found the minimum current to achieve certain specifications such as transconductance and gain-bandwidth. We first had a look at the case with a constant load capacitance for which the minimum current is in weak inversion. Optimizing the CS in weak inversion usually leads to fairly large transistor increasing the parasitic load capacitance which can no more be ignored. We then accounted for the junction, overlap and fringing capacitances which are all scaling with the transistor width. We then have shown that the self-loading capacitance introduces a true minimum current for achieving a given gain-bandwidth product for a given transistor length. The theoretical prediction were then validated by simulations done for the IHP 130nm process using the open source libary with the PSP compact model in ngspice. Despite the transistor model in the simulations is not the EKV model, the design approach using the inversion coefficient and the sEKV model parameters gave results that are very close to the simulations for the nMOS case. When implementing the CS gain stage with a pMOS device having a long channel length, we have discovered a strong deviation between the simulation and theoretical predictions at high frequency (above the gain-bandwidth product frequency). We have explained that this discrepancy came from the gate transcapacitance $C_m$ which could no more be neglected. We could estimate the quasi-static frequency, which was close to the target gain-bandwidth product. Adding the transcapacitance, we then obtained a theoretical prediction that is very close to the simulation. We then used the additional degree of freedom, namely the transistor length (which was set arbitrarily in the previous case) to set the DC gain in addition to the gain-bandwidth product. The predicted results were again very close to the simulation except for the pMOS case. Since the resulting gate length is fairly long, we need to account for the transcapacitance as we did for the gain-bandwidth optimization. After adding the transcapacitance, we get an almost perfect fit between the theoretical prediction and the simulation.
+
+This simple example of designing an elementary CS stage for gain-bandwidth and DC gain specifications has shown that the inversion coefficient approach can succesfully be used provided the sEKV parameters are correctly extracted for the target technology. It also has sown that the resulting design can be validated by simulation even if the compact model used in the simulator is not the EKV model.
+
+# References

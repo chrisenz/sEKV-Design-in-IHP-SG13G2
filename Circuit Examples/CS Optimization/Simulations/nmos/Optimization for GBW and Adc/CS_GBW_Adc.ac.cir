@@ -1,0 +1,23 @@
+Simulation of the CS stage designed with the corresponding Jupyter Notebook
+
+.lib /Simulations/models/cornerMOSlv.lib mos_tt
+.include CS_GBW_Adc.ac.par ; Size and bias values
+.include CS_GBW_Adc.net ; Circuit netlist
+
+.control
+ op
+ save v(out)
+ write $inputdir/CS_GBW_Adc.ac.op
+* reset all
+ ac dec 101 10k 10G
+ let AmagdB=vdb(out)
+ let Aphdeg=180/PI*vp(out)
+ meas ac Adc max AmagdB
+ meas ac GBW when AmagdB=0
+ meas ac fc when Aphdeg=-45
+ meas ac fz when Aphdeg=-135
+ set wr_singlescale
+ set wr_vecnames
+ wrdata $inputdir/CS_GBW_Adc.ac.dat AmagdB Aphdeg
+.endc
+.end

@@ -1,0 +1,8 @@
+X1 out in 0 0 sg13_lv_nmos W={W1} L={L1} AS={AS1} PS={PS1} AD={AD1} PD={PD1}
+X2 1 1 0 0 sg13_lv_nmos W={W1} L={L1} AS={AS1} PS={PS1} AD={AD1} PD={PD1}
+CL out 0 {CL}
+Ib1 VDD out {Ib}
+Ib2 VDD 1 {Ib}
+VDD VDD 0 {VDD}
+Vin 2 in DC 0 AC 1
+Eb 2 0 1 0 1

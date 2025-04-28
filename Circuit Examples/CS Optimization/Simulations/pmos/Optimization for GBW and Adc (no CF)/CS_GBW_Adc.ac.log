@@ -1,0 +1,25 @@
+Using SPARSE 1.3 as Direct Linear Solver
+Using SPARSE 1.3 as Direct Linear Solver
+
+Note: No compatibility mode selected!
+
+
+Circuit: simulation of the cs stage designed with the corresponding jupyter notebook
+
+Doing analysis at TEMP = 27.000000 and TNOM = 27.000000
+
+
+No. of Data Rows : 1
+ASCII raw file "./Simulations/pmos/Optimization for GBW and Adc (no CF)/CS_GBW_Adc.ac.op"
+Doing analysis at TEMP = 27.000000 and TNOM = 27.000000
+
+
+No. of Data Rows : 607
+adc                 =  4.822546e+01 at=  1.000000e+04
+gbw                 =  1.182839e+08
+fc                  =  4.587029e+05
+
+Error: measure  fz  when(WHEN) : out of interval
+ meas ac fz when aphdeg=45 failed!
+
+Note: Simulation executed from .control section 

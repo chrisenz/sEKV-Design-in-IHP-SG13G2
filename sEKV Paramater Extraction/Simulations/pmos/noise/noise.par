@@ -1,5 +1,0 @@
-.param VDD=1.8 VG=0.438 RL=22.630k
-.param W=10u L=130n
-.csparam fmin = 1e+00
-.csparam fmax = 1e+10
-.csparam decPts = 21

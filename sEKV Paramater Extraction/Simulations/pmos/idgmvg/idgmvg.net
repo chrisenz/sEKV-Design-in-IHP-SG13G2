@@ -1,4 +1,0 @@
-Xp d g s 0 sg13_lv_pmos W={W} L={L}
-VG 0 g {VG}
-VS 0 s {VS}
-VD 0 d {VD}

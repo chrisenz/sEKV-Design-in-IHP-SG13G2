@@ -1,4 +1,0 @@
-Xp out in 0 0 sg13_lv_pmos W={W} L={L}
-Vin 0 in DC {VG} AC 1
-VDD 0 DD DC {VDD}
-RL DD out {RL} noisy=0

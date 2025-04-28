@@ -1,4 +1,0 @@
-Xn out in 0 0 sg13_lv_nmos W={W} L={L}
-Vin in 0 DC {VG} AC 1
-VDD DD 0 DC {VDD}
-RL DD out {RL} noisy=0

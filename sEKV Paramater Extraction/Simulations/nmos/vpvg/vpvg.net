@@ -1,3 +1,0 @@
-Xn g g s 0 sg13_lv_nmos W={W1} L={L1} pre_layout=0 rfmode=0
-Ib s 0 {Ib}
-VG g 0 1.0

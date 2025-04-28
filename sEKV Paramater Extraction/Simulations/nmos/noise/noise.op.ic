@@ -1,0 +1,6 @@
+* Intermediate Transient Solution
+* Circuit: OSDI PSP nMOS noise analysis
+* Recorded at simulation time: 0
+.ic v(out) = 1.2618
+.ic v(in) = 0.435
+.ic v(dd) = 1.8

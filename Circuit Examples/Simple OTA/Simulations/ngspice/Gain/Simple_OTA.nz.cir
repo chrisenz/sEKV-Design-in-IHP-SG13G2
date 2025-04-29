@@ -1,0 +1,24 @@
+Simulation of the simple OTA designed with the sEKV model
+
+.lib /Simulations/models/cornerMOSlv.lib mos_tt ; model file for PSP
+.include size_bias.par ; Size and bias values
+.include Simple_OTA.net ; Circuit netlist
+.param Vic=0.6
+
+.control
+ op
+* save all
+* save onoise_n.x1a.nsg13_lv_nmos_idid onoise_n.x2a.nsg13_lv_pmos_idid onoise_n.x3a.nsg13_lv_nmos_idid
+* save inoise_spectrum onoise_spectrum onoise_n.x1a.nsg13_lv_nmos onoise_n.x1b.nsg13_lv_nmos onoise_n.x2a.nsg13_lv_pmos onoise_n.x2b.nsg13_lv_pmos onoise_n.x3a.nsg13_lv_nmos onoise_n.x3b.nsg13_lv_nmos
+ save inoise_spectrum onoise_spectrum
+ + onoise_n.x1a.nsg13_lv_nmos onoise_n.x1b.nsg13_lv_nmos onoise_n.x2a.nsg13_lv_pmos onoise_n.x2b.nsg13_lv_pmos onoise_n.x3a.nsg13_lv_nmos onoise_n.x3b.nsg13_lv_nmos
+ + onoise_n.x1a.nsg13_lv_nmos_flicker onoise_n.x1b.nsg13_lv_nmos_flicker onoise_n.x2a.nsg13_lv_pmos_flicker onoise_n.x2b.nsg13_lv_pmos_flicker onoise_n.x3a.nsg13_lv_nmos_flicker onoise_n.x3b.nsg13_lv_nmos_flicker
+* save inoise_spectrum onoise_spectrum onoise_n.x1a.nsg13_lv_nmos onoise_n.x1a.nsg13_lv_nmos_flicker onoise_n.x1b.nsg13_lv_nmos onoise_n.x1b.nsg13_lv_nmos_flicker onoise_n.x2b.nsg13_lv_pmos onoise_n.x2a.nsg13_lv_pmos_flicker onoise_n.x2b.nsg13_lv_pmos_flicker onoise_n.x3a.nsg13_lv_nmos_flicker onoise_n.x3b.nsg13_lv_nmos_flicker
+ noise V(out) Vid dec 41 10 100MEG 1
+ setplot noise1
+ write $inputdir/Simple_OTA.nz.raw
+ set wr_singlescale
+ set wr_vecnames
+ wrdata $inputdir/Simple_OTA.nz.dat inoise_spectrum onoise_spectrum
+.endc
+.end

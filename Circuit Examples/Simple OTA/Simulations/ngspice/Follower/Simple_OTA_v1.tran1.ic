@@ -1,0 +1,9 @@
+* Intermediate Transient Solution
+* Circuit: simulation of the simple ota designed with the sekv model
+* Recorded at simulation time: 0
+.ic v(2) = 0.640169
+.ic v(inp) = 0.3
+.ic v(1) = 0.172504
+.ic v(out) = 0.308876
+.ic v(vdd) = 1.2
+.ic v(3) = 0.486659

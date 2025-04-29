@@ -1,0 +1,127 @@
+************************************************************
+* EPFL-EKV v2.6 MOST Model
+* Process: Generic 0.18um process
+************************************************************
+*
+* 2n*Beta*Ut^2:  500nA (NMOS)  200nA (PMOS)
+*
+************************************************************
+* NMOS Device parameters
+************************************************************
+.model NMOS NMOS
++ LEVEL     = 5
+* Setup parameters
+*+ UPDATE=2.6
+* Process related parameters
++ COX       = 8.46e-3
++ XJ        = 1.6e-7
++ DW        = 3.9e-8
++ DL        = -7.6e-8
+* Basic intrinsic model parameters
++ VTO       = 0.455
++ GAMMA     = 0.540
++ PHI       = 990.0e-3
++ KP        = 420.0e-6
++ E0        = 5.917e+7
++ UCRIT     = 3.75e+6
+* Channel length modulation parameter
++ LAMBDA    = 0.340
+* Charge sharing parameters
++ WETA      = 0.0
++ LETA      = 220.0e-3
+* Reverse short-channel effect parameters
++ Q0        = 0.000420
++ LK        = 3.80e-7
+* Impact ionization related parameters
++ IBN       = 1.0
++ IBA       = 0.0 ; Turns off impact ionization current
++ IBB       = 270.0e+6
+* Intrinsic model temperature parameters
+*+ TNOM      = 25.0
++ TCV       = 6.03e-4
++ BEX       = -1.569
++ UCEX      = 1.76
++ IBBT      = 0.0
+* Flicker noise parameters
+*+ AF        = 0.8265
++ AF        = 1.0
++ KF        = 8.10e-24
+* Series access resistance parameters
++ HDIF      = 2e-07
++ RSH       = 600.0
+* Junction current parameters
++ JS        = 2.0e-6
++ JSW       = 8.0e-11
++ XTI       = 3.0
++ N         = 1.0
+* Junction capacitances parameters
++ CJ        = 1.000266e-3
++ CJSW      = 2.040547e-10
++ MJ        = 0.373377
++ MJSW      = 0.0748074
++ PB        = 0.626873
++ PBSW      = 0.626873
+* Gate overlap capacitances
++ CGDO      = 3.665e-10
++ CGSO      = 3.665e-10
+
+
+************************************************************
+* PMOS Device parameters
+************************************************************
+.model PMOS PMOS
++ LEVEL     = 5
+* Setup Parameters
+*+ UPDATE = 2.6
+* Process related parameters
++ COX       = 8.46e-3
++ XJ        = 1.7e-7
++ DW        = 5.4e-8
++ DL        = -7.2e-8
+* Basic intrinsic model parameters
++ VTO       = -0.4572
++ GAMMA     = 609.0e-3
++ PHI       = 990.0e-3
++ KP        = 99.0e-6
++ E0        = 1.045e+7
++ UCRIT     = 3.1567e+7
+* Channel length modulation parameter
++ LAMBDA    = 0.772
+* Charge sharing parameters
++ WETA      = 0.0
++ LETA      = 110.0e-3
+* Reverse short-channel effect parameters
++ Q0        = 2.89711e-4
++ LK        = 3.9796e-7
+* Impact ionization related parameters
++ IBN       = 1.0
++ IBA       = 0.0 ; Turns off impact ionization current
++ IBB       = 340.0e+6
+* Intrinsic model temperature parameters
+*+ TNOM      = 25.0
++ TCV       = -5.04e-4
++ BEX       = -0.688
++ UCEX      = 2.0232
++ IBBT      = 0.0
+* Flicker noise parameters
+*+ AF        = 1.3358
++ AF        = 1.0
++ KF        = 6.75e-23
+* Series access resistance parameters
++ HDIF      = 2e-07
++ RSH       = 2385.6
+* Junction current parameters
++ JS        = 4.0e-7  
++ JSW       = 9.0e-12  
++ XTI       = 3.0  
++ N         = 1.0
+* Junction capacitances parameters
++ CJ        = 1.121e-3
++ CJSW      = 2.481E-10
++ MJ        = 0.469519  
++ MJSW      = 0.365478
++ PB        = 0.896249  
++ PBSW      = 0.896249             
+* Gate overlap capacitances
++ CGDO      = 3.28e-10
++ CGSO      = 3.28e-10

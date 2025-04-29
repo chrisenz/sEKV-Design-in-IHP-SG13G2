@@ -1,0 +1,157 @@
+* ----------------------------------------------------------------------
+* Operating point information at 27 degC
+* ----------------------------------------------------------------------
+*
+* Initial state obtained by resetting everything to zero
+*
+* Convergence obtained with initial logarithmic damping heuristics
+* Number of iterations: 19
+*
+* Minimum parallel DC conductance          (.GMINDC   ): 1e-12 
+* Minimum parallel transient conductance   (.GMIN     ): 1e-12 
+* Minimum capacitance on analog nets       (.CAPAMIN  ): 0 
+*
+* ----------------------------------------------------------------------
+
+* ----------------------------------------------------------------------
+* Analog nets
+* ----------------------------------------------------------------------
+
+Nets:
+
+    1        =  5.1528613e-01 V.
+    2        =  8.7213795e-01 V.
+    3        =  9.9618958e-01 V.
+    ICM      =  9.0000000e-01 V.
+    IDM      =  0.0000000e+00 V.
+    INN      =  9.0000000e-01 V.
+    INP      =  9.0000000e-01 V.
+    OUT      =  8.7213795e-01 V.
+    VDD      =  1.8000000e+00 V.
+
+Spice internal nets:
+
+    M1A::DI  =  8.7213557e-01 V.
+    M1A::SI  =  5.1528851e-01 V.
+    M1B::DI  =  8.7213557e-01 V.
+    M1B::SI  =  5.1528851e-01 V.
+    M2A::DI  =  8.7260675e-01 V.
+    M2A::SI  =  1.7995312e+00 V.
+    M2B::DI  =  8.7260675e-01 V.
+    M2B::SI  =  1.7995312e+00 V.
+    M3A::DI  =  9.9593853e-01 V.
+    M3A::SI  =  2.5104552e-04 V.
+    M3B::DI  =  5.1503552e-01 V.
+    M3B::SI  =  2.5061306e-04 V.
+
+Voltage sources:
+
+    VDD   =  1.8000000e+00 V, -9.9913819e-07 A,  1.798e-06 W.
+    VIC   =  9.0000000e-01 V,  0.0000000e+00 A,  0.000e+00 W.
+    VID   =  0.0000000e+00 V,  0.0000000e+00 A,  0.000e+00 W.
+    EINP  =  0.0000000e+00 V,  0.0000000e+00 A,  0.000e+00 W.
+    EINN  =  0.0000000e+00 V,  0.0000000e+00 A,  0.000e+00 W.
+
+Current sources:
+
+*   IB  =  5.0000000e-07  A,  8.0381042e-01  V,  4.019e-07 W.
+
+
+END_USE_OP_TAG
+
+* ----------------------------------------------------------------------
+* SPICE Dissipated power
+* ----------------------------------------------------------------------
+
+    Total SPICE power    = 1.3975151e-06 W.
+
+* ----------------------------------------------------------------------
+* (C) Capacitors
+* ----------------------------------------------------------------------
+
+CL (DEFAULT, multiplicity = 1)
+           VALUE = 1e-12            ,           POWER = 0                ,
+
+* ----------------------------------------------------------------------
+* (M) Mos transistors
+* ----------------------------------------------------------------------
+
+OFF:    0
+SUB:    2
+LIN:    0
+SAT:    4
+
+M1A (NMOS, type NMOS, model EKV 2.6, region SUB (saturation - weak inversion), multiplicity = 1):
+  Vds  =  3.56847e-01,  Vgs  =  3.84711e-01,  Vbs  = -2.37892e-06
+            WEFF = 1.2589e-05       ,            LEFF = 3.514e-06        ,           POWER = 8.90592e-08      ,              ID = 2.49568e-07      ,
+              GM = 6.83732e-06      ,             GDS = 4.28851e-09      ,            GMBS = 2.0094e-06       ,           VDSAT = 0.119537         ,
+             VTH = 0.463106         ,          DELVTO = 0               D,              QD = -3.82105e-16     ,              QG = 1.94607e-13      ,
+              QB = -1.93477e-13     ,              QS = -7.48506e-16     ,             CGG = 1.05711e-13      ,             CGD = 3.33041e-17      ,
+             CGS = -2.96716e-14     ,             CGB = -7.60729e-14     ,             CBG = -7.61738e-14     ,             CBD = -2.39524e-17     ,
+             CBS = -8.33723e-15     ,             CBB = 8.4535e-14       ,             CDG = -1.01081e-14     ,             CDD = -3.18397e-18     ,
+             CDS = 1.30065e-14      ,             CDB = -2.89526e-15     ,            QBDJ = 5.58602e-15      ,            QBSJ = 3.92312e-20      ,
+            CBDJ = 9.38219e-15      ,            CBSJ = 1.03379e-14      ,
+
+
+M1B (NMOS, type NMOS, model EKV 2.6, region SUB (saturation - weak inversion), multiplicity = 1):
+  Vds  =  3.56847e-01,  Vgs  =  3.84711e-01,  Vbs  = -2.37892e-06
+            WEFF = 1.2589e-05       ,            LEFF = 3.514e-06        ,           POWER = 8.90592e-08      ,              ID = 2.49568e-07      ,
+              GM = 6.83732e-06      ,             GDS = 4.28851e-09      ,            GMBS = 2.0094e-06       ,           VDSAT = 0.119537         ,
+             VTH = 0.463106         ,          DELVTO = 0               D,              QD = -3.82105e-16     ,              QG = 1.94607e-13      ,
+              QB = -1.93477e-13     ,              QS = -7.48506e-16     ,             CGG = 1.05711e-13      ,             CGD = 3.33041e-17      ,
+             CGS = -2.96716e-14     ,             CGB = -7.60729e-14     ,             CBG = -7.61738e-14     ,             CBD = -2.39524e-17     ,
+             CBS = -8.33723e-15     ,             CBB = 8.4535e-14       ,             CDG = -1.01081e-14     ,             CDD = -3.18397e-18     ,
+             CDS = 1.30065e-14      ,             CDB = -2.89526e-15     ,            QBDJ = 5.58602e-15      ,            QBSJ = 3.92312e-20      ,
+            CBDJ = 9.38219e-15      ,            CBSJ = 1.03379e-14      ,
+
+
+M2A (PMOS, type PMOS, model EKV 2.6, region SAT (saturation - strong inversion), multiplicity = 1):
+  Vds  = -9.26924e-01,  Vgs  = -9.27393e-01,  Vbs  =  4.68795e-04
+            WEFF = 2.54e-07         ,            LEFF = 6.288e-06        ,           POWER = 2.31566e-07      ,              ID = -2.49567e-07     ,
+              GM = 9.6544e-07       ,             GDS = 7.73401e-10      ,            GMBS = 3.49894e-07      ,           VDSAT = -0.447334        ,
+             VTH = -0.461068        ,          DELVTO = 0               D,              QD = 1.36441e-15      ,              QG = -1.23259e-14     ,
+              QB = 8.82447e-15      ,              QS = 2.13704e-15      ,             CGG = 9.37751e-15      ,             CGD = 8.42055e-19      ,
+             CGS = -8.29124e-15     ,             CGB = -1.08711e-15     ,             CBG = -1.30871e-15     ,             CBD = -1.16207e-19     ,
+             CBS = -2.1679e-15      ,             CBB = 3.47672e-15      ,             CDG = -3.21466e-15     ,             CDD = -2.89182e-19     ,
+             CDS = 4.16465e-15      ,             CDB = -9.49699e-16     ,            QBDJ = -3.89514e-16     ,            QBSJ = -2.29292e-19     ,
+            CBDJ = 3.31903e-16      ,            CBSJ = 4.38318e-16      ,
+
+
+M2B (PMOS, type PMOS, model EKV 2.6, region SAT (saturation - strong inversion), multiplicity = 1):
+  Vds  = -9.26924e-01,  Vgs  = -9.27393e-01,  Vbs  =  4.68795e-04
+            WEFF = 2.54e-07         ,            LEFF = 6.288e-06        ,           POWER = 2.31566e-07      ,              ID = -2.49567e-07     ,
+              GM = 9.6544e-07       ,             GDS = 7.73401e-10      ,            GMBS = 3.49894e-07      ,           VDSAT = -0.447334        ,
+             VTH = -0.461068        ,          DELVTO = 0               D,              QD = 1.36441e-15      ,              QG = -1.23259e-14     ,
+              QB = 8.82447e-15      ,              QS = 2.13704e-15      ,             CGG = 9.37751e-15      ,             CGD = 8.42055e-19      ,
+             CGS = -8.29124e-15     ,             CGB = -1.08711e-15     ,             CBG = -1.30871e-15     ,             CBD = -1.16207e-19     ,
+             CBS = -2.1679e-15      ,             CBB = 3.47672e-15      ,             CDG = -3.21466e-15     ,             CDD = -2.89182e-19     ,
+             CDS = 4.16465e-15      ,             CDB = -9.49699e-16     ,            QBDJ = -3.89514e-16     ,            QBSJ = -2.29292e-19     ,
+            CBDJ = 3.31903e-16      ,            CBSJ = 4.38318e-16      ,
+
+
+M3A (NMOS, type NMOS, model EKV 2.6, region SAT (saturation - strong inversion), multiplicity = 1):
+  Vds  =  9.95687e-01,  Vgs  =  9.95939e-01,  Vbs  = -2.51046e-04
+            WEFF = 2.39e-07         ,            LEFF = 1.7404e-05       ,           POWER = 4.98095e-07      ,              ID = 4.99998e-07      ,
+              GM = 1.71075e-06      ,             GDS = 6.74523e-10      ,            GMBS = 4.99754e-07      ,           VDSAT = 0.510164         ,
+             VTH = 0.457141         ,          DELVTO = 0               D,              QD = -4.18065e-15     ,              QG = 3.13089e-14      ,
+              QB = -2.06212e-14     ,              QS = -6.50703e-15     ,             CGG = 2.43563e-14      ,             CGD = 1.59073e-18      ,
+             CGS = -2.18955e-14     ,             CGB = -2.46239e-15     ,             CBG = -3.05531e-15     ,             CBD = -1.97035e-19     ,
+             CBS = -4.95322e-15     ,             CBB = 8.00872e-15      ,             CDG = -8.49616e-15     ,             CDD = -5.55891e-19     ,
+             CDS = 1.07036e-14      ,             CDB = -2.20689e-15     ,            QBDJ = 5.22055e-16      ,            QBSJ = 1.42727e-19      ,
+            CBDJ = 3.09911e-16      ,            CBSJ = 3.56385e-16      ,
+
+
+M3B (NMOS, type NMOS, model EKV 2.6, region SAT (saturation - strong inversion), multiplicity = 1):
+  Vds  =  5.14785e-01,  Vgs  =  9.95939e-01,  Vbs  = -2.50613e-04
+            WEFF = 2.39e-07         ,            LEFF = 1.7404e-05       ,           POWER = 2.57199e-07      ,              ID = 4.99137e-07      ,
+              GM = 1.69685e-06      ,             GDS = 1.60572e-08      ,            GMBS = 4.96406e-07      ,           VDSAT = 0.510139         ,
+             VTH = 0.457169         ,          DELVTO = 0               D,              QD = -4.18617e-15     ,              QG = 3.13141e-14      ,
+              QB = -2.06197e-14     ,              QS = -6.50822e-15     ,             CGG = 2.45279e-14      ,             CGD = -2.21758e-16     ,
+             CGS = -2.18828e-14     ,             CGB = -2.42327e-15     ,             CBG = -3.01682e-15     ,             CBD = -5.07978e-17     ,
+             CBS = -4.95039e-15     ,             CBB = 8.01801e-15      ,             CDG = -8.66051e-15     ,             CDD = 2.13469e-16      ,
+             CDS = 1.06918e-14      ,             CDB = -2.24475e-15     ,            QBDJ = 2.78665e-16      ,            QBSJ = 1.42481e-19      ,
+            CBDJ = 3.25782e-16      ,            CBSJ = 3.56385e-16      ,
+
+* ----------------------------------------------------------------------
+* (R) Resistors
+* ----------------------------------------------------------------------

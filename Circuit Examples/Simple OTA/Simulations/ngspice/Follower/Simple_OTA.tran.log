@@ -1,0 +1,35 @@
+Using SPARSE 1.3 as Direct Linear Solver
+Using SPARSE 1.3 as Direct Linear Solver
+
+Note: No compatibility mode selected!
+
+
+Circuit: simulation of the simple ota designed with the sekv model
+
+Doing analysis at TEMP = 27.000000 and TNOM = 27.000000
+
+
+No. of Data Rows : 1
+
+Node data saved to file ./Simulations/ngspice/Follower/simple_ota.tran.ic
+ASCII raw file "./Simulations/ngspice/Follower/Simple_OTA.tran.op"
+Doing analysis at TEMP = 27.000000 and TNOM = 27.000000
+
+
+Initial Transient Solution
+--------------------------
+
+Node                                   Voltage
+----                                   -------
+2                                     0.640169
+inp                                        0.3
+1                                     0.172504
+out                                   0.308876
+vdd                                        1.2
+3                                     0.486659
+vin#branch                         3.11973e-14
+vdd#branch                        -9.21891e-07
+
+
+No. of Data Rows : 1022
+Note: Simulation executed from .control section 

@@ -1,0 +1,54 @@
+SMASH (release 7.6.0 of Jun 30 2020)
+Control file: 'M:\My Cloud\Google Drive (EPFL)\1-Work in Progress\Book on Low-power Analog IC Design\Current\08.Amplifiers\Quarto\Simple OTA\Simulations\Smash\Gain\Simple_OTA.pat'
+
+----------------------------------------------------------------------
+Release information:
+    SMASH Kernel (release 7.6.0 of Jun 30 2020)
+    VPP (release 7.6.0 of Jun 30 2020)
+    CAPACITOR (release 7.6.0 of Jun 30 2020)
+        LEVEL=DEFAULT
+    Voltage Controlled Voltage Source (release 7.6.0 of Jun 30 2020)
+        LEVEL=VCVS
+    IDC (release 7.6.0 of Jun 30 2020)
+        LEVEL=DC
+    EKVv2.6 (release 7.6.0 of Jun 30 2020)
+        LEVEL=5 model NMOS
+        LEVEL=5 model PMOS
+    RESISTOR (release 7.6.0 of Jun 30 2020)
+        LEVEL=DEFAULT
+    VDC (release 7.6.0 of Jun 30 2020)
+        LEVEL=DC
+    Tcl (release 8.6.6)
+    zlib (release 1.2.5)
+    License locked by No server. (C:\Users\chris\AppData\Roaming/smash/smash_license.lic)
+    Minimalist Gnu for Windows (MinGW-W64 GCC 6.3.0)
+    Windows NT 10.0
+
+Random seed: 3391173240
+
+
+Capacitors statistics:
+]1.0e-13 , 1.0e-12 ]      1 formula fast capacitors
+Capacitors count: 1
+
+Resistors statistics:
+                         12 API resistors
+Resistors count: 12
+
+Analog elements summary:
+ 15  Parameter(s)
+  1  Subcircuit(s)
+ 21  SPICE Net(s)
+  1  Capacitor(s)
+  6  MOS transistor(s)
+ 12  Resistor(s)
+  5  Voltage source(s)
+  1  Current source(s)
+103  Matrix entries
+
+No logic elements.
+
+----------------------------------------------------------------------
+Load completed with 0 warning(s).
+----------------------------------------------------------------------
+

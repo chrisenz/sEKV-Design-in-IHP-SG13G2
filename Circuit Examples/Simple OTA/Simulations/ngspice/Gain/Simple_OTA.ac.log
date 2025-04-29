@@ -1,0 +1,21 @@
+Using SPARSE 1.3 as Direct Linear Solver
+Using SPARSE 1.3 as Direct Linear Solver
+
+Note: No compatibility mode selected!
+
+
+Circuit: simulation of the simple ota designed with the sekv model
+
+Doing analysis at TEMP = 27.000000 and TNOM = 27.000000
+
+
+No. of Data Rows : 1
+ASCII raw file "./Simulations/ngspice/Gain/Simple_OTA.ac.op"
+Doing analysis at TEMP = 27.000000 and TNOM = 27.000000
+
+
+No. of Data Rows : 288
+adc                 =  3.014330e+01 at=  1.000000e+01
+gbw                 =  1.091370e+06
+pgbw                =  -9.202410e+01
+Note: Simulation executed from .control section 

@@ -6,6 +6,6 @@ The sEKV parameters are extracted for nMOS and pMOS separately using the extract
 
 The sEKV design methodology is illustrated with several simple examples you can find in the [Circuit Examples directory](/Circuit%20Examples/). It currently includes:
 * [Common-source gain stage optimization](/Circuit%20Examples/CS%20Optimization/CS_optimization.pdf).
-* [Five transistors simple OTA]((/Circuit%20Examples/Simple%20OTA/Simple_OT.pdf) for minimum current consumption.
+* [Five transistors simple OTA](/Circuit%20Examples/Simple%20OTA/Simple_OTA.pdf) for minimum current consumption.
 
 The theoretical predictions are validated using ngspice and the models provided by the IHP PDK for the PSP compact model. In order to run the example in the Jupyter or Quarto Notebooks you need to install ngspice according to the instruction given in the [ngspice installation file](ngspice_installation.md).

@@ -1,0 +1,20 @@
+Simulation of the cascode gain stage designed with the sEKV model
+
+.lib /Simulations/models/cornerMOSlv.lib mos_tt ; model file for PSP
+.include size_bias.par ; Size and bias values
+.include Cascode_gain_stage.gout.net ; Circuit netlist
+
+.control
+ op
+ wrnodev $inputdir/Cascode_gain_stage.gout.op.ic
+ save v(out)
+ write $inputdir/Cascode_gain_stage.gout.op
+ ac dec 51 10 10MEG
+ let Zout=v(out)
+ let ReZout=vr(Zout)
+ let ImZout=vi(Zout)
+ set wr_singlescale
+ set wr_vecnames
+ wrdata $inputdir/Cascode_gain_stage.gout.dat Zout ReZout ImZout
+.endc
+.end

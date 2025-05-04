@@ -1,0 +1,28 @@
+Simulation of the simple OTA designed with the sEKV model
+
+.lib /Simulations/models/cornerMOSlv.lib mos_tt ; model file for PSP
+.include size_bias.par ; Size and bias values
+.include Cascode_gain_stage.net ; Circuit netlist
+
+.control
+ save @n.x1.Nsg13_lv_nmos[weff] @n.x1.Nsg13_lv_nmos[leff] @n.x1.Nsg13_lv_nmos[ids] @n.x1.Nsg13_lv_nmos[vgs] @n.x1.Nsg13_lv_nmos[vds] @n.x1.Nsg13_lv_nmos[vsb] @n.x1.Nsg13_lv_nmos[vgt] @n.x1.Nsg13_lv_nmos[vdss] @n.x1.Nsg13_lv_nmos[gm] @n.x1.Nsg13_lv_nmos[gmb] @n.x1.Nsg13_lv_nmos[gds] @n.x1.Nsg13_lv_nmos[sid] @n.x1.Nsg13_lv_nmos[sfl]
+ save @n.x2.Nsg13_lv_nmos[weff] @n.x2.Nsg13_lv_nmos[leff] @n.x2.Nsg13_lv_nmos[ids] @n.x2.Nsg13_lv_nmos[vgs] @n.x2.Nsg13_lv_nmos[vds] @n.x2.Nsg13_lv_nmos[vsb] @n.x2.Nsg13_lv_nmos[vgt] @n.x2.Nsg13_lv_nmos[vdss] @n.x2.Nsg13_lv_nmos[gm] @n.x2.Nsg13_lv_nmos[gmb] @n.x2.Nsg13_lv_nmos[gds] @n.x2.Nsg13_lv_nmos[sid] @n.x2.Nsg13_lv_nmos[sfl]
+ save @n.x3.Nsg13_lv_nmos[weff] @n.x3.Nsg13_lv_nmos[leff] @n.x3.Nsg13_lv_nmos[ids] @n.x3.Nsg13_lv_nmos[vgs] @n.x3.Nsg13_lv_nmos[vds] @n.x3.Nsg13_lv_nmos[vsb] @n.x3.Nsg13_lv_nmos[vgt] @n.x3.Nsg13_lv_nmos[vdss] @n.x3.Nsg13_lv_nmos[gm] @n.x3.Nsg13_lv_nmos[gmb] @n.x3.Nsg13_lv_nmos[gds] @n.x3.Nsg13_lv_nmos[sid] @n.x3.Nsg13_lv_nmos[sfl]
+ save @n.x4.Nsg13_lv_nmos[weff] @n.x4.Nsg13_lv_nmos[leff] @n.x4.Nsg13_lv_nmos[ids] @n.x4.Nsg13_lv_nmos[vgs] @n.x4.Nsg13_lv_nmos[vds] @n.x4.Nsg13_lv_nmos[vsb] @n.x4.Nsg13_lv_nmos[vgt] @n.x4.Nsg13_lv_nmos[vdss] @n.x4.Nsg13_lv_nmos[gm] @n.x4.Nsg13_lv_nmos[gmb] @n.x4.Nsg13_lv_nmos[gds] @n.x4.Nsg13_lv_nmos[sid] @n.x4.Nsg13_lv_nmos[sfl]
+ save @n.x5.Nsg13_lv_nmos[weff] @n.x5.Nsg13_lv_nmos[leff] @n.x5.Nsg13_lv_nmos[ids] @n.x5.Nsg13_lv_nmos[vgs] @n.x5.Nsg13_lv_nmos[vds] @n.x5.Nsg13_lv_nmos[vsb] @n.x5.Nsg13_lv_nmos[vgt] @n.x5.Nsg13_lv_nmos[vdss] @n.x5.Nsg13_lv_nmos[gm] @n.x5.Nsg13_lv_nmos[gmb] @n.x5.Nsg13_lv_nmos[gds] @n.x5.Nsg13_lv_nmos[sid] @n.x5.Nsg13_lv_nmos[sfl]
+ save @n.x6.Nsg13_lv_nmos[weff] @n.x6.Nsg13_lv_nmos[leff] @n.x6.Nsg13_lv_nmos[ids] @n.x6.Nsg13_lv_nmos[vgs] @n.x6.Nsg13_lv_nmos[vds] @n.x6.Nsg13_lv_nmos[vsb] @n.x6.Nsg13_lv_nmos[vgt] @n.x6.Nsg13_lv_nmos[vdss] @n.x6.Nsg13_lv_nmos[gm] @n.x6.Nsg13_lv_nmos[gmb] @n.x6.Nsg13_lv_nmos[gds] @n.x6.Nsg13_lv_nmos[sid] @n.x6.Nsg13_lv_nmos[sfl]
+ save @n.x7.Nsg13_lv_nmos[weff] @n.x7.Nsg13_lv_nmos[leff] @n.x7.Nsg13_lv_nmos[ids] @n.x7.Nsg13_lv_nmos[vgs] @n.x7.Nsg13_lv_nmos[vds] @n.x7.Nsg13_lv_nmos[vsb] @n.x7.Nsg13_lv_nmos[vgt] @n.x7.Nsg13_lv_nmos[vdss] @n.x7.Nsg13_lv_nmos[gm] @n.x7.Nsg13_lv_nmos[gmb] @n.x7.Nsg13_lv_nmos[gds] @n.x7.Nsg13_lv_nmos[sid] @n.x7.Nsg13_lv_nmos[sfl]
+ op
+ wrnodev $inputdir/Cascode_gain_stage.op.ic
+ set wr_singlescale
+ set wr_vecnames
+ wrdata $inputdir/Cascode_gain_stage.op.dat @n.x1.Nsg13_lv_nmos[weff] @n.x1.Nsg13_lv_nmos[leff] @n.x1.Nsg13_lv_nmos[ids] @n.x1.Nsg13_lv_nmos[vgs] @n.x1.Nsg13_lv_nmos[vds] @n.x1.Nsg13_lv_nmos[vsb] @n.x1.Nsg13_lv_nmos[vgt] @n.x1.Nsg13_lv_nmos[vdss] @n.x1.Nsg13_lv_nmos[gm] @n.x1.Nsg13_lv_nmos[gmb] @n.x1.Nsg13_lv_nmos[gds] @n.x1.Nsg13_lv_nmos[sid] @n.x1.Nsg13_lv_nmos[sfl]
+ set appendwrite
+ wrdata $inputdir/Cascode_gain_stage.op.dat @n.x2.Nsg13_lv_nmos[weff] @n.x2.Nsg13_lv_nmos[leff] @n.x2.Nsg13_lv_nmos[ids] @n.x2.Nsg13_lv_nmos[vgs] @n.x2.Nsg13_lv_nmos[vds] @n.x2.Nsg13_lv_nmos[vsb] @n.x2.Nsg13_lv_nmos[vgt] @n.x2.Nsg13_lv_nmos[vdss] @n.x2.Nsg13_lv_nmos[gm] @n.x2.Nsg13_lv_nmos[gmb] @n.x2.Nsg13_lv_nmos[gds] @n.x2.Nsg13_lv_nmos[sid] @n.x2.Nsg13_lv_nmos[sfl]
+ wrdata $inputdir/Cascode_gain_stage.op.dat @n.x3.Nsg13_lv_nmos[weff] @n.x3.Nsg13_lv_nmos[leff] @n.x3.Nsg13_lv_nmos[ids] @n.x3.Nsg13_lv_nmos[vgs] @n.x3.Nsg13_lv_nmos[vds] @n.x3.Nsg13_lv_nmos[vsb] @n.x3.Nsg13_lv_nmos[vgt] @n.x3.Nsg13_lv_nmos[vdss] @n.x3.Nsg13_lv_nmos[gm] @n.x3.Nsg13_lv_nmos[gmb] @n.x3.Nsg13_lv_nmos[gds] @n.x3.Nsg13_lv_nmos[sid] @n.x3.Nsg13_lv_nmos[sfl]
+ wrdata $inputdir/Cascode_gain_stage.op.dat @n.x4.Nsg13_lv_nmos[weff] @n.x4.Nsg13_lv_nmos[leff] @n.x4.Nsg13_lv_nmos[ids] @n.x4.Nsg13_lv_nmos[vgs] @n.x4.Nsg13_lv_nmos[vds] @n.x4.Nsg13_lv_nmos[vsb] @n.x4.Nsg13_lv_nmos[vgt] @n.x4.Nsg13_lv_nmos[vdss] @n.x4.Nsg13_lv_nmos[gm] @n.x4.Nsg13_lv_nmos[gmb] @n.x4.Nsg13_lv_nmos[gds] @n.x4.Nsg13_lv_nmos[sid] @n.x4.Nsg13_lv_nmos[sfl]
+ wrdata $inputdir/Cascode_gain_stage.op.dat @n.x5.Nsg13_lv_nmos[weff] @n.x5.Nsg13_lv_nmos[leff] @n.x5.Nsg13_lv_nmos[ids] @n.x5.Nsg13_lv_nmos[vgs] @n.x5.Nsg13_lv_nmos[vds] @n.x5.Nsg13_lv_nmos[vsb] @n.x5.Nsg13_lv_nmos[vgt] @n.x5.Nsg13_lv_nmos[vdss] @n.x5.Nsg13_lv_nmos[gm] @n.x5.Nsg13_lv_nmos[gmb] @n.x5.Nsg13_lv_nmos[gds] @n.x5.Nsg13_lv_nmos[sid] @n.x5.Nsg13_lv_nmos[sfl]
+ wrdata $inputdir/Cascode_gain_stage.op.dat @n.x6.Nsg13_lv_nmos[weff] @n.x6.Nsg13_lv_nmos[leff] @n.x6.Nsg13_lv_nmos[ids] @n.x6.Nsg13_lv_nmos[vgs] @n.x6.Nsg13_lv_nmos[vds] @n.x6.Nsg13_lv_nmos[vsb] @n.x6.Nsg13_lv_nmos[vgt] @n.x6.Nsg13_lv_nmos[vdss] @n.x6.Nsg13_lv_nmos[gm] @n.x6.Nsg13_lv_nmos[gmb] @n.x6.Nsg13_lv_nmos[gds] @n.x6.Nsg13_lv_nmos[sid] @n.x6.Nsg13_lv_nmos[sfl]
+ wrdata $inputdir/Cascode_gain_stage.op.dat @n.x7.Nsg13_lv_nmos[weff] @n.x7.Nsg13_lv_nmos[leff] @n.x7.Nsg13_lv_nmos[ids] @n.x7.Nsg13_lv_nmos[vgs] @n.x7.Nsg13_lv_nmos[vds] @n.x7.Nsg13_lv_nmos[vsb] @n.x7.Nsg13_lv_nmos[vgt] @n.x7.Nsg13_lv_nmos[vdss] @n.x7.Nsg13_lv_nmos[gm] @n.x7.Nsg13_lv_nmos[gmb] @n.x7.Nsg13_lv_nmos[gds] @n.x7.Nsg13_lv_nmos[sid] @n.x7.Nsg13_lv_nmos[sfl]
+.endc
+.end

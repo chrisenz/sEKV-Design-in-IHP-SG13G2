@@ -1,0 +1,15 @@
+X1 1 in 0 0 sg13_lv_nmos W={W1} L={L1} AS={AS1} PS={PS1} AD={AD1} PD={PD1}
+X2 out vb2 1 0 sg13_lv_nmos W={W2} L={L2} AS={AS2} PS={PS2} AD={AD2} PD={PD2}
+X3 2 3 0 0 sg13_lv_nmos W={W3} L={L3} AS={AS3} PS={PS3} AD={AD3} PD={PD3}
+X4 3 vb2 2 0 sg13_lv_nmos W={W4} L={L4} AS={AS4} PS={PS4} AD={AD4} PD={PD4}
+X5 vb2 vb2 4 0 sg13_lv_nmos W={W5} L={L5} AS={AS5} PS={PS5} AD={AD5} PD={PD5}
+X6 5 5 4 0 sg13_lv_nmos W={W6} L={L6} AS={AS6} PS={PS6} AD={AD6} PD={PD6}
+X7 4 5 0 0 sg13_lv_nmos W={W7} L={L7} AS={AS7} PS={PS7} AD={AD7} PD={PD7}
+CL out 0 {CL}
+Ib1 vdd out {Ib}
+Ib2 vdd 3 {Ib}
+Ib3 vdd vb2 {Ib}
+Ib4 vdd 5 {Ib}
+VDD vdd 0 {VDD}
+Vin in vb1 DC 0 AC 1
+Eb vb1 0 3 0 1

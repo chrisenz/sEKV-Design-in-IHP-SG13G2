@@ -1,0 +1,22 @@
+Simulation of the cascode gain stage designed with the sEKV model
+
+.lib /Simulations/models/cornerMOSlv.lib mos_tt ; model file for PSP
+.include size_bias.par ; Size and bias values
+.include Cascode_gain_stage.net ; Circuit netlist
+
+.control
+ op
+ save v(out)
+ write $inputdir/Cascode_gain_stage.ac.op
+* reset all
+ ac dec 51 10 10MEG
+ let AmagdB=vdb(out)
+ let Aphdeg=180/PI*vp(out)
+ meas ac Adc max AmagdB
+ meas ac fc when Aphdeg=135
+ meas ac GBW when AmagdB=0
+ set wr_singlescale
+ set wr_vecnames
+ wrdata $inputdir/Cascode_gain_stage.ac.dat AmagdB Aphdeg
+.endc
+.end

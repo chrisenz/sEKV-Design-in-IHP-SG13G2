@@ -1,0 +1,1878 @@
+---
+title: Cascode Gain Stage
+subtitle: For IHP 130nm Process (Version 1)
+author: Christian Enz (christian.enz@epfl.ch)
+affiliation: EPFL
+date: today
+execute:
+  echo: false
+  warning: false
+toc: true
+number-sections: true
+number-depth: 3
+highlight-style: pygments
+bibliography: references.bib
+csl: ieee.csl
+format:
+  html:
+    include-in-header: mathjax.html
+    code-fold: true
+    html-math-method: mathjax
+    css: styles.css
+  pdf:
+    keep-tex: true
+    pdf-engine: pdflatex
+    documentclass: scrreprt
+    papersize: a4
+    geometry:
+      - top=20mm
+      - bottom=20mm
+      - left=20mm
+      - right=20mm
+---
+
+```{python}
+#| init_cell: true
+
+from ekv_functions import *
+
+import pandas as pd
+import matplotlib.pyplot as plt
+import subprocess
+import shutil
+import os
+import os.path as op
+import sys
+import re
+
+from IPython.display import Markdown
+from tabulate import tabulate
+from matplotlib.ticker import EngFormatter
+
+#plt.rcParams['text.usetex'] = True
+plt.rcParams['svg.fonttype'] = 'none'
+plt.rcParams['pdf.fonttype'] = 42
+#plt.rcParams['ps.fonttype'] = 42
+plt.rcParams['font.family'] = 'Arial'
+#plt.rcParams['mathtext.fontset'] = 'cm'
+
+plt.rcParams['mathtext.fontset'] = 'custom'
+plt.rcParams['mathtext.rm'] = 'Arial'
+plt.rcParams['mathtext.it'] = 'Arial:italic'
+plt.rcParams['mathtext.bf'] = 'Arial:bold'
+
+sys.path.append(".")
+inkscapePath = r"C:\\Program Files\\Inkscape\\bin\\inkscape.exe"
+#savePath = "./Figures/"
+savePath = "./Plots/"
+
+#plt.rcParams['text.usetex'] = True
+plt.rcParams['svg.fonttype'] = 'none'
+plt.rcParams['pdf.fonttype'] = 42
+#plt.rcParams['ps.fonttype'] = 42
+plt.rcParams['font.family'] = 'Arial'
+#plt.rcParams['mathtext.fontset'] = 'cm'
+
+plt.rcParams['mathtext.fontset'] = 'custom'
+plt.rcParams['mathtext.rm'] = 'Arial'
+plt.rcParams['mathtext.it'] = 'Arial:italic'
+plt.rcParams['mathtext.bf'] = 'Arial:bold'
+
+plt.style.use('plt_style_medium.mplstyle')
+lw=1
+msize=4
+mevery=4
+
+circuitName="Cascode_gain_stage"
+version = "_v1" # Allows you to save different versions
+#newDesign=True
+newDesign=False
+#newSim=True
+newSim=False
+refloat=r'.*?([+-]?\d+([.]\d*)?([eE][+-]?\d+)?|[.]\d+([eE][+-]?\d+)?)'
+```
+
+# Introduction
+This notebook presents the design of a cascode gain stage using the sEKV model and the inversion coefficient approach @bib:enz:book:2006, @bib:enz:sscmag:autumn:2017, @bib:enz:sscmag:winter:2017.
+
+![Schematic of the cascode gain stage.](Figures/Cascode_schematic.png){#fig-cascode_schematic}
+
+The schematic of the cascode gain stage is shown in @fig-cascode_schematic. Let's start with the small-signal analysis. 
+
+# Analysis
+## Small-signal analysis
+
+![Small-signal schematic of the cascode stage for the calculation of the equivalent transconductance.](Figures/Cascode_gm.png){#fig-cascode_gm}
+
+::: {.callout-note}
+In the following analysis, the current source will be considered as ideal, i.e. zero output conductance. Of course, this current source is implemented by one or several transistors. In order not to degrade the overall output conductance and the DC gain, the current source should have an output conductance smaller than the cascode gain stage. This means that the current source should also be cascoded.
+:::
+
+The small-signal schematic corresponding to @fig-cascode_schematic for the derivation of the equivalent transconductance is given in @fig-cascode_gm. Note that the output is short-circuited for calculating the short-circuit output current and the corresponding transconductance. The equivalent transconductance is given by
+\begin{equation}
+  G_{meq} \triangleq \left.\frac{\Delta I_{out}}{\Delta V_{in}}\right|_{\Delta V_{out}=0}
+  = \frac{G_{m1} (G_{ms2} + G_{ds2})}{G_{ms2} + G_{ds1} + G_{ds2}} \cong G_{m1},
+\end{equation}
+which shows that assuming $G_{ms2} \gg G_{ds1}, G_{ds2}$, the equivalent transconductance of the cascode stage is equal to the transconductance of the driver transistor M~1~. This result is expected since the cascode transistor is a common gate stage which has a unity current gain so that the current coming from the driver transistor M~1~ is directly directed to the output.
+
+![Small-signal schematic of the cascode stage for the calculation of the output conductance.](Figures/Cascode_gout.png){#fig-cascode_gout}
+
+The small-signal schematic for the calculation of the output conductance is shown in @fig-cascode_gout. The output conductance is given by
+\begin{equation}
+  G_{out} \triangleq \frac{\Delta I_{out}}{\Delta V_{out}}
+  = \frac{G_{ds1} G_{ds2}}{G_{ms2} + G_{ds1} + G_{ds2}} \cong \frac{G_{ds1}}{G_{ms2}/G_{ds2}},
+\end{equation}
+which is equal to the output conductance of M~1~, $G_{ds1}$, divided by the voltage gain of the cascode $G_{ms2}/G_{ds2}$. This means that, at low-frequency, the output conductance of a single transistor can be reduced by adding a cascode stage at the cost of some voltage headroom to maintain M~2~ in saturation.
+
+![Small-signal schematic of the cascode stage for the calculation of the output conductance including the parasitic capacitance $C_{p1}$.](Figures/Cascode_gout_cp1.png){#fig-cascode_gout_cp1}
+
+![Effect of the parasitic capacitance $C_{p1}$ on the output admittance $Y_{out}$.](Figures/Cascode_yout.png){#fig-cascode_yout}
+
+The impact of the parasitic capacitance at node 1 on the output conductance can be investigated by adding the capacitance as shown in @fig-cascode_gout_cp1. The output admittance then becomes
+\begin{equation}
+  Y_{out} = G_{out} \cdot \frac{1+s/\omega_z}{1+s/\omega_p},
+\end{equation}
+where
+\begin{align}
+  G_{out} &= \frac{G_{ds1} G_{ds2}}{G_{ms2} + G_{ds1} + G_{ds2}} \cong \frac{G_{ds1} G_{ds2}}{G_{ms2}},\\
+  \omega_z &= \frac{G_{ds1}}{C_{p1}},\\
+  \omega_p &= \frac{G_{ms2} + G_{ds1} + G_{ds2}}{C_{p1}} \cong \frac{G_{ms2}}{C_{p1}}.
+\end{align}
+
+The magnitude of $Y_{out}$ versus frequency is sketched in @fig-cascode_yout. For $\omega \ll \omega_z \ll \omega_p$, $Y_{out} \cong G_{out}$. However for $\omega_z \ll \omega_p \ll \omega$, the output admittance becomes $Y_{out} \cong G_{ds2}$. We see that the cascode effect is lost. This can easily be understood since for $\omega_p \ll \omega$, the cascode node 1 is shortened to the ac ground and the voltage controlling the source of M~2~ is zero leaving the output conductance of M~2~ only.
+
+![Small-signal schematic for voltage gain calculation.](Figures/Cascode_av.png){#fig-cascode_av}
+
+The transfer function can be calculated using the schematic shown in @fig-cascode_av resulting in
+\begin{equation}
+  A_v(s) = \frac{A_{dc}}{1 + s/\omega_c},
+\end{equation}
+with
+\begin{align}
+  A_{dc} &= -\frac{G_{m1}\,(G_{ms2} + G_{ds2})}{G_{ds1}\,G_{ds2}} \cong -\frac{G_{m1}\,G_{ms2}}{G_{ds1}\,G_{ds2}},\\
+  \omega_c &= \frac{G_{ds1}\,G_{ds2}}{(G_{ms2} + G_{ds1} + G_{ds2})\,C_L} \cong \frac{G_{ds1}\,G_{ds2}}{G_{ms2}\,C_L}.
+\end{align}.
+
+The gain-bandwidth product is then given by
+\begin{equation}
+  \omega_u = \frac{G_{m1}\,(G_{ms2} + G_{ds2})}{(G_{ms2} + G_{ds1} + G_{ds2})\,C_L} \cong \frac{G_{m1}}{C_L},
+\end{equation}
+which, as expected, is equal to the ratio of the cascode equivalent transconductance $G_{m1}$ to the load capacitance $C_L$.
+
+## Noise analysis
+
+![Small-signal schematic of the cascode stage for the noise calculation.](Figures/Cascode_noise.png){#fig-cascode_noise}
+
+To calculate the output noise power spectral density (PSD) we can use the schematic shown in @fig-cascode_noise. The output noise current is then given by
+\begin{equation}
+  I_{nout} = \frac{G_{ms2} + G_{ds2}}{G_{ms2} + G_{ds1} + G_{ds2}} \cdot I_{n1} + \frac{G_{ds1}}{G_{ms2} + G_{ds1} + G_{ds2}} \cdot I_{n2}
+  \cong I_{n1} + \frac{I_{n2}}{G_{ms2}/G_{ds1}},
+\end{equation}
+for $G_{ms2} \gg G_{ds1}, G_{ds2}$. We see that the contribution to the output noise current of the cascode stage is actually divided by $G_{ms2}/G_{ds1}$. Provided that this gain can be made sufficiently large and that both transistor have the same noise, the noise of the cascode stage can be made negligible compared to the noise due to M~1~. Ultimately if $G_{ds1}=0$, the noise current $I_{n2}$ circulates in the cascode transistor M~2~ ($G_{ms2}$ in the small-signal schematic) and hence does not reach the output.
+
+The output noise conductance is then given by
+\begin{equation}
+  G_{nout}(f) \cong G_{n1}(f) + \left(\frac{G_{ds1}}{G_{ms2}}\right)^2 G_{n2}(f)
+\end{equation}
+where the noise conductances are given by
+\begin{equation}\label{eqn:Gni}
+  G_{ni}(f) = \gamma_{ni} \cdot G_{mi} + \frac{\rho_n}{f\,W_i\,L_i} \cdot G_{mi}^2 \quad \text{for $i=1,2$}.
+\end{equation}
+
+The input-referred noise is obtained by dividing $G_{nout}$ by $G_{meq}^2$, resulting in
+\begin{equation}
+  R_{nin} = \frac{G_{nout}(f)}{G_{meq}}.
+\end{equation}
+It can be decomposed into the thermal and flicker noise components according to
+\begin{equation}
+  R_{nin} = R_{nt} + R_{nf}(f)
+\end{equation}
+where $R_{nt}$ is the total input-referred thermal noise
+\begin{equation}
+  R_{nt} \cong \frac{\gamma_{n1}}{G_{m1}} + \left(\frac{G_{ds1}}{G_{m1}}\right)^2 \frac{\delta_{n2}}{G_{ms2}}
+  = \frac{\gamma_{n1}}{G_{m1}} (1 + \eta_{th}),
+\end{equation}
+where
+\begin{equation}
+  \eta_{th} = \frac{G_{ds1}^2}{G_{m1} G_{ms2}} \frac{\delta_{n2}}{\gamma_{n1}} \ll 1
+\end{equation}
+represents the contribution to the input-referred thermal noise of the cascode transistor M~2~ relative to that of the driver transistor M~1~. Since for long-channel transistors $\gamma_{n1}$ and $\delta_{n2}$ are of the same order of magnitude and since $G_{m1} G_{ms2} \gg G_{ds1}^2$ then $\eta_{th} \ll 1$. This means that the contribution of the cascode transistor to the input-referred thermal noise is negligible.
+
+$R_{nf}(f)$ is the input-referred 1/f noise
+\begin{equation}\label{eqn:cascode:Rnf}
+  R_{nf}(f) \cong \frac{\rho_n}{f\,W_1 L_1} + \left(\frac{G_{ds1}}{G_{m1}}\right)^2 \frac{\rho_n}{n_2^2 f\,W_2 L_2}
+  = \frac{\rho_n}{f\,W_1 L_1} \cdot (1 + \eta_{fl}),
+\end{equation}
+where
+\begin{equation}
+  \eta_{fl} = \left(\frac{G_{ds1}}{n_2 \, G_{m1}}\right)^2 \frac{W_1 L_1}{W_2 L_2}
+\end{equation}
+represents the contribution to the input-referred flicker noise of the cascode transistor M~2~ relative to the driver transistor M~1~. If M~1~ and M~2~ have about the same area, then $\eta_{fl} \ll 1$, meaning that the contribution of the cascode transistor to the input-referred flicker noise is negligible.
+
+The $\gamma_n$ noise factor of the cascode stage is given by
+\begin{equation}
+  \gamma_{cas} \triangleq G_{meq} \cdot R_{nt} = G_{m1} \cdot R_{nt} = \gamma_{n1} \cdot (1 + \eta_{th}) \cong \gamma_{n1},
+\end{equation}
+since $G_{m1} G_{ms2} \gg G_{ds1}^2$. The contribution of the cascode transistor to the overall noise excess factor is therefore negligible. The same remark holds for the 1/f noise. Indeed, assuming M~1~ and M~2~ have the same area and $G_{m1}/G_{ds1} \gg 1$, \eqref{eqn:cascode:Rnf} simplifies to
+\begin{equation}
+  R_{nf}(f) \cong  \frac{\rho_n}{f\,W_1 L_1},
+\end{equation}
+which corresponds to the contribution of M~1~ only.
+
+![Small-signal schematic of the cascode stage for the calculation of the output noise including the effect of the parasitic capacitance $C_{p1}$](Figures/Cascode_noise_cp1.png){#fig-cascode_noise_cp1}
+
+Similarly, the impact of the parasitic capacitance on the noise can be calculated from @fig-cascode_noise_cp1. The output noise conductance is then given by
+\begin{equation}
+  G_{nout} = |H_{n1}(\omega)|^2 \cdot G_{n1} + |H_{n2}(\omega)|^2 \cdot G_{n2},
+\end{equation}
+where
+\begin{align}
+  H_{n1}(s) &= \frac{G_{ms2} + G_{ds2}}{G_{ms2} + G_{ds1} + G_{ds2}} \cdot \frac{1}{1 + s/\omega_p} \cong \frac{1}{1+s/\omega_p}\\
+  H_{n2}(s) &= \frac{G_{ds1}}{G_{ms2} + G_{ds1} + G_{ds2}} \cdot \frac{1 + s/\omega_z}{1 + s/\omega_p} \cong \frac{G_{ds1}}{G_{ms2}} \cdot \frac{1+s/\omega_z}{1+s/\omega_p}.
+\end{align}
+
+![Noise transfer functions $H_{n1}$ and $H_{n2}$ versus frequency.](Figures/Cascode_hn1_hn2.png){#fig-cascode_hn1_hn2}
+
+The magnitude of $H_{n1}$ and $H_{n2}$ versus frequency are sketched in @fig-cascode_hn1_hn2. For $\omega \ll \omega_z \ll \omega_p$, $H_{n1} \cong 1$ and $H_{n2} \cong G_{ds1}/G_{ms2}$ which is the result obtained above. However, for $\omega_z \ll \omega_p \ll \omega$, $H_{n1} \cong \omega_p/s$ and $H_{n2} \cong 1$. We see that the cascode effect is lost since the noise of M~2~ is no more divided by the cascode gain $G_{ms2}/G_{ds1}$ but is entirely transferred to the output.
+
+As a conclusion, adding a cascode stage reduces the output conductance without penalty on the noise, but at the cost of a slight voltage overhead for maintaining M~2~ in saturation. This is only true for $\omega < \omega_z = G_{ds1}/C_{p1}$. For frequencies $\omega \gg \omega_p = G_{ms2}/C_{p1}$ the cascode effect is lost. Note that in order to maximize $G_{ms2}$ at a given current and minimize its saturation voltage, M~2~ should be biased in weak inversion.
+
+We now will use the above equations to design the cascode gain stage.
+
+# Design
+## Circuit
+
+![Cascode gain stage including the bias circuit.](Figures/Cascode_with_bias.png){#fig-cascode_with_bias}
+
+The schematic of the cascode gain stage is shown in @fig-cascode_with_bias. We have included the bias circuit made of transistors M~3~ to M~7~. Transistors M~3~ and M~4~ are added to correctly set the gate bias voltage of M~1~ for the the bias current $I_b$ for the simulation. M~3~ and M~4~ are made identical to M~1~  and M~2~, respectively. They are sharing the same cascode bias voltage $V_{b2}$ generated by transistors M~5~, M~6~ and M~7~. Assuming that transistors M~5~, M~6~ and M~7~ are all biased in weak inversion, it can be shown that the drain voltage $V_{D1}$ (voltage at node 1), is given by
+\begin{equation}\label{eqn:vb2}
+  V_{D1} = U_T \cdot \ln\left[\frac{\beta_2}{\beta_5}\,\left(1 + 2\,\frac{\beta_6}{\beta_7}\right)\right],
+\end{equation}
+where
+\begin{equation}\label{eqn:}
+  \beta = \frac{I_{spec}}{2 n U_T^2} = \mu\,C_{ox}\,\frac{W}{L}.
+\end{equation}
+The bias voltage $V_{D1}$ should be at least $4\,U_T$. If we make M~5~ identical to M~2~ and M~4~, then $\beta_2/\beta_5 = 1$. To get $V_{D1} = 4\,U_T$ would require $\beta_6/\beta_7 \cong 54$ which is prohibitive. We therefore need to take advantage of the additional degree of freedom choosing $\beta_2 > \beta_5$. For example if we take $\beta_2/\beta_5 = \beta_6/\beta_7 = 5$ we get $V_{D1} \cong 4\,U_T$.
+
+## Specifications
+We will design the cascode gain stage for the specifications given in @tbl-specs, namely a given gain-bandwidth product $GBW$ and DC gain $A_{dc}$. Note that, contrary to the common-source optimization, in this design, increasing the width of M~1~ does not increase the load capacitance but increases the parasitic capacitance $C_{p1}$ at the cascode node.
+
+```{python}
+#| label: tbl-specs
+#| tbl-cap: Specifications.
+
+from specs import *
+
+Adc=pow(10,AdcdB/20)
+wu=2*pi*GBWspec
+table = [["Minimum DC gain","$A_{{dc}}$",f'{Adc:.0f}',"-"],
+         ["Minimum DC gain","$A_{{dc}}$",f'{AdcdB:.0f}',"$dB$"],
+         ["Minimum gain-bandwidth product","$GBW$",f'{GBWspec/1e6:.3f}',"$MHz$"],
+         ["Load capacitance","$C_L$",f'{CL/1e-12:.0f}',"$pF$"],
+         ]
+Markdown(tabulate(
+  table,
+  headers=["Specification","Symbol","Value","Unit"],
+  numalign="center",
+  stralign="center",
+  colalign=("left","center","center","center")
+))
+```
+
+## Process
+We will design the cascode gain stage for the open source IHP 13G2 BiCMOS process @bib:ihp:2025. The physical parameters are given in @tbl-physics_param, the global process parameters in @tbl-process_param and finally the MOSFET parameters in @tbl-mos_param. 
+
+::: {.callout-warning}
+The matching parameters for IHP 130nm are unknown. We will use those from a generic 180nm technology.
+:::
+
+```{python}
+#| label: tbl-physics_param
+#| tbl-cap: Physical parameters
+
+from ihp130g2_sekv import *
+
+table = [["$T$",f'{T:.0f}',"$K$"],
+         ["$U_T$",f'{UT/1e-3:.3f}',"$mV$"]
+         ]
+Markdown(tabulate(
+  table,
+  headers=["Parameter","Value","Unit"],
+  numalign="center",
+  stralign="center",
+  colalign=("center", "center", "center")
+))
+```
+
+```{python}
+#| label: tbl-process_param
+#| tbl-cap: Process parameters.
+
+table = [["$t_{{ox}}$",f'{tox/1e-9:.3f}',"$nm$","SiO~2~ oxyde thickness"],
+         ["$C_{{ox}}$",f'{Cox*1e3:.3f}',"$\\frac{{fF}}{{\\mu m^2}}$","Oxyde capacitance per unit area"],
+         ["$V_{{DD}}$",f'{VDD:.1f}',"$V$", "Nominal supply voltage"],
+         ["$L_{{min}}$",f'{Lmin/1e-9:.0f}',"$nm$","Minimum drawn gate length"],
+         ["$W_{{min}}$",f'{Wmin/1e-9:.0f}',"$nm$","Minimum drawn gate width"],
+         ["$z_1$",f'{z1/1e-9:.0f}',"$nm$","Minimum outer diffusion width"],
+         ["$z_2$",f'{z2/1e-9:.0f}',"$nm$","Minimum diffusion width between two fingers"]
+        ]
+Markdown(tabulate(
+  table,
+  headers=["Parameter","Value","Unit","Comment"],
+  numalign="center",
+  stralign="center",
+  colalign=("center", "center", "center","left")
+))
+```
+
+```{python}
+#| label: tbl-mos_param
+#| tbl-cap: Transistors parameters.
+
+table = [["Length and width correction parameters for current"],
+         ["$DL$",f'{DLn/1e-9:.0f}',f'{DLp/1e-9:.0f}',"$nm$"],
+         ["$DW$",f'{DWn/1e-9:.0f}',f'{DWp/1e-9:.0f}',"$nm$"],
+         ["Length and width correction for intrinsic and overlap capacitances"],
+         ["$DLCV$",f'{DLCVn/1e-9:.0f}',f'{DLCVp/1e-9:.0f}',"$nm$"],
+         ["$DWCV$",f'{DWCVn/1e-9:.0f}',f'{DWCVp/1e-9:.0f}',"$nm$"],
+         ["Length and width correction parameter for fringing capacitances"],
+         ["$DLGCV$",f'{DLGCVn/1e-9:.0f}',f'{DLGCVp/1e-9:.0f}',"$nm$"],
+         ["$DWGCV$",f'{DWGCVn/1e-9:.0f}',f'{DWGCVp/1e-9:.0f}',"$nm$"],
+         ["Long-channel sEKV parameters parameters"],
+         ["$n$",f'{n0n:.2f}',f'{n0p:.2f}',"-"],
+         ["$I_{{spec\\Box}}$",f'{Ispecsqn/1e-9:.0f}',f'{Ispecsqp/1e-9:.0f}',"$nA$"],
+         ["$V_{{T0}}$",f'{VT0n/1e-3:.0f}',f'{VT0p/1e-3:.0f}',"$mV$"],
+         ["Short-channel sEKV parameters parameters"],
+         ["$L_{{sat}}$",f'{Lsatn/1e-9:.3f}',f'{Lsatp/1e-9:.3f}',"$nm$"],
+         ["$\\lambda$",f'{lambdan*1e-6:.3f}',f'{lambdap*1e-6:.3f}',"$\\frac{{V}}{{\\mu m}}$"],
+         ["Junction capacitances parameters"],
+         ["$C_J$",f'{CJn*1e3:.3f}',f'{CJp*1e3:.3f}',"$\\frac{{fF}}{{\\mu m^2}}$"],
+         ["$C_{{JSWSTI}}$",f'{CJSWSTIn*1e9:.3f}',f'{CJSWSTIp*1e9:.3f}',"$\\frac{{fF}}{{\\mu m}}$"],
+         ["$C_{{JSWGAT}}$",f'{CJSWGATn*1e9:.3f}',f'{CJSWGATp*1e9:.3f}',"$\\frac{{fF}}{{\\mu m}}$"],
+         ["Overlap capacitances parameters"],
+         ["$C_{{GSo}}$",f'{CGSOn*1e9:.3f}',f'{CGSOp*1e9:.3f}',"$\\frac{{fF}}{{\\mu m}}$"],
+         ["$C_{{GDo}}$",f'{CGDOn*1e9:.3f}',f'{CGDOp*1e9:.3f}',"$\\frac{{fF}}{{\\mu m}}$"],
+         ["$C_{{GBo}}$",f'{CGBOn*1e9:.3f}',f'{CGBOp*1e9:.3f}',"$\\frac{{fF}}{{\\mu m}}$"],
+         ["Fringing capacitances parameters"],
+         ["$C_{{GSf}}$",f'{CGSFn*1e9:.3f}',f'{CGSFp*1e9:.3f}',"$\\frac{{fF}}{{\\mu m}}$"],
+         ["$C_{{GDf}}$",f'{CGDFn*1e9:.3f}',f'{CGDFp*1e9:.3f}',"$\\frac{{fF}}{{\\mu m}}$"],
+         ["Flicker noise parameters"],
+         ["$K_F$",f'{KFn:.3e}',f'{KFp:.3e}',"$V A s$"],
+         ["$AF$",f'{AFn:.1f}',f'{AFp:.1f}',"-"],
+         ["$\\rho$",f'{rhon:.3e}',f'{rhop:.3e}',"$\\frac{{V m^2}}{{A s}}$"],
+         ["Matching parameters"],
+         ["$A_{{VT}}$",f'{AVTn*1e9:.0f}',f'{AVTp*1e9:.0f}',"$mV \\cdot \\mu m$"],
+         ["$A_{{\\beta}}$",f'{Abetan*1e8:.0f}',f'{Abetap*1e8:.0f}',"$\\% \\cdot \\mu m$"]
+        ]
+Markdown(tabulate(
+  table,
+  headers=["Parameter","nMOS","pMOS","Unit"],
+  numalign="center",
+  stralign="center",
+  colalign=("right", "center", "center","left")
+))
+```
+
+![Threshold voltage of nMOS transistor in saturation versus gate length $L$.](Figures/VTH_vs_L.png){#fig-vth_vs_l}
+
+As shown in @fig-vth_vs_l, it is worth notting that the threshold voltage in saturation is strongly dependent on the gate length @bib:ihpsg13g2nmos:2023. From  @fig-vth_vs_l, we see that the threshold voltage for a long-channel transistor with $V_{SB}=0$ is as low as $V_{T0} \cong 50\,mV$. It then increases to about $V_{T0} \cong 250\,mV$ for a short-channel transistor. This threshold voltage change (about 200 mV) can have an important impact on the bias voltages, such as the voltages generated by the bias circuit shown in @fig-cascode_with_bias.
+
+## Design procedure
+### Sizing of M~1~
+```{python}
+Ibmin=2*pi*n0n*UT*CL*GBWspec
+Ib=250E-9
+IC1=0.1
+Gm1=Ib/(n0n*UT)*gmsid_ic(IC1)
+GBW=Gm1/(2*pi*CL)
+WoverL1=Ib/(Ispecsqn*IC1)
+Av1=sqrt(Adc)
+Av2=sqrt(Adc)
+Gds1=Gm1/Av1
+L1=Ib/(lambdan*Gds1)
+W1=WoverL1*L1
+L1=round(1E8*L1)/1E8
+W1=round(1E8*W1)/1E8
+```
+
+M~1~ is biased in weak inversion in order to maximize the current efficiency and is sized according to the specification on the GBW and the load capacitance according to
+\begin{equation}
+  GBW = \frac{G_{m1}}{2 \pi C_L}.
+\end{equation}
+The gate transconductance of M~1~ $G_{m1}$ in deep weak inversion is given by
+\begin{equation}
+  G_{m1} = \frac{I_b}{n U_T}.
+\end{equation}
+The bias current $I_b$ must satisfy the following inequality
+\begin{equation}
+  I_b \geq  2\pi n_{0n} U_T C_L GBW_{min},
+\end{equation}
+which for the given specifications gives $I_{b,min}=$ `{python} f'{Ibmin/1e-9:.0f}'` $nA$.
+
+To have some margin to account for the additional parasitic capacitance at the output that add to the load capacitance $C_L$, we set $I_b =$ `{python} f'{Ib/1e-9:.0f}'` $nA$ and the inversion coefficient of M~1~ to $IC_1=$ `{python} f'{IC1:.1f}'`. The transconductance can be calculated from the $G_m/I_D$ function as
+
+$G_{m1} = \frac{I_b}{n_{0n}\,U_T} \cdot gmsid(IC_1) =$ `{python} f'{Gm1/1e-6:.3f}'` $\frac{\mu A}{V}$.
+
+This leads to a gain-bandwidth product
+
+$GBW = \frac{G_{m1}}{2\pi\,C_L} =$ `{python} f'{GBW/1e6:.1f}'` $MHz$,
+
+which is slightly higher than the target specification offering some margin.
+
+Knowing the drain current $I_{D1}$ and the inversion coefficient, we can calculate the $W/L$ aspect ratio for M~1~ as
+
+$\frac{W_1}{L_1} = \frac{I_b}{I_{spec\Box n}\,IC_1} =$ `{python} f'{WoverL1:.1f}'`.
+
+To choose the length of M~1~, we can split the gain equally between the driver transistor $A_{v1} = G_{m1}/G_{ds1}$ and the cascode transistor $A_{v2} = G_{ms2}/G_{ds2}$. This leads to $A_{v1} = A_{v2} =$ `{python} f'{Av1:.0f}'` giving the desired overall gain of $A_{dc} =$ `{python} f'{20*log(Av1*Av2):.0f}'` dB. We can then deduce the transistor length and width as
+
+$L_1 =$ `{python} f'{L1/1e-9:.0f}'` $nm$ and
+
+$W_1 =$ `{python} f'{W1/1e-9:.0f}'` $nm$.
+
+Before sizing M~2~ we need to size M~5~.
+
+### Sizing the bias circuit
+```{python}
+K25=5
+K67=5
+K=ln(K25*(1+2*K67))
+VD1bias=K*UT
+IC5=0.1
+WoverL5=Ib/(Ispecsqn*IC5)
+L2=L1
+L3=L1
+L4=L1
+L5=L1
+L6=L1
+L7=L1
+W5=WoverL5*L5
+W5=round(1E8*W5)/1E8
+W7=2*W1
+W6=K67*W7
+W3=W1
+```
+
+Since we need to bias M~2~, M~4~ and M~5~ in weak inversion we need to make sure that that M~2~ and M~4~ remain in weak inversion despite they are much wider than M~5~ and biased with the same current $I_b$. For this reason we start sizing M~5~ first. Since we know the drain current of M~5~, if we choose its inversion coefficient we get the $W/L$. Let's choose $IC_5 =$ `{python} f'{IC5:.1f}'` for which we get $W/L =$ `{python} f'{WoverL5:.3f}'`. As mentioned above, we need to be careful choosing the length of M~5~ because of the strong dependence of the threshold voltage to the transistor length. Since the bias circuit is based on the assumption that all the transistors have the same threshold voltage, it is safer to choose the same length for all transistors. We can choose $L_1$ since we already have chosen it. Therefore $L_7 = L_6 = L_5 = L_4 = L_3 = L_2 = L_1 =$ `{python} f'{L1/1e-9:.0f}'` $nm$. This leads to $W_5 =$ `{python} f'{W5/1e-9:.0f}'` $nm$ and $L_5 =$ `{python} f'{L5/1e-9:.0f}'` $nm$.
+
+Note that choosing $L_2 = L_1$ leads to $G_{ds2} \cong G_{ds1}$ since M~1~ and M~2~ carry the same current. The DC gain of the cascode transistor $G_{ms2}/G_{ds2}$ should be slightly larger than the DC gain of the driver transistor $G_{m1}/G_{ds1} =$ `{python} f'{Av1:.0f}'`, because $G_{ms2} > G_{m1}$. The DC gain should therefore be achieved.
+
+Since M~7~ carries twice the current of M~1~, if we want M~7~ to have the same inversion coefficient than M~1~, we need to choose $W_7 = 2\,W_1 =$ `{python} f'{W7/1e-6:.2f}'` $\mu m$. The width of M~6~ needs to be `{python} f'{K67:.0f}'` times larger than $W_7$ leading to $W_6 =$ `{python} f'{K67:.0f}'` $W_7 =$ `{python} f'{W6/1e-6:.2f}'` $\mu m$.
+
+Finally M~3~ is taken identical to M~1~ resulting in $W_3 = W_1 =$ `{python} f'{W3/1e-6:.2f}'` $\mu m$ and $L_3 =$ `{python} f'{L3/1e-9:.0f}'` $nm$.
+
+### Sizing of M~2~
+```{python}
+W2=K25*W5
+W2=round(1E8*W2)/1E8
+W4=W2
+WoverL2=W2/L2
+Ispec2=Ispecsqn*WoverL2
+IC2=Ib/Ispec2
+Gms2=Ib/UT*gmsid_ic(IC2)
+Gds2=Ib/(lambdan*L2)
+Av2=Gms2/Gds2
+Av2dB=20*log(abs(Av2))
+Adcthe=Av1*Av2
+AdcdBthe=20*log(abs(Adcthe))
+```
+
+We can now finalize the design by sizing M~2~. In order to save voltage headroom we need to bias M~2~ in weak inversion. This is done by choosing $W_2$ to be `{python} f'{K25:.0f}'` times $W_5$, leading to $W_2 =$ `{python} f'{W2/1e-6:.2f}'` $\mu m$ with $L_2 =$ `{python} f'{L2/1e-9:.0f}'` $nm$. With these dimensions, the inversion coefficient of M~2~ is `{python} f'{K25:.0f}'` times smaller than that of M~5~, $IC_2 =$ `{python} f'{IC2:.3f}'`, which is making sure that M~2~ is biased in weak inversion. We can now check the DC gain. The source transconductance and output conductance of M~2~ are equal to $G_{ms2} =$ `{python} f'{Gms2/1e-6:.3f}'` $\mu A/V$ and $G_{ds2} =$ `{python} f'{Gds2/1e-9:.3f}'` $nA/V$. This leads to a cascode voltage gain of $A_{v2} =$ `{python} f'{Av2:.2f}'` and an overall gain $A_{dc} =$ `{python} f'{AdcdBthe:.2f}'` $dB$ which, as expected, is slightly higher than the specs.
+
+The sizing procedure is now finished and is summarized in the next section.
+
+## Summary
+### Specifications
+The specifications are recalled in @tbl-cascode_specs2.
+
+```{python}
+#| label: tbl-cascode_specs2
+#| tbl-cap: Specifications.
+
+from specs import *
+
+cascode_specs_df=pd.DataFrame(
+{
+    "Name": ["AdcdB","GBWspec","CL"],
+    "Value": [AdcdB,GBWspec,CL]
+})
+#pd.set_option('display.float_format', '{:.2E}'.format)
+#ota_specs_df
+
+Adc=10**(AdcdB/20)
+wu=2*pi*GBWspec
+table = [["Minimum DC gain","$A_{{dc}}$",f'{AdcdB:.0f}',"$dB$"],
+         ["Minimum gain-bandwidth product","$GBW$",f'{GBWspec/1e6:.3f}',"$MHz$"],
+         ["Load capacitance","$C_L$",f'{CL/1e-12:.0f}',"$pF$"]
+         ]
+Markdown(tabulate(
+  table,
+  headers=["Specification","Symbol","Value","Unit"],
+  numalign="center",
+  stralign="center",
+  colalign=("left","center","center","center")
+))
+```
+
+### Bias
+The bias information are summarized in @tbl-cascode_bias.
+
+```{python}
+#| label: tbl-cascode_bias
+#| tbl-cap: Bias information.
+
+cascode_bias_df=pd.DataFrame(
+{
+    "Name": ["VDD","Ib"],
+    "Value": [VDD,Ib]
+})
+#pd.set_option('display.float_format', '{:.1E}'.format)
+cascode_bias_df
+
+table = [["Supply voltage","$V_{{DD}}$",f'{VDD:.1f}',"$V$"],
+         ["Bias current","$I_b$",f'{Ib/1e-9:.0f}',"$nA$"]
+         ]
+Markdown(tabulate(
+  table,
+  headers=["Bias voltage or current","Symbol","Value","Unit"],
+  numalign="center",
+  stralign="center",
+  colalign=("left","center","center","center"),
+#  floatfmt=".1f"
+))
+```
+
+### Transistor information
+The transistor sizes and bias information are summarized in @tbl-transistor_info_size and @tbl-transistor_info_bias, respectivily. @tbl-transistor_info_ss gives the small-signal and thermal noise parameters. An Excel table is generated with more information (e.g. all the parasitic capacitances).
+
+```{python}
+#| label: tbl-transistor_info_size
+#| tbl-cap: Transistor size information.
+
+excelFilename = circuitName + version + ".xlsx"
+
+transistor_info={
+    "Type": ["n","n","n","n","n","n","n"],
+    "W": [W1,W2,W3,W4,W5,W6,W7],
+    "L": [L1,L2,L3,L4,L5,L6,L7],
+    "ID": [Ib,Ib,Ib,Ib,Ib,Ib,2*Ib]
+}
+transistor_list=["M1","M2","M3","M4","M5","M6","M7"]
+cascode_df=pd.DataFrame(transistor_info, index=transistor_list)
+cascode_df["Weff"]=np.where(cascode_df["Type"]=="n",
+                                     cascode_df["W"]-DWn,
+                                     cascode_df["W"]-DWp)
+cascode_df["Leff"]=np.where(cascode_df["Type"]=="n",
+                                     cascode_df["L"]-DLn,
+                                     cascode_df["L"]-DLp)
+cascode_df["W/L"]=cascode_df["Weff"]/cascode_df["Leff"]
+cascode_df["AD"]=cascode_df["W"]*z1
+cascode_df["PD"]=2*(cascode_df["W"]+z1)
+cascode_df["AS"]=cascode_df["AD"]
+cascode_df["PS"]=cascode_df["PD"]
+cascode_df["Ispec"]=np.where(cascode_df["Type"]=="n",
+                                     cascode_df["W/L"]*Ispecsqn,
+                                     cascode_df["W/L"]*Ispecsqp)
+cascode_df["IC"]=cascode_df["ID"]/cascode_df["Ispec"]
+cascode_df["VP-VS"]=UT*vps_ic(cascode_df["IC"])
+cascode_df["n"]=np.where(cascode_df["Type"]=="n",
+                                     n0n,
+                                     n0p)
+cascode_df["VG-VT0"]=np.where(cascode_df["Type"]=="n",
+                                     cascode_df["VP-VS"]/n0n,
+                                     cascode_df["VP-VS"]/n0p)
+cascode_df["VDSsat"]=UT*vdssat_ic(cascode_df["IC"])
+cascode_df["Gspec"]=cascode_df["Ispec"]/UT
+cascode_df["Gms"]=cascode_df["Gspec"]*gms_ic(cascode_df["IC"])
+cascode_df["Gm"]=np.where(cascode_df["Type"]=="n",
+                                     cascode_df["Gms"]/n0n,
+                                     cascode_df["Gms"]/n0p)
+cascode_df["Gds"]=np.where(cascode_df["Type"]=="n",
+                                     cascode_df["ID"]/(lambdan*cascode_df["L"]),
+                                     cascode_df["ID"]/(lambdap*cascode_df["L"]))
+cascode_df["gamman"]=np.where(cascode_df["Type"]=="n",
+                                     gamman_ic(cascode_df["IC"],n0n),
+                                     gamman_ic(cascode_df["IC"],n0p))
+cascode_df["COX"]=Cox*cascode_df["W"]*cascode_df["L"]
+cascode_df["CGSi"]=cascode_df["COX"]*cgsi_ic(cascode_df["IC"])
+cascode_df["CGDi"]=0
+cascode_df["CGBi"]=np.where(cascode_df["Type"]=="n",
+                                     cascode_df["COX"]*cgbi_ic(cascode_df["IC"],n0n),
+                                     cascode_df["COX"]*cgbi_ic(cascode_df["IC"],n0p))
+cascode_df["CBSi"]=np.where(cascode_df["Type"]=="n",
+                                     cascode_df["COX"]*cbsi_ic(cascode_df["IC"],n0n),
+                                     cascode_df["COX"]*cbsi_ic(cascode_df["IC"],n0p))
+cascode_df["CBDi"]=np.where(cascode_df["Type"]=="n",
+                                     cascode_df["CGDi"]*(n0n-1),
+                                     cascode_df["CGDi"]*(n0p-1))
+cascode_df["CGSo"]=np.where(cascode_df["Type"]=="n",
+                                     cascode_df["W"]*CGSOn,
+                                     cascode_df["W"]*CGSOp)
+cascode_df["CGDo"]=np.where(cascode_df["Type"]=="n",
+                                     cascode_df["W"]*CGDOn,
+                                     cascode_df["W"]*CGDOp)
+cascode_df["CGBo"]=np.where(cascode_df["Type"]=="n",
+                                    cascode_df["W"]*CGBOn,
+                                    cascode_df["W"]*CGBOp)
+cascode_df["CGSf"]=np.where(cascode_df["Type"]=="n",
+                                     cascode_df["W"]*CGSFn,
+                                     cascode_df["W"]*CGSFp)
+cascode_df["CGDf"]=np.where(cascode_df["Type"]=="n",
+                                     cascode_df["W"]*CGDFn,
+                                     cascode_df["W"]*CGDFp)
+cascode_df["CBSj"]=np.where(cascode_df["Type"]=="n",
+                                    cascode_df["AS"]*CJn+(cascode_df["PS"]-cascode_df["W"])*CJSWSTIn+cascode_df["W"]*CJSWGATn,
+                                    cascode_df["AS"]*CJp+(cascode_df["PS"]-cascode_df["W"])*CJSWSTIp+cascode_df["W"]*CJSWGATp)
+cascode_df["CBDj"]=np.where(cascode_df["Type"]=="n",
+                                    cascode_df["AD"]*CJn+(cascode_df["PD"]-cascode_df["W"])*CJSWSTIn+cascode_df["W"]*CJSWGATn,
+                                    cascode_df["AD"]*CJp+(cascode_df["PD"]-cascode_df["W"])*CJSWSTIp+cascode_df["W"]*CJSWGATp)
+cascode_df["CGS"]=cascode_df["CGSi"]+cascode_df["CGSo"]+cascode_df["CGSf"]
+cascode_df["CGD"]=cascode_df["CGDi"]+cascode_df["CGDo"]+cascode_df["CGDf"]
+cascode_df["CGB"]=cascode_df["CGBi"]+cascode_df["CGBo"]
+cascode_df["CBS"]=cascode_df["CBSi"]+cascode_df["CBSj"]
+cascode_df["CBD"]=cascode_df["CBDi"]+cascode_df["CBDj"]
+#pd.set_option('display.float_format', '{:.2E}'.format)
+#cascode_df
+
+if newDesign:
+  with pd.ExcelWriter(excelFilename) as writer:
+    cascode_specs_df.to_excel(writer, sheet_name="Specs", index=False)
+    cascode_bias_df.to_excel(writer, sheet_name="Bias", index=False)
+    cascode_df.to_excel(writer, sheet_name="Transistors")
+
+# Generate the table from dataframe
+feature_list=["W","L","Weff","Leff","W/L","AD","PD"]
+Nmos=len(transistor_list)
+Nfeature=len(feature_list)
+table=[]
+for mos in transistor_list:
+  row=[mos]
+  for feature in feature_list:
+    row.append(cascode_df.at[mos,feature])
+  table.append(row)
+
+# Scale data for proper units
+for i in range(Nmos):
+  for j in [1,2,3,4,7]:
+    table[i][j]=table[i][j]/1e-6
+  for j in [6]:
+    table[i][j]=table[i][j]/1e-12
+
+Markdown(tabulate(
+  table,
+  headers=["Transistor","$W\\;[\\mu m]$","$L\\;[\\mu m]$","$W_{{eff}}\\;[\\mu m]$","$L_{{eff}}\\;[\\mu m]$","$W/L$","$AD\\;[\\mu m^2]$","$PD\\;[\\mu m]$"],
+  numalign="center",
+  stralign="center",
+  colalign=("center","center","center","center","center","center","center","center"),
+  floatfmt=(".3f",".2f",".2f",".3f",".3f",".3f",".3f",".3f")
+))
+```
+
+```{python}
+#| label: tbl-transistor_info_bias
+#| tbl-cap: Transistor bias information.
+
+# Generate the table from dataframe
+feature_list=["ID","Ispec","IC","VP-VS","VG-VT0","VDSsat"]
+Nmos=len(transistor_list)
+Nfeature=len(feature_list)
+table=[]
+for mos in transistor_list:
+  row=[mos]
+  for feature in feature_list:
+    row.append(cascode_df.at[mos,feature])
+  table.append(row)
+
+# Scale data for proper units
+for i in range(Nmos):
+  for j in [4,5,6]:
+    table[i][j]=table[i][j]/1e-3
+  for j in [1,2]:
+    table[i][j]=table[i][j]/1e-9
+
+Markdown(tabulate(
+  table,
+  headers=["Transistor","$I_D\\;[nA]$","$I_{{spec}}\\;[nA]$","$IC$","$V_P-V_S\\;[mV]$","$V_G-V_{{T0}}\\;[mV]$","$V_{{DSsat}}\\;[mV]$"],
+  numalign="center",
+  stralign="center",
+  colalign=("center","center","center","center","center","center","center"),
+  floatfmt=(".0f",".0f",".0f",".3f",".0f",".0f",".0f")
+))
+```
+
+```{python}
+#| label: tbl-transistor_info_ss
+#| tbl-cap: Transistor small-signal and thermal noise parameters.
+
+# Generate the table from dataframe
+feature_list=["Gspec","Gms","Gm","Gds","gamman"]
+Nmos=len(transistor_list)
+Nfeature=len(feature_list)
+table=[]
+for mos in transistor_list:
+  row=[mos]
+  for feature in feature_list:
+    row.append(cascode_df.at[mos,feature])
+  table.append(row)
+
+# Scale data for proper units
+for i in range(Nmos):
+  for j in [1,2,3]:
+    table[i][j]=table[i][j]/1e-6
+  for j in [4]:
+    table[i][j]=table[i][j]/1e-9
+
+Markdown(tabulate(
+  table,
+  headers=["Transistor","$G_{{spec}}\\;[\\mu A/V]$","$G_{{ms}}\\;[\\mu A/V]$","$G_m\\;[\\mu A/V]$","$G_{{ds}}\\;[nA/V]$","$\\gamma_n$"],
+  numalign="center",
+  stralign="center",
+  colalign=("center","center","center","center","center","center"),
+  floatfmt=(".3f",".3f",".3f",".3f",".3f",".3f")
+))
+```
+
+# Theoretical estimations
+We can now check the transfer function and the input-referred noise PSD.
+
+## Transfer function
+The parameters that are required to evaluate the transfer function are calculated in @tbl-cascode_gain.
+
+```{python}
+#| label: tbl-cascode_gain
+#| tbl-cap: Small-signal parameters required to calculate the transfer function.
+
+from IPython.display import Markdown
+from tabulate import tabulate
+
+Gm1=cascode_df.at['M1','Gm']
+Gms2=cascode_df.at['M2','Gms']
+Gds1=cascode_df.at['M1','Gds']
+Gds2=cascode_df.at['M2','Gds']
+Adcthe=-Gm1*(Gms2+Gds2)/(Gds1*Gds2)
+AdcdBthe=20*log(abs(Adcthe))
+wc=Gds1*Gds2/((Gms2+Gds1+Gds2)*CL)
+fcthe=wc/(2*pi)
+wu=Gm1*(Gms2+Gds2)/((Gms2+Gds1+Gds2)*CL)
+GBWthe=wu/(2*pi)
+
+table = [["$A_{dc}$",f'{AdcdBthe:.0f}',"$dB$"],
+         ["$G_{m1}$",f'{Gm1/1e-6:.3f}',"$\\mu A/V$"],
+         ["$G_{ms2}$",f'{Gms2/1e-6:.3f}',"$\\mu A/V$"],
+         ["$f_c$",f'{fcthe/1e3:.3f}',"$kHz$"],
+         ["$GBW$",f'{GBWthe/1e6:.3f}',"$MHz$"]
+         ]
+Markdown(tabulate(
+  table,
+  headers=["Symbol","Theoretical Value","Unit"],
+  numalign="center",
+  stralign="center",
+  colalign=("center","center","center")
+))
+```
+
+Using the values given in @tbl-cascode_gain, we can now plot the transfer function which is plotted in @fig-cascode_tf_the.
+
+```{python}
+#| label: fig-cascode_tf_the
+#| fig-cap: "Theoretical transfer function."
+
+def Av(s,Adc,wc):
+    num=Adc
+    den=1+s/wc
+    return num/den
+
+Npts=101
+logfmin=1
+logfmax=7
+fmin=pow(10,logfmin)
+fmax=pow(10,logfmax)
+facthe=np.logspace(logfmin,logfmax,Npts,endpoint=True,base=10.0)
+
+AmagdBthe=np.zeros(Npts)
+Aphiradthe=np.zeros(Npts)
+Aphidegthe=np.zeros(Npts)
+for k in range(0,Npts):
+    jw=1j*2*pi*facthe[k]
+    AmagdBthe[k]=20*log(abs(Av(jw,Adcthe,wc)))
+    Aphiradthe[k]=np.angle(Av(jw,Adcthe,wc))
+
+Aphidegthe=np.unwrap(Aphiradthe)*180/pi
+
+plt.style.use('plt_style_small.mplstyle')
+params = {'figure.figsize': (5,5)}
+plt.rcParams.update(params)
+
+fig, axs = plt.subplots(2, sharex=True)
+lw=1
+
+axs[0].semilogx([fmin,GBWthe],[0,0],'k--', linewidth=lw)
+axs[0].semilogx([GBWthe,GBWthe],[0,-60],'k--', linewidth=lw)
+axs[0].semilogx([fmin,fcthe],[AdcdBthe-3,AdcdBthe-3],'k--', linewidth=lw)
+axs[0].semilogx([fcthe,fcthe],[-40,AdcdBthe-3],'k--', linewidth=lw)
+axs[0].semilogx(facthe,AmagdBthe,'r',label='Theory')
+axs[0].set(xlim=(fmin,fmax), ylim=(-20,50), ylabel='$|A_v|$ [dB]')
+axs[0].set_yticks(range(-20,60,10))
+#axs[0].legend(loc='best')
+textstr1 = '\n'.join((
+    f'$A_{{dc}} =$ {AdcdBthe:.1f} dB',
+    f'$f_c =$ {fcthe/1e3:.1f} kHz',
+    f'$GBW =$ {GBWthe/1e6:.1f} MHz'))
+axs[0].text(0.03, 0.07, textstr1, ha='left', va='bottom', transform=axs[0].transAxes, size=9,
+         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+
+axs[1].semilogx([fmin,fcthe],[135,135],'k--', linewidth=lw)
+axs[1].semilogx([fcthe,fcthe],[135,180],'k--', linewidth=lw)
+axs[1].semilogx(facthe,Aphidegthe,'b',label='Theory')
+axs[1].set(ylim=(90,180), xlabel='Frequency [Hz]', ylabel='$arg\\{A_v\\}$ [deg]')
+#axs[1].set_xticks([1e-1,1e0,1e1,1e2,1e3,1e4,1e5,1e6,1e7,1e8])
+axs[1].set_yticks([90,135,180])
+plt.subplots_adjust(hspace=0.1)
+#fig.set_figwidth(4)
+#fig.set_figheight(4)
+plt.show()
+```
+
+## Input-referred noise
+We can now compute all the parameters needed for the calculation of the OTA thermal noise excess factor and its input-referred thermal noise resistance. They are given in @tbl-thermal.
+
+::: {.callout-warning}
+In order to check the effect of the cascode on the noise, we will ignore the noise contribution of the bias circuit. Of course in reality the bias circuit will also contribute to the output noise.
+:::
+
+```{python}
+#| label: tbl-thermal
+#| tbl-cap: Thermal noise parameters.
+
+Gm1=cascode_df.at['M1','Gm']
+Gms2=cascode_df.at['M2','Gms']
+Gds1=cascode_df.at['M1','Gds']
+Gds2=cascode_df.at['M2','Gds']
+gamman1=cascode_df.at['M1','gamman']
+gamman2=cascode_df.at['M2','gamman']
+n1=cascode_df.at['M1','n']
+n2=cascode_df.at['M2','n']
+deltan2=gamman2/n2
+etath=Gds1**2/(Gm1*Gms2)*deltan2/gamman1
+gammancasthe=gamman1*(1+etath)
+Rninththe=gammancasthe/Gm1
+Sninththe=4*kT*Rninththe
+SninthdBvthe=10*log(Sninththe)
+table = [["$G_{m1}$",f'{Gm1/1e-6:.3f}',"$\\mu A/V$"],
+         ["$G_{ms2}$",f'{Gms2/1e-6:.3f}',"$\\mu A/V$"],
+         ["$G_{ds1}$",f'{Gds1/1e-6:.3f}',"$\\mu A/V$"],
+         ["$G_{m1}\\,G_{ms2}/G_{ds1}^2$",f'{Gm1*Gms2/Gds1**2:.3f}',"-"],
+         ["$\\gamma_{n1}$",f'{gamman1:.3f}',"-"],
+         ["$\\delta_{n2}$",f'{deltan2:.3f}',"-"],
+         ["$\\eta_{th}$",f'{etath:.3e}',"-"],
+         ["$R_{nt}$",f'{Rninththe/1e3:.3f}',"$k \\Omega$"],
+         ["$\\gamma_{cas}$",f'{gammancasthe:.3f}',"-"],
+         ["$\\sqrt{S_{ninth}}$",f'{sqrt(Sninththe)/1e-9:.3f}',"$nV/\\sqrt{Hz}$"],
+         ["$10 \\cdot \\log(S_{ninth})$",f'{SninthdBvthe:.3f}',"$dBv/\\sqrt{Hz}$"]
+         ]
+Markdown(tabulate(
+  table,
+  headers=["Symbol","Theoretical Value","Unit"],
+  numalign="center",
+  stralign="center",
+  colalign=("center","center","center")
+))
+```
+
+
+```{python}
+#| label: tbl-flicker
+#| tbl-cap: Flicker noise parameters.
+from IPython.display import Markdown
+from tabulate import tabulate
+W1=cascode_df.at['M1','W']
+L1=cascode_df.at['M1','L']
+W2=cascode_df.at['M2','W']
+L2=cascode_df.at['M2','L']
+W1eff=W1-DWn
+L1eff=L1-DLn
+W2eff=W2-DWp
+L2eff=L2-DLp
+etafl=(Gds1/(n2*Gm1))**2*W1eff*L1eff/(W2eff*L2eff)
+Rnfl1Hz=rhon/(W1eff*L1eff)*(1+etafl)
+Sfl1Hz=4*kT*Rnfl1Hz
+Sninfl1HzdBv=10*log(Sfl1Hz)
+fkthe=2*rhon/(W1*L1*Rninththe)*(1+etafl)
+table = [["$(n_2\\,G_{m1}/G_{ds1})^2$",f'{(n2*Gm1/Gds1)**2:.1f}',"-"],
+         ["$\\frac{{W_1 \\cdot L_1}}{{W_2 \\cdot L_2}}$",f'{W1*L1/(W2*L2):.1f}',"-"],
+         ["$\\eta_{fl}$",f'{etafl:.3f}',"-"],
+         ["$\\sqrt{{S_{{ninfl}}(1\\,Hz)}}$",f'{sqrt(Sfl1Hz)/1e-6:.1f}',"$\\mu V/\\sqrt{{Hz}}$"],
+         ["$10 \\cdot \\log(S_{{ninfl}}(1\\,Hz))$",f'{Sninfl1HzdBv:.1f}',"$dBv/\\sqrt{{Hz}}$"],
+         ["$f_k$",f'{fkthe/1e3:.0f}',"$kHz$"]
+         ]
+Markdown(tabulate(
+  table,
+  headers=["Symbol","Theoretical Value","Unit"],
+  numalign="center",
+  stralign="center",
+  colalign=("center","center","center")
+))
+```
+
+We can plot the input-referred noise PSD which is shown in @fig-cascode_noise_the.
+
+```{python}
+#| label: fig-cascode_noise_the
+#| fig-cap: "Theoretical input-referred noise PSD."
+
+def Snflicker(f,S0,fk):
+    return(S0*fk/f)
+
+def Sntot(f,S0,fk):
+    return(S0*(1+fk/f))
+
+Npts=101
+logfmin=1
+logfmax=8
+fmin=pow(10,logfmin)
+fmax=pow(10,logfmax)
+fnzthe=np.logspace(logfmin,logfmax,Npts,endpoint=True,base=10.0)
+
+S0=4*kT*Rninththe
+S0dBvthe=10*log(S0)
+
+Sninththe=np.zeros(Npts)
+Sninflthe=np.zeros(Npts)
+Sninthe=np.zeros(Npts)
+SninthdBvthe=np.zeros(Npts)
+SninfldBvthe=np.zeros(Npts)
+SnindBvthe=np.zeros(Npts)
+
+for k in range(0,Npts):
+    Sninththe[k]=S0
+    Sninflthe[k]=Snflicker(fnzthe[k],S0,fkthe)
+    Sninthe[k]=Sntot(fnzthe[k],S0,fkthe)
+    SninthdBvthe[k]=10*log(Sninththe[k])
+    SninfldBvthe[k]=10*log(Sninflthe[k])
+    SnindBvthe[k]=10*log(Sninthe[k])
+
+plt.style.use('plt_style_small.mplstyle')
+plt.semilogx(fnzthe,SninthdBvthe,'b--',label='Thermal')
+plt.semilogx(fnzthe,SninfldBvthe,'g--',label='Flicker')
+plt.semilogx(fnzthe,SnindBvthe,'r',label='Total')
+plt.xlim(fmin,fmax)
+plt.xticks([1e1,1e2,1e3,1e4,1e5,1e6,1e7,1e8])
+plt.xlabel('Frequency [Hz]')
+plt.ylim(-150,-100)
+plt.ylabel('Input Noise PSD $[dBv/\\sqrt{Hz}]$')
+plt.legend(loc='center right', fontsize=9)
+textstr = '\n'.join((
+    f'$S_{{nin,th}} =$ {S0dBvthe:.1f} $dBv/\\sqrt{{Hz}}$',
+    f'$f_k =$ {fkthe/1e3:.1f} kHz'))
+plt.text(0.5, 0.95, textstr, ha='left', va='top', size=9, transform=plt.gca().transAxes,
+         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+# saveFigures(savePath, 'Input_referred_noise')
+plt.show()
+```
+
+# Validation by simulation
+
+![Schematic of the cascode gain stage used for simulation.](Figures/Cascode_with_bias.png){#fig-cascode_sim_schematic}
+
+The above design can be verified using ngspice simulations. We will use the circuit shown in @fig-cascode_sim_schematic to run the simulations. Note that the bias voltage $V_{b1}$ is generated by the additonal current branch with M~3~ and M~4~. In this way we ensure that the DC gate voltage of M~1~ actually corresponds to its drain current. The bias voltage $V_{b2}$ is generated by transistors M~5~, M~6~ and M~7~.
+
+::: {.callout-note}
+The simulations are performed with the PSP 103.6 compact model @bib:psp103.6:2017. For ngspice, we use the Verilog-A implementation given in the IHP package @bib:ihp:2025 and compiled the OSDI file with OpneVAF @bib:openvaf:2025 to run with ngspice @bib:dwarning:2024. In addition to the PSP user manual @bib:psp103.6:2017 a documentation of PSP and other MOSFET compact models and their parameter extraction can be found in @bib:iccap:2008.
+:::
+
+We start checking the transistors operating point in the next section.
+
+## Operating point
+Before running the AC and NOISE simulations, we first need to check the quiescent voltages and currents and the operating points of all transistors by running an .OP simulation. The node voltages are extracted from the .ic file and presented in @tbl-ng_node_voltages. The transistor drain current and voltages are presented in @tbl-ng_op1. The small-signal parameters are given in @tbl-ng_op2 and the noise PSD are given in @tbl-ng_op3.
+
+```{python}
+#| label: tbl-ng_node_voltages
+#| tbl-cap: Cascode gain stage node voltages.
+
+simtype = ".op"
+fileName = circuitName + simtype
+simulationPath = "./Simulations/ngspice/"
+simulationFile = simulationPath + fileName + ".cir"
+simulationLog = simulationPath + fileName + ".log"
+simulationVoltages = simulationPath + fileName + ".ic"
+simulationData = simulationPath + fileName + ".dat"
+ngspiceNodeVoltageFile = simulationPath + circuitName + version + simtype + ".ic"
+ngspiceDataFile = simulationPath + circuitName + version + simtype + ".dat"
+
+W1=cascode_df.at['M1','W']
+L1=cascode_df.at['M1','L']
+AS1=cascode_df.at['M1','AS']
+PS1=cascode_df.at['M1','PS']
+AD1=cascode_df.at['M1','AD']
+PD1=cascode_df.at['M1','PD']
+W2=cascode_df.at['M2','W']
+L2=cascode_df.at['M2','L']
+AS2=cascode_df.at['M2','AS']
+PS2=cascode_df.at['M2','PS']
+AD2=cascode_df.at['M2','AD']
+PD2=cascode_df.at['M2','PD']
+W3=cascode_df.at['M3','W']
+L3=cascode_df.at['M3','L']
+AS3=cascode_df.at['M3','AS']
+PS3=cascode_df.at['M3','PS']
+AD3=cascode_df.at['M3','AD']
+PD3=cascode_df.at['M3','PD']
+W4=cascode_df.at['M4','W']
+L4=cascode_df.at['M4','L']
+AS4=cascode_df.at['M4','AS']
+PS4=cascode_df.at['M4','PS']
+AD4=cascode_df.at['M4','AD']
+PD4=cascode_df.at['M4','PD']
+W5=cascode_df.at['M5','W']
+L5=cascode_df.at['M5','L']
+AS5=cascode_df.at['M5','AS']
+PS5=cascode_df.at['M5','PS']
+AD5=cascode_df.at['M5','AD']
+PD5=cascode_df.at['M5','PD']
+W6=cascode_df.at['M6','W']
+L6=cascode_df.at['M6','L']
+AS6=cascode_df.at['M6','AS']
+PS6=cascode_df.at['M6','PS']
+AD6=cascode_df.at['M6','AD']
+PD6=cascode_df.at['M6','PD']
+W7=cascode_df.at['M7','W']
+L7=cascode_df.at['M7','L']
+AS7=cascode_df.at['M7','AS']
+PS7=cascode_df.at['M7','PS']
+AD7=cascode_df.at['M7','AD']
+PD7=cascode_df.at['M7','PD']
+
+if newSim:
+  paramstr = '\n'.join((
+    f'.param VDD={VDD:.1f} Ib={Ib/1e-9:.0f}n',
+    f'.param CL={CL/1e-12:.0f}p',
+    f'.param W1={W1/1e-6:.2f}u L1={L1/1e-6:.2f}u AS1={AS1:.3e} PS1={PS1:.3e} AD1={AD1:.3e} PD1={PD1:.3e}',
+    f'.param W2={W2/1e-6:.2f}u L2={L2/1e-6:.2f}u AS2={AS2:.3e} PS2={PS2:.3e} AD2={AD2:.3e} PD2={PD2:.3e}',
+    f'.param W3={W3/1e-6:.2f}u L3={L3/1e-6:.2f}u AS3={AS3:.3e} PS3={PS3:.3e} AD3={AD3:.3e} PD3={PD3:.3e}',
+    f'.param W4={W4/1e-6:.2f}u L4={L4/1e-6:.2f}u AS4={AS4:.3e} PS4={PS4:.3e} AD4={AD4:.3e} PD4={PD4:.3e}',
+    f'.param W5={W5/1e-6:.2f}u L5={L5/1e-6:.2f}u AS5={AS5:.3e} PS5={PS5:.3e} AD5={AD5:.3e} PD5={PD5:.3e}',
+    f'.param W6={W6/1e-6:.2f}u L6={L6/1e-6:.2f}u AS6={AS6:.3e} PS6={PS6:.3e} AD6={AD6:.3e} PD6={PD6:.3e}',
+    f'.param W7={W7/1e-6:.2f}u L7={L7/1e-6:.2f}u AS7={AS7:.3e} PS7={PS7:.3e} AD7={AD7:.3e} PD7={PD7:.3e}'
+  ))
+  #print(paramstr)
+  with open(simulationPath+'size_bias.par', 'w') as f:
+    f.write(paramstr)
+  #print('Starting ngspice simulation...\n')
+  result = subprocess.run(f"""ngspice_con -b -o "{simulationLog}" "{simulationFile}" """, shell=True, capture_output=True, text=True)
+  # We need to copy the resulting operating point information file because it will be overwritten by subsequent simulations
+  shutil.copy2(simulationVoltages, ngspiceNodeVoltageFile)
+  shutil.copy2(simulationData, ngspiceDataFile)
+
+nodeList=["vdd","in","out","vb1","vb2","1","2","3","4","5"]
+v_df=pd.DataFrame(index=nodeList)
+Nnodes=len(nodeList)
+for k in range(0,Nnodes):
+  nodeName=nodeList[k]
+  regexp = re.compile(r'v\(' + nodeName + r'\)' + refloat)
+  with open(ngspiceNodeVoltageFile) as f:
+    for line in f:
+      match = re.search(regexp, line)
+      if match:
+        v_df.at[nodeName, 'Voltage']=float(match.group(1))
+
+Vb1=v_df.loc['2','Voltage']
+#pd.set_option('display.float_format', '{:.2f}'.format)
+#v_df
+
+Markdown( 
+  tabulate(v_df,
+  showindex=True,
+  headers=["Node","Voltage"],
+  numalign="center",
+  stralign="center",
+  colalign=("center","center")
+))
+```
+
+```{python}
+#| label: tbl-ng_op1
+#| tbl-cap: PSP operating point information extracted from ngspice .op file for each transistor.
+
+df_mos=pd.read_table(ngspiceDataFile, sep=r'\s+', skiprows=[2,4,6,8,10,12], dtype=np.float64, engine='python')
+df_mos=df_mos.rename(columns={'@n.x1.nsg13_lv_nmos[weff]': 'Transistor',
+                              '@n.x1.Nsg13_lv_nmos[weff]': 'Weff', '@n.x1.Nsg13_lv_nmos[leff]': 'Leff',
+                              '@n.x1.Nsg13_lv_nmos[ids]': 'ID',
+                              '@n.x1.Nsg13_lv_nmos[vgs]': 'VGS', '@n.x1.Nsg13_lv_nmos[vds]': 'VDS', '@n.x1.Nsg13_lv_nmos[vsb]': 'VSB',
+                              '@n.x1.Nsg13_lv_nmos[vgt]': 'VG-VT', '@n.x1.Nsg13_lv_nmos[vdss]': 'VDsat',
+                              '@n.x1.Nsg13_lv_nmos[gm]': 'Gm', '@n.x1.Nsg13_lv_nmos[gmb]': 'Gmb', '@n.x1.Nsg13_lv_nmos[gds]': 'Gds',
+                              '@n.x1.Nsg13_lv_nmos[sid]': 'SIDth', '@n.x1.Nsg13_lv_nmos[sfl]': 'SIDfl at 1Hz'})
+df_mos['Transistor'] = df_mos['Transistor'].astype(str)
+
+#transistor_list=["M1a","M1b","M2a","M2b","M2c","M2d","M3a","M3b","M4","M5a","M5b","M7"]
+#Nmos=len(transistor_list)
+for k in range(Nmos):
+  df_mos.at[k, 'Transistor'] = transistor_list[k]
+
+df_mos.set_index('Transistor', inplace=True)
+df_mos.rename_axis(index=None, inplace=True)
+pd.set_option('display.float_format', '{:.2E}'.format)
+#df_mos
+
+feature_list=["ID","VGS","VDS","VSB","VG-VT","VDsat"]
+
+Nfeature=len(feature_list)
+table=[]
+for mos in transistor_list:
+  row=[mos]
+  for feature in feature_list:
+    row.append(df_mos.at[mos,feature])
+  table.append(row)
+
+for i in range(Nmos):
+  for j in [1]:
+    table[i][j]=table[i][j]/1e-9
+  for j in [2,3,4,5,6]:
+    table[i][j]=table[i][j]/1e-3
+
+Markdown(tabulate(
+  table,
+  headers=["Transistor","$I_D\\;[nA]$","$V_{GS}\\;[mV]$","$V_{DS}\\;[mV]$","$V_{SB}\\;[mV]$","$V_{GS}-V_T\\;[mV]$","$V_{Dsat}\\;[mV]$"],
+  numalign="center",
+  stralign="center",
+  colalign=("center","center","center","center","center","center","center"),
+  floatfmt=(".3f",".0f",".0f",".0f",".0f",".0f",".0f")
+))
+```
+
+
+```{python}
+#| label: tbl-ng_op2
+#| tbl-cap: PSP small-signal operating point information extracted from ngspice .op file for each transistor.
+
+feature_list=["Gm","Gmb","Gds"]
+
+Nfeature=len(feature_list)
+table=[]
+for mos in transistor_list:
+  row=[mos]
+  for feature in feature_list:
+    row.append(df_mos.at[mos,feature])
+  table.append(row)
+
+for i in range(Nmos):
+  for j in [1,2]:
+    table[i][j]=table[i][j]/1e-6
+  for j in [3]:
+    table[i][j]=table[i][j]/1e-9
+
+Markdown(tabulate(
+  table,
+  headers=["Transistor","$G_m\\;[\\mu A/V]$","$G_{mb}\\;[\\mu A/V]$","$G_{ds}\\;[nA/V]$"],
+  numalign="center",
+  stralign="center",
+  colalign=("center","center","center","center"),
+  floatfmt=(".3f",".3f",".3f",".3f")
+))
+```
+
+```{python}
+#| label: tbl-ng_op3
+#| tbl-cap: PSP noise operating point information extracted from ngspice .op file for each transistor.
+
+feature_list=["SIDth","SIDfl at 1Hz"]
+
+Nfeature=len(feature_list)
+table=[]
+for mos in transistor_list:
+  row=[mos]
+  for feature in feature_list:
+    row.append(df_mos.at[mos,feature])
+  table.append(row)
+
+#for i in range(Nmos):
+#  for j in [2]:
+#    table[i][j]=table[i][j]/1e3
+#  for j in [3]:
+#    table[i][j]=table[i][j]/1e-9
+#  for j in [4]:
+#    table[i][j]=table[i][j]/1e-6
+
+Markdown(tabulate(
+  table,
+  headers=["Transistor","$S_{ID,th}\\;[A^2/Hz]$","$S_{ID,fl}$ at 1Hz $[A^2/Hz]$"],
+  numalign="center",
+  stralign="center",
+  colalign=("center","center","center"),
+  floatfmt=(".3e",".3e",".3e")
+))
+```
+
+
+```{python}
+#| label: tbl-ng_op4
+#| tbl-cap: sEKV parameters calculated from the values extracted from the simulation.
+
+transistor_info={
+    "Type": ["n","n","n","n","n","n","n"]
+}
+transistor_list=["M1","M2","M3","M4","M5","M6","M7"]
+df_mos_sekv=pd.DataFrame(transistor_info, index=transistor_list)
+
+df_mos_sekv["Weff"]=df_mos["Weff"]
+df_mos_sekv["Leff"]=df_mos["Leff"]
+df_mos_sekv["Weff/Leff"]=df_mos["Weff"]/df_mos["Leff"]
+df_mos_sekv["Ispec"]=np.where(df_mos_sekv["Type"]=="n",
+                                     df_mos_sekv["Weff/Leff"]*Ispecsqn,
+                                     df_mos_sekv["Weff/Leff"]*Ispecsqp)
+df_mos_sekv["IC"]=df_mos["ID"]/df_mos_sekv["Ispec"]
+df_mos_sekv["Gspec"]=df_mos_sekv["Ispec"]/UT
+df_mos_sekv["n"]=df_mos["Gmb"]/df_mos["Gm"]+1
+df_mos_sekv["Gm"]=df_mos["Gm"]
+df_mos_sekv["Gms"]=df_mos_sekv["n"]*df_mos["Gm"]
+df_mos_sekv["Gds"]=df_mos["Gds"]
+df_mos_sekv["Vninth"]=sqrt(df_mos["SIDth"])/df_mos["Gm"]
+df_mos_sekv["Rninth"]=df_mos["SIDth"]/(4*kT*df_mos["Gm"]**2)
+df_mos_sekv["gamman"]=df_mos["Gm"]*df_mos_sekv["Rninth"]
+df_mos_sekv["Vninfl at 1 Hz"]=sqrt(df_mos["SIDfl at 1Hz"])/df_mos["Gm"]
+#df_mos_sekv
+
+feature_list=["Weff","Leff","Weff/Leff","Ispec","IC"]
+
+Nfeature=len(feature_list)
+table=[]
+for mos in transistor_list:
+  row=[mos]
+  for feature in feature_list:
+    row.append(df_mos_sekv.at[mos,feature])
+  table.append(row)
+
+for i in range(Nmos):
+  for j in [1,2,4]:
+    table[i][j]=table[i][j]/1e-6
+
+Markdown(tabulate(
+  table,
+  headers=["Transistor","$W_{eff}\\;[\\mu m]$","$L_{eff}\\;[\\mu m]$","$W_{eff}/L_{eff}$","$I_{spec}\\;[\\mu A]$","$IC$"],
+  numalign="center",
+  stralign="center",
+  colalign=("center","center","center","center","center","center"),
+  floatfmt=(".3f",".3f",".3f",".3f",".3f",".3f")
+))
+```
+
+```{python}
+#| label: tbl-ng_op5
+#| tbl-cap: sEKV small-signal parameters calculated from the values extracted from the simulation.
+
+feature_list=["Gspec","n","Gm","Gms","Gds"]
+
+Nfeature=len(feature_list)
+table=[]
+for mos in transistor_list:
+  row=[mos]
+  for feature in feature_list:
+    row.append(df_mos_sekv.at[mos,feature])
+  table.append(row)
+
+for i in range(Nmos):
+  for j in [1,3,4]:
+    table[i][j]=table[i][j]/1e-6
+  for j in [5]:
+    table[i][j]=table[i][j]/1e-9
+
+Markdown(tabulate(
+  table,
+  headers=["Transistor","$G_{spec}\\;[\\mu A/V]$","$n$","$G_m\\;[\\mu A/V]$","$G_{ms}\\;[\\mu A/V]$","$G_{ds}\\;[nA/V]$"],
+  numalign="center",
+  stralign="center",
+  colalign=("center","center","center","center","center","center"),
+  floatfmt=(".3f",".3f",".3f",".3f",".3f",".3f")
+))
+```
+
+```{python}
+#| label: tbl-ng_op6
+#| tbl-cap: sEKV noise parameters calculated from the values extracted from the simulation.
+
+feature_list=["Vninth","Rninth","gamman","Vninfl at 1 Hz"]
+
+Nfeature=len(feature_list)
+table=[]
+for mos in transistor_list:
+  row=[mos]
+  for feature in feature_list:
+    row.append(df_mos_sekv.at[mos,feature])
+  table.append(row)
+
+for i in range(Nmos):
+  for j in [1,4]:
+    table[i][j]=table[i][j]/1e-9
+  for j in [2]:
+    table[i][j]=table[i][j]/1e3
+
+Markdown(tabulate(
+  table,
+  headers=["Transistor","$\\sqrt{S_{nin,th}}\\;[nV/\\sqrt{Hz}]$","$R_{nin,th}\\;[k\\Omega]$","$\\gamma_n\\;[-]$","$\\sqrt{S_{nin,fl}}\\;[nV/\\sqrt{Hz}]$"],
+  numalign="center",
+  stralign="center",
+  colalign=("center","center","center","center","center"),
+  floatfmt=(".3f",".3f",".3f",".3f",".3f")
+))
+```
+
+```{python}
+#| label: tbl-ng_bias
+#| tbl-cap: Bias voltages and operating regions of each transistor.
+
+VGB1=v_df.loc['in','Voltage']
+VGB2=v_df.loc['vb2','Voltage']
+VGB3=v_df.loc['3','Voltage']
+VGB4=v_df.loc['vb2','Voltage']
+VGB5=v_df.loc['vb2','Voltage']
+VGB6=v_df.loc['5','Voltage']
+VGB7=v_df.loc['5','Voltage']
+
+VSB1=0
+VSB2=v_df.loc['1','Voltage']
+VSB3=0
+VSB4=v_df.loc['2','Voltage']
+VSB5=v_df.loc['4','Voltage']
+VSB6=v_df.loc['4','Voltage']
+VSB7=0
+
+VDB1=v_df.loc['1','Voltage']
+VDB2=v_df.loc['out','Voltage']
+VDB3=v_df.loc['2','Voltage']
+VDB4=v_df.loc['3','Voltage']
+VDB5=v_df.loc['vb2','Voltage']
+VDB6=v_df.loc['5','Voltage']
+VDB7=v_df.loc['4','Voltage']
+
+VDS1=VDB1-VSB1
+VDS2=VDB2-VSB2
+VDS3=VDB3-VSB3
+VDS4=VDB4-VSB4
+VDS5=VDB5-VSB5
+VDS6=VDB6-VSB6
+VDS7=VDB7-VSB7
+
+ID1=df_mos.loc['M1','ID']
+ID2=df_mos.loc['M2','ID']
+ID3=df_mos.loc['M3','ID']
+ID4=df_mos.loc['M4','ID']
+ID5=df_mos.loc['M5','ID']
+ID6=df_mos.loc['M6','ID']
+ID7=df_mos.loc['M7','ID']
+
+IC1=df_mos_sekv.loc['M1','IC']
+IC2=df_mos_sekv.loc['M2','IC']
+IC3=df_mos_sekv.loc['M3','IC']
+IC4=df_mos_sekv.loc['M4','IC']
+IC5=df_mos_sekv.loc['M5','IC']
+IC6=df_mos_sekv.loc['M6','IC']
+IC7=df_mos_sekv.loc['M7','IC']
+
+VDsat1=df_mos.loc['M1','VDsat']
+VDsat2=df_mos.loc['M2','VDsat']
+VDsat3=df_mos.loc['M3','VDsat']
+VDsat4=df_mos.loc['M4','VDsat']
+VDsat5=df_mos.loc['M5','VDsat']
+VDsat6=df_mos.loc['M6','VDsat']
+VDsat7=df_mos.loc['M7','VDsat']
+
+Vb1=v_df.loc['vb1','Voltage']
+Vb2=v_df.loc['vb2','Voltage']
+
+df_mosop={
+    "Type": ["n","n","n","n","n","n","n"],
+    "ID": [ID1,ID2,ID3,ID4,ID5,ID6,ID7],
+    "IC": [IC1,IC2,IC3,IC4,IC5,IC6,IC7],
+    "VG": [VGB1,VGB2,VGB3,VGB4,VGB5,VGB6,VGB7],
+    "VS": [VSB1,VSB2,VSB3,VSB4,VSB5,VSB6,VSB7],
+    "VD": [VDB1,VDB2,VDB3,VDB4,VDB5,VDB6,VDB7],
+    "VDS": [VDS1,VDS2,VDS3,VDS4,VDS5,VDS6,VDS7],
+    "VDsat": [VDsat1,VDsat2,VDsat3,VDsat4,VDsat5,VDsat6,VDsat7]
+}
+
+index_labels=["M1","M2","M3","M4","M5","M6","M7"]
+df_mosop=pd.DataFrame(df_mosop, index=index_labels)
+df_mosop["Region"]=np.where(df_mosop["IC"]<0.1,
+                                     "WI",
+                                     np.where(df_mosop["IC"]<10,
+                                     "MI",
+                                     "SI"))
+df_mosop["Saturation"]=np.where(df_mosop["VDS"]>df_mosop["VDsat"],
+                                     "sat",
+                                     "lin")
+#pd.set_option('display.float_format', '{:.3E}'.format)
+#df_mosop
+
+feature_list=["Type","VG","VS","VD","VDS","VDsat","Region","Saturation"]
+#Nmos=len(transistor_list)
+Nfeature=len(feature_list)
+table=[]
+for mos in transistor_list:
+  row=[mos]
+  for feature in feature_list:
+    row.append(df_mosop.at[mos,feature])
+  table.append(row)
+
+for i in range(Nmos):
+  for j in [5,6]:
+    table[i][j]=table[i][j]/1e-3
+
+Markdown(tabulate(
+  table,
+  headers=["Trans.","Type","$V_G\\;[V]$","$V_S\\;[V]$","$V_D\\;[V]$","$V_{DS}\\;[mV]$","$V_{DSsat}\\;[mV]$","Reg.","Sat."],
+  numalign="center",
+  stralign="center",
+  colalign=("center","center","center","center","center","center","center","center","center"),
+  floatfmt=(".3f",".3f",".3f",".3f",".3f",".0f",".0f",".3f",".3f")
+))
+```
+
+From @tbl-ng_node_voltages, we observe that the drain voltage of M~1~ (voltage at node 1) is $V_{D1} = V(1) =$ `{python} f'{v_df.loc['1','Voltage']/1e-3:.0f}'` $mV$ which is sligtly larger than $4\,U_T =$ `{python} f'{VD1bias/1e-3:.0f}'` $mV$. This comes from the fact that transistor M~5~ is not biased deep in weak inversion but with an inversion coefficient $IC_5 =$ `{python} f'{df_mos_sekv.at["M5","IC"]:.3f}'` which makes its $V_{GS}$ voltage larger moving the voltage at node 1 a bit higher.
+
+The $V_{DS}$ voltages of @tbl-ng_op1 are all larger than the $V_{Dsat}$ voltages, confirming that all the transistors are biased in saturation. This is also confirmed in @tbl-ng_bias.
+
+Comparing to the theoretical values of @tbl-transistor_info_ss, we see that the simulated transconductance values are slightly smaller than the theoretical values, while the simulated output conductances are smaller than the theoretical values.
+
+## Small-signal transfer function
+After having checked the operating point and making sure that all transistors are biased in saturation, we can now perform the AC simulation. The simulation results are compared to the theoretical estimations in @fig-ng_transfer_function. The simulated $GBW$ is slightly smaller than the theoretical value but remains on target. The simulated DC gain is larger than the theoretical estimation.
+
+```{python}
+#| label: fig-ng_transfer_function
+#| fig-cap: "Simulated gain response compared to theoretical estimation."
+
+import matplotlib.patches as mpatches
+
+simtype = ".ac"
+fileName = circuitName + simtype
+simulationPath = "./Simulations/ngspice/"
+simulationFile = simulationPath + fileName + ".cir"
+simulationLog = simulationPath + fileName + ".log"
+simulationData = simulationPath + fileName + ".dat"
+ngspiceDataFile = simulationPath + circuitName + version + simtype + ".dat"
+ngspiceLogFile = simulationPath + circuitName + version + simtype + ".log"
+
+if newSim:
+  #print('Starting NGSpice simulation...\n')
+  result = subprocess.run(f"""ngspice_con -b -o "{simulationLog}" "{simulationFile}" """, shell=True, capture_output=True, text=True)
+  # We need to copy the resulting dc simulation data file because it will be overwritten by the next dc simulation
+  shutil.copy2(simulationData, ngspiceDataFile)
+  # We also need to copy the dc simulation log file because it will be overwritten by the next dc simulation
+  shutil.copy2(simulationLog, ngspiceLogFile)
+
+df_sim=pd.read_table(ngspiceDataFile, sep=' +', engine='python')
+facsim=df_sim['frequency'].to_numpy()
+AmagdBsim=df_sim['AmagdB'].to_numpy()
+Aphidegsim=df_sim['Aphdeg'].to_numpy()
+Npts=len(facsim)
+fmin=facsim[0]
+fmax=facsim[Npts-1]
+
+regexp = re.compile(r'adc' + refloat)
+with open(ngspiceLogFile) as f:
+  for line in f:
+    match = re.match(regexp, line)
+    if match:
+      AdcdBsim=float(match.group(1))
+
+regexp = re.compile(r'fc' + refloat)
+with open(ngspiceLogFile) as f:
+  for line in f:
+    match = re.match(regexp, line)
+    if match:
+      fcsim=float(match.group(1))
+
+regexp = re.compile(r'gbw' + refloat)
+with open(ngspiceLogFile) as f:
+  for line in f:
+    match = re.match(regexp, line)
+    if match:
+      GBWsim=float(match.group(1))
+
+params = {'figure.figsize': (5,5)}
+plt.rcParams.update(params)
+    
+fig, axs = plt.subplots(2, sharex=True)
+#axs[0].semilogx([fmin,GBWsim],[0,0],'k--', linewidth=lw)
+#axs[0].semilogx([GBWsim,GBWsim],[0,-60],'k--', linewidth=lw)
+axs[0].semilogx(facsim,AmagdBsim,'r',label='Simulation')
+axs[0].semilogx(facthe,AmagdBthe,'r--',label='Theory')
+axs[0].set(xlim=(fmin,fmax), ylim=(-20,50), ylabel='$|A_v|$ [dB]')
+axs[0].set_yticks(range(-20,60,10))
+axs[0].legend(loc='upper right')
+textstr1 = '\n'.join((
+    f'$A_{{dc}} =$ {AdcdBthe:.1f} dB (theory)',
+    f'$A_{{dc}} =$ {AdcdBsim:.1f} dB (sim.)',
+    f'$f_c =$ {fcthe/1e3:.1f} kHz (theory)',
+    f'$f_c =$ {fcsim/1e3:.1f} kHz (sim.)',
+    f'$GBW =$ {GBWthe/1e6:.1f} MHz (theory)',
+    f'$GBW =$ {GBWsim/1e6:.1f} MHz (sim.)'))
+axs[0].text(0.03, 0.07, textstr1, ha='left', va='bottom', transform=axs[0].transAxes, size=9,
+         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+
+#axs[1].semilogx([fmin,GBWsim],[PGBWsim,PGBWsim],'k--', linewidth=lw)
+#axs[1].semilogx([GBWsim,GBWsim],[PGBWsim,0],'k--', linewidth=lw)
+axs[1].semilogx(facsim,Aphidegsim,'b',label='Simulation')
+axs[1].semilogx(facthe,Aphidegthe,'b--',label='Theory')
+axs[1].set(xlim=(fmin,fmax), ylim=(90,180), xlabel='Frequency [Hz]', ylabel='$arg\\{A_v\\}$ [degree]')
+#axs[1].set_xticks([1e1,1e2,1e3,1e4,1e5,1e6,1e7,1e8])
+axs[1].set_yticks([90,135,180])
+axs[1].legend(loc='lower left')
+#textstr2 = '\n'.join((
+#    f'$PM =$ {PMthe:.1f} deg (theory)',
+#    f'$PM =$ {PMsim:.1f} deg (sim.)'))
+#axs[1].text(0.62, 0.95, textstr2, ha='left', va='top', transform=axs[1].transAxes, size=9,
+#         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+#arrow = mpatches.FancyArrowPatch((GBWsim, PGBWsim), (GBWsim, -180),
+#                                 arrowstyle='<|-|>', color="black", mutation_scale=15)
+#axs[1].add_patch(arrow)
+#axs[1].annotate(f'Phase margin = {PMsim:.0f} deg', (0, 0.5), xycoords=arrow, ha='right', va='center', size=9)
+plt.subplots_adjust(hspace=0.1)
+plt.show()
+```
+
+## Output resistance
+
+![Schematic for simulating the output impedance.](Figures/Cascode_output_conductance.png){#fig-cascode_gout}
+
+We can check that the cascode significantly reduces the output conductance (increases the output resistance). In order to do this we add an AC current source at the output with zero DC value as shown in @fig-cascode_gout. This AC current source will not change the oquiscent output voltage but will inject a small-signal current at the ouput. Measuring the output voltage we can then deduce the output admittance or impedance.
+
+The result of the simulation is presented in @fig-ng_output_resistance where the simulated small-signal output impedance is plotted versus frequency and compared to $R_{ds1}=1/G_{ds1}$, $R_{ds2}=1/G_{ds2}$ and the theoretical expression
+\begin{equation}
+  R_{out} = \frac{G_{ms2} + G_{ds1} + G_{ds2}}{G_{ds1} G_{ds2}} \cong \frac{G_{ms2}}{G_{ds1} G_{ds2}}.
+\end{equation}
+The values of $G_{ms2}$, $G_{ds1}$ and $G_{ds2}$ are extracted from PSP. We see a perfect match between the simulation and theoretical value of $R_{out}$.
+
+```{python}
+#| label: fig-ng_output_resistance
+#| fig-cap: "Simulated output resistance compared to theoretical value."
+
+simtype = ".gout"
+fileName = circuitName + simtype
+simulationPath = "./Simulations/ngspice/"
+simulationFile = simulationPath + fileName + ".cir"
+simulationLog = simulationPath + fileName + ".log"
+simulationData = simulationPath + fileName + ".dat"
+ngspiceDataFile = simulationPath + circuitName + version + simtype + ".dat"
+ngspiceLogFile = simulationPath + circuitName + version + simtype + ".log"
+
+if newSim:
+  #print('Starting NGSpice simulation...\n')
+  result = subprocess.run(f"""ngspice_con -b -o "{simulationLog}" "{simulationFile}" """, shell=True, capture_output=True, text=True)
+  # We need to copy the resulting dc simulation data file because it will be overwritten by the next dc simulation
+  shutil.copy2(simulationData, ngspiceDataFile)
+  # We also need to copy the dc simulation log file because it will be overwritten by the next dc simulation
+  shutil.copy2(simulationLog, ngspiceLogFile)
+
+Gds1=df_mos_sekv.at["M1","Gds"]
+Rds1=1/Gds1
+Gms2=df_mos_sekv.at["M2","Gms"]
+Gds2=df_mos_sekv.at["M2","Gds"]
+Rds2=1/Gds2
+Rgain=(Gms2+Gds1+Gds2)/Gds2
+Gout=Gds1/Rgain
+Rout=1/Gout
+
+df_sim=pd.read_table(ngspiceDataFile, sep=' +', engine='python')
+fgoutsim=df_sim['frequency'].to_numpy()
+ReZoutsim=df_sim['ReZout'].to_numpy()
+ImZoutsim=df_sim['ImZout'].to_numpy()
+Npts=len(fgoutsim)
+fmin=fgoutsim[0]
+fmax=fgoutsim[Npts-1]
+
+plt.style.use('plt_style_small.mplstyle')
+plt.loglog([fmin,fmax],[Rds1/1e6,Rds1/1e6],'g--', label='$R_{ds1}$')
+plt.loglog([fmin,fmax],[Rds2/1e6,Rds2/1e6],'m--', label='$R_{ds2}$')
+plt.loglog(fgoutsim,ReZoutsim/1e6,'r-', label='$R_{out}$ (Sim.)')
+plt.loglog([fmin,fmax],[Rout/1e6,Rout/1e6],'b--', label='$R_{out}$ (Theory)')
+plt.xlim(fmin,fmax)
+plt.xticks([1e1,1e2,1e3,1e4,1e5,1e6,1e7])
+plt.xlabel('Frequency [Hz]')
+plt.ylim(1e0,1e2)
+plt.ylabel('$Z_{out}$ $[M\\Omega]$')
+#plt.legend(loc='center left', fontsize=9)
+plt.legend(loc='center left', fontsize=9, bbox_to_anchor=(1, 0.5))
+textstr = '\n'.join((
+    f'$R_{{ds1}} =$ {Rds1/1e6:.1f} $M\\Omega$',
+    f'$R_{{ds2}} =$ {Rds2/1e6:.1f} $M\\Omega$',
+    f'$(G_{{ms2}}+G_{{ds1}}+G_{{ds2}})/G_{{ds2}} =$ {Rgain:.1f}',
+    f'$R_{{out}} =$ {Rout/1e6:.1f} $M\\Omega$ (theory)',
+    f'$R_{{out}} =$ {ReZoutsim[0]/1e6:.1f} $M\\Omega$ (sim.)'))
+plt.text(0.05, 0.65, textstr, ha='left', va='top', size=9, transform=plt.gca().transAxes,
+         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+plt.show()
+```
+
+The output resistance is increased by a factor
+\begin{equation}
+  R_{out} \cdot G_{ds1} = \frac{G_{ms2} + G_{ds1} + G_{ds2}}{G_{ds2}} \cong \frac{G_{ms2}}{G_{ds2}}
+\end{equation}
+which is about $(G_{ms2} + G_{ds1} + G_{ds2})/G_{ds2} =$ `{python} f'{Rgain:.1f}'`.
+
+This demonstrates that adding a cascode transistor significantly improves the output resistance at the cost of slightly less voltage headroom. It is particularly usefull for this technology where the nMOS transistor have a very low output resistance.
+
+
+## Input-referred noise
+We can now simulate the input-referred noise PSD and check whether the noise of the cascode transistor M~2~ is indeed much lower than the noise of the driver transistor M~1~. To avoid the noise contribution of the biasing circuit, we set the bias voltages $V_{b1}$ and $V_{b2}$ with two voltage sources having the appropriate values extracted from the OP simulation, namely $V_{b1} =$ `{python} f'{Vb1/1e-3:.0f}'` $mV$ and $V_{b2} =$ `{python} f'{Vb2/1e-3:.0f}'` $mV$. The input-referred noise PSD is plotted in @fig-ng_noise and compared to the theoretical estimation. We see that the simulated white noise is reasonably close to the theoretical estimation, however the simulated flicker noise is smaller than the theoretical estimation. This comes from the fact that in PSP the gate-referred flicker noise is bias dependent which is not the case in the sEKV model.
+
+The contributions of M~1~ and M~2~ to the input-referred white noise are shown in @fig-ng_white_noise_contributions. As expected, we can observe that the contribution of the cascode transistor M~2~ is more than 20 dB lower than that of M~1~.
+
+@fig-ng_flicker_noise_contributions shows that the contribution of M~2~ to the input-referred flicker noise PSD. We can observe that the contribution of M~2~ is also about 20 dB lower than that of M~1~.
+
+The breakdown of the contributions of M~1~ and M~2~ to the total input-referred noise is summarized in @fig-ng_noise_contributions which shows again that the noise contribution of M~2~ is more than 20 dB lower than that of M~1~.
+
+```{python}
+#| label: fig-ng_noise
+#| fig-cap: "Simulated input-referred noise PSD compared to theoretical estimation."
+
+simtype = ".nz"
+fileName = circuitName + simtype
+simulationPath = "./Simulations/ngspice/"
+simulationFile = simulationPath + fileName + ".cir"
+simulationLog = simulationPath + fileName + ".log"
+simulationData = simulationPath + fileName + ".dat"
+simulationRaw = simulationPath + fileName + ".raw"
+ngspiceDataFile = simulationPath + circuitName + version + simtype + ".dat"
+ngspiceRawFile = simulationPath + circuitName + version + simtype + ".raw"
+ngspiceLogFile = simulationPath + circuitName + version + simtype + ".log"
+
+if newSim:
+  paramstr = '\n'.join((
+    f'.param VDD={VDD:.1f} Ib={Ib/1e-9:.0f}n Vb1={Vb1:.6f} Vb2={Vb2:.3f}',
+    f'.param CL={CL/1e-12:.0f}p',
+    f'.param W1={W1/1e-6:.2f}u L1={L1/1e-6:.2f}u AS1={AS1:.3e} PS1={PS1:.3e} AD1={AD1:.3e} PD1={PD1:.3e}',
+    f'.param W2={W2/1e-6:.2f}u L2={L2/1e-6:.2f}u AS2={AS2:.3e} PS2={PS2:.3e} AD2={AD2:.3e} PD2={PD2:.3e}'
+  ))
+  #print(paramstr)
+  with open(simulationPath+'size_bias.par', 'w') as f:
+    f.write(paramstr)
+  #print('Starting NGSpice simulation...\n')
+  result = subprocess.run(f"""ngspice_con -b -o "{simulationLog}" "{simulationFile}" """, shell=True, capture_output=True, text=True)
+  # We need to copy the resulting dc simulation data file because it will be overwritten by the next dc simulation
+  shutil.copy2(simulationData, ngspiceDataFile)
+  shutil.copy2(simulationRaw, ngspiceRawFile)
+  # We also need to copy the dc simulation log file because it will be overwritten by the next dc simulation
+  shutil.copy2(simulationLog, ngspiceLogFile)
+
+df_sim=pd.read_table(ngspiceDataFile, sep=' +', engine='python')
+
+fnzsim=df_sim['frequency'].to_numpy()
+Vnout=df_sim['onoise_spectrum'].to_numpy()
+Vnin=df_sim['inoise_spectrum'].to_numpy()
+SnoutdBvsim=20*log(Vnout)
+SnindBvsim=20*log(Vnin)
+
+Npts=len(fnzsim)
+fmin=fnzsim[0]
+fmax=fnzsim[Npts-1]
+
+plt.style.use('plt_style_small.mplstyle')
+plt.semilogx([fkthe,fkthe],[-150,S0dBvthe],'k--',linewidth=lw)
+plt.semilogx(fnzsim,SnindBvsim,'r-', markevery=25, label='Total (sim.)')
+plt.semilogx(fnzthe,SninthdBvthe,'b--', label='Thermal (theory)')
+plt.semilogx(fnzthe,SninfldBvthe,'g--', label='Flicker (theory)')
+plt.semilogx(fnzthe,SnindBvthe,'r--', label='Total (theory)')
+plt.xlim(fmin,fmax)
+plt.xticks([1e1,1e2,1e3,1e4,1e5,1e6,1e7,1e8])
+plt.xlabel('Frequency [Hz]')
+plt.ylim(-150,-100)
+plt.ylabel(r'Input Noise PSD $[dBv/\sqrt{Hz}]$')
+plt.legend(loc='upper right', fontsize=9)
+#plt.legend(loc='center left', fontsize=9, bbox_to_anchor=(1, 0.5))
+textstr = '\n'.join((
+    f'$S_{{nin,th}} =$ {S0dBvthe:.1f} $dBv/\\sqrt{{Hz}}$ (theory)',
+    f'$S_{{nin,th}} =$ {SnindBvsim[Npts-1]:.1f} $dBv/\\sqrt{{Hz}}$ (sim.)',
+    f'$f_k =$ {fkthe/1e3:.1f} kHz (theory)'))
+#    f'$f_k =$ {fksim/1e3:.1f} kHz (sim.)'))
+plt.text(1.05, 0.5, textstr, ha='left', va='center', size=9, transform=plt.gca().transAxes,
+         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+#saveFigures(savePath, 'Input_referred_noise_PSD')
+plt.show()
+```
+
+
+```{python}
+#| label: fig-ng_white_noise_contributions
+#| fig-cap: "Breakdown of the contributions to the simulated input-referred white noise PSD."
+
+regexp = re.compile(r'No. Variables:' + refloat)
+with open(ngspiceRawFile) as f:
+  for line in f:
+    match = re.match(regexp, line)
+    if match:
+      Nvar=int(match.group(1))
+
+#print(Nvar)
+
+regexp = re.compile(r'No. Points:' + refloat)
+with open(ngspiceRawFile) as f:
+  for line in f:
+    match = re.match(regexp, line)
+    if match:
+      Npts=int(match.group(1))
+
+#print(Npts)
+
+df_noise=pd.read_table(ngspiceRawFile, sep=r'\s+', skiprows=(15), skip_blank_lines=True, header=None, dtype=np.float64, engine='python')
+
+fnzsim=np.zeros(Npts)
+Vnin=np.zeros(Npts)
+VnoutM1=np.zeros(Npts)
+VnoutM1f=np.zeros(Npts)
+VnoutM2=np.zeros(Npts)
+VnoutM2f=np.zeros(Npts)
+Vnout=np.zeros(Npts)
+SnoutM1=np.zeros(Npts)
+SnoutM1f=np.zeros(Npts)
+SnoutM1w=np.zeros(Npts)
+SnoutM2=np.zeros(Npts)
+SnoutM2f=np.zeros(Npts)
+SnoutM2w=np.zeros(Npts)
+SninM1=np.zeros(Npts)
+SninM1f=np.zeros(Npts)
+SninM1w=np.zeros(Npts)
+SninM1dBv=np.zeros(Npts)
+SninM1fdBv=np.zeros(Npts)
+SninM1wdBv=np.zeros(Npts)
+SninM2=np.zeros(Npts)
+SninM2f=np.zeros(Npts)
+SninM2w=np.zeros(Npts)
+SninM2dBv=np.zeros(Npts)
+SninM2fdBv=np.zeros(Npts)
+SninM2wdBv=np.zeros(Npts)
+SnoutdBv=np.zeros(Npts)
+Snin=np.zeros(Npts)
+SnindBv=np.zeros(Npts)
+A=np.zeros(Npts)
+Sninf=np.zeros(Npts)
+SninfdBv=np.zeros(Npts)
+Sninw=np.zeros(Npts)
+SninwdBv=np.zeros(Npts)
+for k in range(0,Npts):
+  fnzsim[k]=df_noise.iloc[Nvar*k,1]
+  Vnin[k]=df_noise.iloc[Nvar*k+1,0]
+  VnoutM1[k]=df_noise.iloc[Nvar*k+2,0]
+  VnoutM1f[k]=df_noise.iloc[Nvar*k+3,0]
+  VnoutM2[k]=df_noise.iloc[Nvar*k+4,0]
+  VnoutM2f[k]=df_noise.iloc[Nvar*k+5,0]
+  Vnout[k]=df_noise.iloc[Nvar*k+6,0]
+  SnoutM1[k]=VnoutM1[k]**2
+  SnoutM1f[k]=VnoutM1f[k]**2
+  SnoutM1w[k]=SnoutM1[k]- SnoutM1f[k]
+  SnoutM2[k]=VnoutM2[k]**2
+  SnoutM2f[k]=VnoutM2f[k]**2
+  SnoutM2w[k]=SnoutM2[k]- SnoutM2f[k]
+  A[k]=Vnout[k]/Vnin[k]
+  Snin[k]=Vnin[k]**2
+  SnindBv[k]=10*log(Snin[k])
+  SninM1[k]=SnoutM1[k]/A[k]**2
+  SninM1f[k]=SnoutM1f[k]/A[k]**2
+  SninM1w[k]=SnoutM1w[k]/A[k]**2
+  SninM1dBv[k]=10*log(SninM1[k])
+  SninM1fdBv[k]=10*log(SninM1f[k])
+  SninM1wdBv[k]=10*log(SninM1w[k])
+  SninM2[k]=SnoutM2[k]/A[k]**2
+  SninM2f[k]=SnoutM2f[k]/A[k]**2
+  SninM2w[k]=SnoutM2w[k]/A[k]**2
+  SninM2dBv[k]=10*log(SninM2[k])
+  SninM2fdBv[k]=10*log(SninM2f[k])
+  SninM2wdBv[k]=10*log(SninM2w[k])
+  Sninf[k]=SninM1f[k]+SninM2f[k]
+  Sninw[k]=Snin[k]-Sninf[k]
+  SninfdBv[k]=10*log(Sninf[k])
+  SninwdBv[k]=10*log(Sninw[k])
+
+fmin=fnzsim[0]
+fmax=fnzsim[Npts-1]
+
+plt.style.use('plt_style_small.mplstyle')
+plt.semilogx(fnzsim,SninwdBv,'r-', label='Total (sim.)')
+plt.semilogx(fnzthe,SninthdBvthe,'m-', label='Total (theory)')
+plt.semilogx(fnzsim,SninM1wdBv,'b--', label='M1')
+plt.semilogx(fnzsim,SninM2wdBv,'g--', label='M2')
+plt.xlim(fmin,fmax)
+plt.xticks([1e1,1e2,1e3,1e4,1e5,1e6,1e7,1e8])
+plt.xlabel('Frequency [Hz]')
+plt.ylim(-180,-140)
+#plt.yticks(range(-150,-100,10))
+plt.ylabel('Input Noise PSD $[dBv/\\sqrt{Hz}]$')
+plt.legend(loc='center left', fontsize=9)
+#plt.legend(loc='center left', fontsize=9, bbox_to_anchor=(1, 0.5))
+textstr = '\n'.join((
+    f'$S_{{nin,th}} =$ {S0dBvthe:.1f} $dBv/\\sqrt{{Hz}}$ (theory)',
+    f'$S_{{nin,th}} =$ {SninwdBv[0]:.1f} $dBv/\\sqrt{{Hz}}$ (sim.)',
+    f'$S_{{nin,th}} =$ {SninM1wdBv[0]:.1f} $dBv/\\sqrt{{Hz}}$ (M1)',
+    f'$S_{{nin,th}} =$ {SninM2wdBv[0]:.1f} $dBv/\\sqrt{{Hz}}$ (M2)'))
+plt.text(1.05, 0.5, textstr, ha='left', va='center', size=9, transform=plt.gca().transAxes,
+         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+#saveFigures(savePath, 'Input_referred_noise_PSD')
+plt.show()
+```
+
+```{python}
+#| label: fig-ng_flicker_noise_contributions
+#| fig-cap: "Breakdown of the contributions to the simulated input-referred flicker noise PSD."
+
+plt.style.use('plt_style_small.mplstyle')
+plt.semilogx(fnzsim,SninfdBv,'r', label='Total (sim.)')
+plt.semilogx(fnzthe,SninfldBvthe,'m-', label='Total (theory)')
+plt.semilogx(fnzsim,SninM1fdBv,'b--', label='M1')
+plt.semilogx(fnzsim,SninM2fdBv,'g--', label='M2')
+
+plt.xlim(fmin,1e5)
+#plt.xticks([1e1,1e2,1e3,1e4,1e5,1e6,1e7,1e8])
+plt.xlabel('Frequency [Hz]')
+plt.ylim(-170,-100)
+#plt.yticks(range(-150,-100,10))
+plt.ylabel('Input Noise PSD $[dBv/\\sqrt{Hz}]$')
+#plt.legend(loc='lower left')
+plt.legend(loc='center left', fontsize=9, bbox_to_anchor=(1, 0.5))
+#textstr = '\n'.join((
+#    f'$S_{{nin,th}} =$ {S0dBvthe:.1f} $dBv/\\sqrt{{Hz}}$ (theory)',
+#    f'$S_{{nin,th}} =$ {S0dBvsim:.1f} $dBv/\\sqrt{{Hz}}$ (sim.)',
+#    f'$f_k =$ {fkthe/1e3:.1f} kHz (theory)'))
+#    f'$f_k =$ {fksim/1e3:.1f} kHz (sim.)'))
+#plt.text(0.35, 0.95, textstr, ha='left', va='top', size=9, transform=plt.gca().transAxes,
+#         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+#saveFigures(savePath, 'Input_referred_noise_PSD')
+plt.show()
+```
+
+```{python}
+#| label: fig-ng_noise_contributions
+#| fig-cap: "Breakdown of the contributions to the simulated input-referred noise PSD."
+
+plt.style.use('plt_style_small.mplstyle')
+plt.semilogx(fnzsim,SninM1dBv,'b-', label='M1 (total)')
+plt.semilogx(fnzsim,SninM1fdBv,'b-.', label='M1 (flicker)')
+plt.semilogx(fnzsim,SninM1wdBv,'b--', label='M1 (white)')
+plt.semilogx(fnzsim,SninM2dBv,'g-', label='M2 (total)')
+plt.semilogx(fnzsim,SninM2fdBv,'g-.', label='M2 (flicker)')
+plt.semilogx(fnzsim,SninM2wdBv,'g--', label='M2 (white)')
+plt.semilogx(fnzsim,SninfdBv,'r--', label='Total (flicker)')
+plt.semilogx(fnzsim,SninwdBv,'r-.', label='Total (white)')
+plt.semilogx(fnzsim,SnindBv,'r-', label='Total')
+#plt.semilogx(fthe,SninthdBvthe,'k--', label='Thermal (theory)')
+#plt.semilogx(fthe,SninfldBvthe,'k--', label='Flicker (theory)')
+plt.semilogx(fnzthe,SnindBvthe,'m--', label='Total (theory)')
+plt.xlim(fmin,fmax)
+plt.xticks([1e1,1e2,1e3,1e4,1e5,1e6,1e7,1e8])
+plt.xlabel('Frequency [Hz]')
+plt.ylim(-170,-100)
+#plt.yticks(range(-150,-100,10))
+plt.ylabel('Input Noise PSD $[dBv/\\sqrt{Hz}]$')
+#plt.legend(loc='lower left')
+plt.legend(loc='center left', fontsize=9, bbox_to_anchor=(1, 0.5))
+#textstr = '\n'.join((
+#    f'$S_{{nin,th}} =$ {S0dBvthe:.1f} $dBv/\\sqrt{{Hz}}$ (theory)',
+#    f'$S_{{nin,th}} =$ {S0dBvsim:.1f} $dBv/\\sqrt{{Hz}}$ (sim.)',
+#    f'$f_k =$ {fkthe/1e3:.1f} kHz (theory)'))
+#    f'$f_k =$ {fksim/1e3:.1f} kHz (sim.)'))
+#plt.text(0.35, 0.95, textstr, ha='left', va='top', size=9, transform=plt.gca().transAxes,
+#         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+#saveFigures(savePath, 'Input_referred_noise_PSD')
+plt.show()
+```
+
+# Conclusion
+In this notebook, we have first analyzed the cascode gain stage showing that the DC voltage gain is equivalent to a two-stage amplifier. We also have shown that the output resistance is increased by the voltage gain of the cascode transistor. In addition, the noise of the cascode transistor is much lower than that of the driver transistor and can usually be neglected. We then have designed the cascode gain stage for achieving a certain DC gain and gain-bandwidth product for a given load capacitance for the IHP SG13G2 130nm BiCMOS technology. A particular attention was brought to the design of the bias circuit to make sure that both transistors M~1~ and M~2~ are biased in weak inversion and in saturation. The circuit was then simulated with ngspice for the chosen IHP 130nm CMOS process taking advantage of the open source PDK. The simulation results are usually quite close to the values predicted by the theory. The simulations have also confirmed the main features of the cascode gain stage, namely a high voltage gain, high output resistance and low-noise. These features are achieved without increase of the current consumption (except the bias circuit which is needed anyway) thanks to the current reuse feature of the cascode stage.
+
+# References

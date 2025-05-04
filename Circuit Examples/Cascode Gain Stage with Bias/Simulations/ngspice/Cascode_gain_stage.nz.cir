@@ -1,0 +1,21 @@
+Simulation of the cascode gain stage designed with the sEKV model
+
+.lib /Simulations/models/cornerMOSlv.lib mos_tt ; model file for PSP
+.include size_bias.par ; Size and bias values
+.include Cascode_gain_stage.nz.net ; Circuit netlist
+.param Vic=0.6
+
+.control
+ op
+* save all
+ save inoise_spectrum onoise_spectrum
+ + onoise_n.x1.nsg13_lv_nmos onoise_n.x2.nsg13_lv_nmos
+ + onoise_n.x1.nsg13_lv_nmos_flicker onoise_n.x2.nsg13_lv_nmos_flicker
+ noise V(out) Vin dec 41 10 100MEG 1
+ setplot noise1
+ write $inputdir/Cascode_gain_stage.nz.raw
+ set wr_singlescale
+ set wr_vecnames
+ wrdata $inputdir/Cascode_gain_stage.nz.dat inoise_spectrum onoise_spectrum
+.endc
+.end

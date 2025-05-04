@@ -1,3 +1,3 @@
 # Common source optimization for minimum current
 
-This Quarto Notebook shows various optimizations using the inversion coefficient. In particular, it shows how to optimize a common-source (CS) gain stage for a given gain-bandwidth product and DC gain. The examples are validated with ngspice simulations. You can have a look at the [pdf output](CS_optimization.pdf).
+This circuit example shows various optimizations using the inversion coefficient. In particular, it shows how to optimize a common-source (CS) gain stage for a given gain-bandwidth product and DC gain. The design examples are performed in the Quarto Notebook and validated with ngspice simulations. The examples can be  [pdf report](CS_optimization.pdf).

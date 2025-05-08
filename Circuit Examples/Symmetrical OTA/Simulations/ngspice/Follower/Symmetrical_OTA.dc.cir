@@ -1,0 +1,21 @@
+Simulation of the symmetrical OTA designed with the sEKV model
+
+.lib /Simulations/models/cornerMOSlv.lib mos_tt ; model file for PSP
+.include size_bias.par ; Size and bias values
+.include simulation.dc.par ; Parameter for the DC simulation
+.include pulse.par ; Parameters for the PULSE parameters used in the netlist
+.include Symmetrical_OTA.net ; Circuit netlist
+
+.control
+ op
+ dc Vin $&Vinmin $&Vinmax $&dVin
+ let Vout = V(out)
+* meas dc Voutq FIND  v(out) WHEN V(inp)=V(inn)
+* meas dc Vos WHEN V(out)=0.6
+* meas dc Voutmax max Vout
+* meas dc Voutmin min Vout
+ set wr_singlescale
+ set wr_vecnames
+ wrdata $inputdir/Symmetrical_OTA.dc.dat Vout
+.endc
+.end

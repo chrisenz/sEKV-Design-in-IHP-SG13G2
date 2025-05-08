@@ -1,0 +1,20 @@
+Using SPARSE 1.3 as Direct Linear Solver
+Using SPARSE 1.3 as Direct Linear Solver
+
+Note: No compatibility mode selected!
+
+
+Circuit: simulation of the symmetrical ota designed with the sekv model
+
+Doing analysis at TEMP = 27.000000 and TNOM = 27.000000
+
+
+No. of Data Rows : 1
+Doing analysis at TEMP = 27.000000 and TNOM = 27.000000
+
+
+No. of Data Rows : 1001
+vos                 =  1.145526e-04
+voutmax             =  6.220033e-01 at=  1.200000e-04
+voutmin             =  5.818059e-01 at=  1.100000e-04
+Note: Simulation executed from .control section 

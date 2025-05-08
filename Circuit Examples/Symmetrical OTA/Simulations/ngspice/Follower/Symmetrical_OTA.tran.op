@@ -1,0 +1,977 @@
+Title: simulation of the symmetrical ota designed with the sekv model
+Date: Wed May  7 20:45:05  2025
+Plotname: Operating Point
+Flags: real
+No. Variables: 484
+No. Points: 1
+Variables:
+	0	v(2)	voltage
+	1	v(1)	voltage
+	2	v(3)	voltage
+	3	v(4)	voltage
+	4	v(5)	voltage
+	5	v(6)	voltage
+	6	v(8)	voltage
+	7	v(inp)	voltage
+	8	v(n.x1a.nsg13_lv_nmos#bd)	voltage
+	9	v(n.x1a.nsg13_lv_nmos#bi)	voltage
+	10	v(n.x1a.nsg13_lv_nmos#bp)	voltage
+	11	v(n.x1a.nsg13_lv_nmos#bs)	voltage
+	12	v(n.x1a.nsg13_lv_nmos#di)	voltage
+	13	v(n.x1a.nsg13_lv_nmos#gp)	voltage
+	14	v(n.x1a.nsg13_lv_nmos#int1)	voltage
+	15	v(n.x1a.nsg13_lv_nmos#int2)	voltage
+	16	v(n.x1a.nsg13_lv_nmos#int3)	voltage
+	17	v(n.x1a.nsg13_lv_nmos#int4)	voltage
+	18	v(n.x1a.nsg13_lv_nmos#int5)	voltage
+	19	v(n.x1a.nsg13_lv_nmos#int6)	voltage
+	20	v(n.x1a.nsg13_lv_nmos#int7)	voltage
+	21	v(n.x1a.nsg13_lv_nmos#int8)	voltage
+	22	v(n.x1a.nsg13_lv_nmos#int9)	voltage
+	23	v(n.x1a.nsg13_lv_nmos#noi)	voltage
+	24	v(n.x1a.nsg13_lv_nmos#si)	voltage
+	25	v(n.x1a.nsg13_lv_nmos#flow(noii))	voltage
+	26	v(n.x1a.nsg13_lv_nmos#flow(res1))	voltage
+	27	v(n.x1a.nsg13_lv_nmos#flow(res2))	voltage
+	28	v(n.x1a.nsg13_lv_nmos#flow(res3))	voltage
+	29	v(n.x1a.nsg13_lv_nmos#flow(res4))	voltage
+	30	v(n.x1a.nsg13_lv_nmos#flow(res5))	voltage
+	31	v(n.x1a.nsg13_lv_nmos#flow(res6))	voltage
+	32	v(n.x1a.nsg13_lv_nmos#flow(res7))	voltage
+	33	v(n.x1a.nsg13_lv_nmos#flow(res8))	voltage
+	34	v(n.x1a.nsg13_lv_nmos#flow(res9))	voltage
+	35	v(n.x1a.nsg13_lv_nmos#flow(spline1))	voltage
+	36	v(n.x1a.nsg13_lv_nmos#flow(spline2))	voltage
+	37	v(n.x1a.nsg13_lv_nmos#flow(spline3))	voltage
+	38	v(n.x1a.nsg13_lv_nmos#flow(spline4))	voltage
+	39	v(n.x1a.nsg13_lv_nmos#flow(spline5))	voltage
+	40	v(n.x1a.nsg13_lv_nmos#flow(spline6))	voltage
+	41	v(n.x1a.nsg13_lv_nmos#flow(spline7))	voltage
+	42	v(n.x1a.nsg13_lv_nmos#flow(spline8))	voltage
+	43	v(n.x1a.nsg13_lv_nmos#flow(spline9))	voltage
+	44	v(n.x1a.nsg13_lv_nmos#implicit_equation_0)	voltage
+	45	v(n.x1a.nsg13_lv_nmos#implicit_equation_1)	voltage
+	46	v(n.x1a.nsg13_lv_nmos#implicit_equation_2)	voltage
+	47	v(n.x1b.nsg13_lv_nmos#bd)	voltage
+	48	v(n.x1b.nsg13_lv_nmos#bi)	voltage
+	49	v(n.x1b.nsg13_lv_nmos#bp)	voltage
+	50	v(n.x1b.nsg13_lv_nmos#bs)	voltage
+	51	v(n.x1b.nsg13_lv_nmos#di)	voltage
+	52	v(n.x1b.nsg13_lv_nmos#gp)	voltage
+	53	v(n.x1b.nsg13_lv_nmos#int1)	voltage
+	54	v(n.x1b.nsg13_lv_nmos#int2)	voltage
+	55	v(n.x1b.nsg13_lv_nmos#int3)	voltage
+	56	v(n.x1b.nsg13_lv_nmos#int4)	voltage
+	57	v(n.x1b.nsg13_lv_nmos#int5)	voltage
+	58	v(n.x1b.nsg13_lv_nmos#int6)	voltage
+	59	v(n.x1b.nsg13_lv_nmos#int7)	voltage
+	60	v(n.x1b.nsg13_lv_nmos#int8)	voltage
+	61	v(n.x1b.nsg13_lv_nmos#int9)	voltage
+	62	v(n.x1b.nsg13_lv_nmos#noi)	voltage
+	63	v(n.x1b.nsg13_lv_nmos#si)	voltage
+	64	v(n.x1b.nsg13_lv_nmos#flow(noii))	voltage
+	65	v(n.x1b.nsg13_lv_nmos#flow(res1))	voltage
+	66	v(n.x1b.nsg13_lv_nmos#flow(res2))	voltage
+	67	v(n.x1b.nsg13_lv_nmos#flow(res3))	voltage
+	68	v(n.x1b.nsg13_lv_nmos#flow(res4))	voltage
+	69	v(n.x1b.nsg13_lv_nmos#flow(res5))	voltage
+	70	v(n.x1b.nsg13_lv_nmos#flow(res6))	voltage
+	71	v(n.x1b.nsg13_lv_nmos#flow(res7))	voltage
+	72	v(n.x1b.nsg13_lv_nmos#flow(res8))	voltage
+	73	v(n.x1b.nsg13_lv_nmos#flow(res9))	voltage
+	74	v(n.x1b.nsg13_lv_nmos#flow(spline1))	voltage
+	75	v(n.x1b.nsg13_lv_nmos#flow(spline2))	voltage
+	76	v(n.x1b.nsg13_lv_nmos#flow(spline3))	voltage
+	77	v(n.x1b.nsg13_lv_nmos#flow(spline4))	voltage
+	78	v(n.x1b.nsg13_lv_nmos#flow(spline5))	voltage
+	79	v(n.x1b.nsg13_lv_nmos#flow(spline6))	voltage
+	80	v(n.x1b.nsg13_lv_nmos#flow(spline7))	voltage
+	81	v(n.x1b.nsg13_lv_nmos#flow(spline8))	voltage
+	82	v(n.x1b.nsg13_lv_nmos#flow(spline9))	voltage
+	83	v(n.x1b.nsg13_lv_nmos#implicit_equation_0)	voltage
+	84	v(n.x1b.nsg13_lv_nmos#implicit_equation_1)	voltage
+	85	v(n.x1b.nsg13_lv_nmos#implicit_equation_2)	voltage
+	86	v(n.x2a.nsg13_lv_pmos#bd)	voltage
+	87	v(n.x2a.nsg13_lv_pmos#bi)	voltage
+	88	v(n.x2a.nsg13_lv_pmos#bp)	voltage
+	89	v(n.x2a.nsg13_lv_pmos#bs)	voltage
+	90	v(n.x2a.nsg13_lv_pmos#di)	voltage
+	91	v(n.x2a.nsg13_lv_pmos#gp)	voltage
+	92	v(n.x2a.nsg13_lv_pmos#int1)	voltage
+	93	v(n.x2a.nsg13_lv_pmos#int2)	voltage
+	94	v(n.x2a.nsg13_lv_pmos#int3)	voltage
+	95	v(n.x2a.nsg13_lv_pmos#int4)	voltage
+	96	v(n.x2a.nsg13_lv_pmos#int5)	voltage
+	97	v(n.x2a.nsg13_lv_pmos#int6)	voltage
+	98	v(n.x2a.nsg13_lv_pmos#int7)	voltage
+	99	v(n.x2a.nsg13_lv_pmos#int8)	voltage
+	100	v(n.x2a.nsg13_lv_pmos#int9)	voltage
+	101	v(n.x2a.nsg13_lv_pmos#noi)	voltage
+	102	v(n.x2a.nsg13_lv_pmos#si)	voltage
+	103	v(n.x2a.nsg13_lv_pmos#flow(noii))	voltage
+	104	v(n.x2a.nsg13_lv_pmos#flow(res1))	voltage
+	105	v(n.x2a.nsg13_lv_pmos#flow(res2))	voltage
+	106	v(n.x2a.nsg13_lv_pmos#flow(res3))	voltage
+	107	v(n.x2a.nsg13_lv_pmos#flow(res4))	voltage
+	108	v(n.x2a.nsg13_lv_pmos#flow(res5))	voltage
+	109	v(n.x2a.nsg13_lv_pmos#flow(res6))	voltage
+	110	v(n.x2a.nsg13_lv_pmos#flow(res7))	voltage
+	111	v(n.x2a.nsg13_lv_pmos#flow(res8))	voltage
+	112	v(n.x2a.nsg13_lv_pmos#flow(res9))	voltage
+	113	v(n.x2a.nsg13_lv_pmos#flow(spline1))	voltage
+	114	v(n.x2a.nsg13_lv_pmos#flow(spline2))	voltage
+	115	v(n.x2a.nsg13_lv_pmos#flow(spline3))	voltage
+	116	v(n.x2a.nsg13_lv_pmos#flow(spline4))	voltage
+	117	v(n.x2a.nsg13_lv_pmos#flow(spline5))	voltage
+	118	v(n.x2a.nsg13_lv_pmos#flow(spline6))	voltage
+	119	v(n.x2a.nsg13_lv_pmos#flow(spline7))	voltage
+	120	v(n.x2a.nsg13_lv_pmos#flow(spline8))	voltage
+	121	v(n.x2a.nsg13_lv_pmos#flow(spline9))	voltage
+	122	v(n.x2a.nsg13_lv_pmos#implicit_equation_0)	voltage
+	123	v(n.x2a.nsg13_lv_pmos#implicit_equation_1)	voltage
+	124	v(n.x2a.nsg13_lv_pmos#implicit_equation_2)	voltage
+	125	v(n.x2b.nsg13_lv_pmos#bd)	voltage
+	126	v(n.x2b.nsg13_lv_pmos#bi)	voltage
+	127	v(n.x2b.nsg13_lv_pmos#bp)	voltage
+	128	v(n.x2b.nsg13_lv_pmos#bs)	voltage
+	129	v(n.x2b.nsg13_lv_pmos#di)	voltage
+	130	v(n.x2b.nsg13_lv_pmos#gp)	voltage
+	131	v(n.x2b.nsg13_lv_pmos#int1)	voltage
+	132	v(n.x2b.nsg13_lv_pmos#int2)	voltage
+	133	v(n.x2b.nsg13_lv_pmos#int3)	voltage
+	134	v(n.x2b.nsg13_lv_pmos#int4)	voltage
+	135	v(n.x2b.nsg13_lv_pmos#int5)	voltage
+	136	v(n.x2b.nsg13_lv_pmos#int6)	voltage
+	137	v(n.x2b.nsg13_lv_pmos#int7)	voltage
+	138	v(n.x2b.nsg13_lv_pmos#int8)	voltage
+	139	v(n.x2b.nsg13_lv_pmos#int9)	voltage
+	140	v(n.x2b.nsg13_lv_pmos#noi)	voltage
+	141	v(n.x2b.nsg13_lv_pmos#si)	voltage
+	142	v(n.x2b.nsg13_lv_pmos#flow(noii))	voltage
+	143	v(n.x2b.nsg13_lv_pmos#flow(res1))	voltage
+	144	v(n.x2b.nsg13_lv_pmos#flow(res2))	voltage
+	145	v(n.x2b.nsg13_lv_pmos#flow(res3))	voltage
+	146	v(n.x2b.nsg13_lv_pmos#flow(res4))	voltage
+	147	v(n.x2b.nsg13_lv_pmos#flow(res5))	voltage
+	148	v(n.x2b.nsg13_lv_pmos#flow(res6))	voltage
+	149	v(n.x2b.nsg13_lv_pmos#flow(res7))	voltage
+	150	v(n.x2b.nsg13_lv_pmos#flow(res8))	voltage
+	151	v(n.x2b.nsg13_lv_pmos#flow(res9))	voltage
+	152	v(n.x2b.nsg13_lv_pmos#flow(spline1))	voltage
+	153	v(n.x2b.nsg13_lv_pmos#flow(spline2))	voltage
+	154	v(n.x2b.nsg13_lv_pmos#flow(spline3))	voltage
+	155	v(n.x2b.nsg13_lv_pmos#flow(spline4))	voltage
+	156	v(n.x2b.nsg13_lv_pmos#flow(spline5))	voltage
+	157	v(n.x2b.nsg13_lv_pmos#flow(spline6))	voltage
+	158	v(n.x2b.nsg13_lv_pmos#flow(spline7))	voltage
+	159	v(n.x2b.nsg13_lv_pmos#flow(spline8))	voltage
+	160	v(n.x2b.nsg13_lv_pmos#flow(spline9))	voltage
+	161	v(n.x2b.nsg13_lv_pmos#implicit_equation_0)	voltage
+	162	v(n.x2b.nsg13_lv_pmos#implicit_equation_1)	voltage
+	163	v(n.x2b.nsg13_lv_pmos#implicit_equation_2)	voltage
+	164	v(n.x2c.nsg13_lv_pmos#bd)	voltage
+	165	v(n.x2c.nsg13_lv_pmos#bi)	voltage
+	166	v(n.x2c.nsg13_lv_pmos#bp)	voltage
+	167	v(n.x2c.nsg13_lv_pmos#bs)	voltage
+	168	v(n.x2c.nsg13_lv_pmos#di)	voltage
+	169	v(n.x2c.nsg13_lv_pmos#gp)	voltage
+	170	v(n.x2c.nsg13_lv_pmos#int1)	voltage
+	171	v(n.x2c.nsg13_lv_pmos#int2)	voltage
+	172	v(n.x2c.nsg13_lv_pmos#int3)	voltage
+	173	v(n.x2c.nsg13_lv_pmos#int4)	voltage
+	174	v(n.x2c.nsg13_lv_pmos#int5)	voltage
+	175	v(n.x2c.nsg13_lv_pmos#int6)	voltage
+	176	v(n.x2c.nsg13_lv_pmos#int7)	voltage
+	177	v(n.x2c.nsg13_lv_pmos#int8)	voltage
+	178	v(n.x2c.nsg13_lv_pmos#int9)	voltage
+	179	v(n.x2c.nsg13_lv_pmos#noi)	voltage
+	180	v(n.x2c.nsg13_lv_pmos#si)	voltage
+	181	v(n.x2c.nsg13_lv_pmos#flow(noii))	voltage
+	182	v(n.x2c.nsg13_lv_pmos#flow(res1))	voltage
+	183	v(n.x2c.nsg13_lv_pmos#flow(res2))	voltage
+	184	v(n.x2c.nsg13_lv_pmos#flow(res3))	voltage
+	185	v(n.x2c.nsg13_lv_pmos#flow(res4))	voltage
+	186	v(n.x2c.nsg13_lv_pmos#flow(res5))	voltage
+	187	v(n.x2c.nsg13_lv_pmos#flow(res6))	voltage
+	188	v(n.x2c.nsg13_lv_pmos#flow(res7))	voltage
+	189	v(n.x2c.nsg13_lv_pmos#flow(res8))	voltage
+	190	v(n.x2c.nsg13_lv_pmos#flow(res9))	voltage
+	191	v(n.x2c.nsg13_lv_pmos#flow(spline1))	voltage
+	192	v(n.x2c.nsg13_lv_pmos#flow(spline2))	voltage
+	193	v(n.x2c.nsg13_lv_pmos#flow(spline3))	voltage
+	194	v(n.x2c.nsg13_lv_pmos#flow(spline4))	voltage
+	195	v(n.x2c.nsg13_lv_pmos#flow(spline5))	voltage
+	196	v(n.x2c.nsg13_lv_pmos#flow(spline6))	voltage
+	197	v(n.x2c.nsg13_lv_pmos#flow(spline7))	voltage
+	198	v(n.x2c.nsg13_lv_pmos#flow(spline8))	voltage
+	199	v(n.x2c.nsg13_lv_pmos#flow(spline9))	voltage
+	200	v(n.x2c.nsg13_lv_pmos#implicit_equation_0)	voltage
+	201	v(n.x2c.nsg13_lv_pmos#implicit_equation_1)	voltage
+	202	v(n.x2c.nsg13_lv_pmos#implicit_equation_2)	voltage
+	203	v(n.x2d.nsg13_lv_pmos#bd)	voltage
+	204	v(n.x2d.nsg13_lv_pmos#bi)	voltage
+	205	v(n.x2d.nsg13_lv_pmos#bp)	voltage
+	206	v(n.x2d.nsg13_lv_pmos#bs)	voltage
+	207	v(n.x2d.nsg13_lv_pmos#di)	voltage
+	208	v(n.x2d.nsg13_lv_pmos#gp)	voltage
+	209	v(n.x2d.nsg13_lv_pmos#int1)	voltage
+	210	v(n.x2d.nsg13_lv_pmos#int2)	voltage
+	211	v(n.x2d.nsg13_lv_pmos#int3)	voltage
+	212	v(n.x2d.nsg13_lv_pmos#int4)	voltage
+	213	v(n.x2d.nsg13_lv_pmos#int5)	voltage
+	214	v(n.x2d.nsg13_lv_pmos#int6)	voltage
+	215	v(n.x2d.nsg13_lv_pmos#int7)	voltage
+	216	v(n.x2d.nsg13_lv_pmos#int8)	voltage
+	217	v(n.x2d.nsg13_lv_pmos#int9)	voltage
+	218	v(n.x2d.nsg13_lv_pmos#noi)	voltage
+	219	v(n.x2d.nsg13_lv_pmos#si)	voltage
+	220	v(n.x2d.nsg13_lv_pmos#flow(noii))	voltage
+	221	v(n.x2d.nsg13_lv_pmos#flow(res1))	voltage
+	222	v(n.x2d.nsg13_lv_pmos#flow(res2))	voltage
+	223	v(n.x2d.nsg13_lv_pmos#flow(res3))	voltage
+	224	v(n.x2d.nsg13_lv_pmos#flow(res4))	voltage
+	225	v(n.x2d.nsg13_lv_pmos#flow(res5))	voltage
+	226	v(n.x2d.nsg13_lv_pmos#flow(res6))	voltage
+	227	v(n.x2d.nsg13_lv_pmos#flow(res7))	voltage
+	228	v(n.x2d.nsg13_lv_pmos#flow(res8))	voltage
+	229	v(n.x2d.nsg13_lv_pmos#flow(res9))	voltage
+	230	v(n.x2d.nsg13_lv_pmos#flow(spline1))	voltage
+	231	v(n.x2d.nsg13_lv_pmos#flow(spline2))	voltage
+	232	v(n.x2d.nsg13_lv_pmos#flow(spline3))	voltage
+	233	v(n.x2d.nsg13_lv_pmos#flow(spline4))	voltage
+	234	v(n.x2d.nsg13_lv_pmos#flow(spline5))	voltage
+	235	v(n.x2d.nsg13_lv_pmos#flow(spline6))	voltage
+	236	v(n.x2d.nsg13_lv_pmos#flow(spline7))	voltage
+	237	v(n.x2d.nsg13_lv_pmos#flow(spline8))	voltage
+	238	v(n.x2d.nsg13_lv_pmos#flow(spline9))	voltage
+	239	v(n.x2d.nsg13_lv_pmos#implicit_equation_0)	voltage
+	240	v(n.x2d.nsg13_lv_pmos#implicit_equation_1)	voltage
+	241	v(n.x2d.nsg13_lv_pmos#implicit_equation_2)	voltage
+	242	v(n.x3a.nsg13_lv_nmos#bd)	voltage
+	243	v(n.x3a.nsg13_lv_nmos#bi)	voltage
+	244	v(n.x3a.nsg13_lv_nmos#bp)	voltage
+	245	v(n.x3a.nsg13_lv_nmos#bs)	voltage
+	246	v(n.x3a.nsg13_lv_nmos#di)	voltage
+	247	v(n.x3a.nsg13_lv_nmos#gp)	voltage
+	248	v(n.x3a.nsg13_lv_nmos#int1)	voltage
+	249	v(n.x3a.nsg13_lv_nmos#int2)	voltage
+	250	v(n.x3a.nsg13_lv_nmos#int3)	voltage
+	251	v(n.x3a.nsg13_lv_nmos#int4)	voltage
+	252	v(n.x3a.nsg13_lv_nmos#int5)	voltage
+	253	v(n.x3a.nsg13_lv_nmos#int6)	voltage
+	254	v(n.x3a.nsg13_lv_nmos#int7)	voltage
+	255	v(n.x3a.nsg13_lv_nmos#int8)	voltage
+	256	v(n.x3a.nsg13_lv_nmos#int9)	voltage
+	257	v(n.x3a.nsg13_lv_nmos#noi)	voltage
+	258	v(n.x3a.nsg13_lv_nmos#si)	voltage
+	259	v(n.x3a.nsg13_lv_nmos#flow(noii))	voltage
+	260	v(n.x3a.nsg13_lv_nmos#flow(res1))	voltage
+	261	v(n.x3a.nsg13_lv_nmos#flow(res2))	voltage
+	262	v(n.x3a.nsg13_lv_nmos#flow(res3))	voltage
+	263	v(n.x3a.nsg13_lv_nmos#flow(res4))	voltage
+	264	v(n.x3a.nsg13_lv_nmos#flow(res5))	voltage
+	265	v(n.x3a.nsg13_lv_nmos#flow(res6))	voltage
+	266	v(n.x3a.nsg13_lv_nmos#flow(res7))	voltage
+	267	v(n.x3a.nsg13_lv_nmos#flow(res8))	voltage
+	268	v(n.x3a.nsg13_lv_nmos#flow(res9))	voltage
+	269	v(n.x3a.nsg13_lv_nmos#flow(spline1))	voltage
+	270	v(n.x3a.nsg13_lv_nmos#flow(spline2))	voltage
+	271	v(n.x3a.nsg13_lv_nmos#flow(spline3))	voltage
+	272	v(n.x3a.nsg13_lv_nmos#flow(spline4))	voltage
+	273	v(n.x3a.nsg13_lv_nmos#flow(spline5))	voltage
+	274	v(n.x3a.nsg13_lv_nmos#flow(spline6))	voltage
+	275	v(n.x3a.nsg13_lv_nmos#flow(spline7))	voltage
+	276	v(n.x3a.nsg13_lv_nmos#flow(spline8))	voltage
+	277	v(n.x3a.nsg13_lv_nmos#flow(spline9))	voltage
+	278	v(n.x3a.nsg13_lv_nmos#implicit_equation_0)	voltage
+	279	v(n.x3a.nsg13_lv_nmos#implicit_equation_1)	voltage
+	280	v(n.x3a.nsg13_lv_nmos#implicit_equation_2)	voltage
+	281	v(n.x3b.nsg13_lv_nmos#bd)	voltage
+	282	v(n.x3b.nsg13_lv_nmos#bi)	voltage
+	283	v(n.x3b.nsg13_lv_nmos#bp)	voltage
+	284	v(n.x3b.nsg13_lv_nmos#bs)	voltage
+	285	v(n.x3b.nsg13_lv_nmos#di)	voltage
+	286	v(n.x3b.nsg13_lv_nmos#gp)	voltage
+	287	v(n.x3b.nsg13_lv_nmos#int1)	voltage
+	288	v(n.x3b.nsg13_lv_nmos#int2)	voltage
+	289	v(n.x3b.nsg13_lv_nmos#int3)	voltage
+	290	v(n.x3b.nsg13_lv_nmos#int4)	voltage
+	291	v(n.x3b.nsg13_lv_nmos#int5)	voltage
+	292	v(n.x3b.nsg13_lv_nmos#int6)	voltage
+	293	v(n.x3b.nsg13_lv_nmos#int7)	voltage
+	294	v(n.x3b.nsg13_lv_nmos#int8)	voltage
+	295	v(n.x3b.nsg13_lv_nmos#int9)	voltage
+	296	v(n.x3b.nsg13_lv_nmos#noi)	voltage
+	297	v(n.x3b.nsg13_lv_nmos#si)	voltage
+	298	v(n.x3b.nsg13_lv_nmos#flow(noii))	voltage
+	299	v(n.x3b.nsg13_lv_nmos#flow(res1))	voltage
+	300	v(n.x3b.nsg13_lv_nmos#flow(res2))	voltage
+	301	v(n.x3b.nsg13_lv_nmos#flow(res3))	voltage
+	302	v(n.x3b.nsg13_lv_nmos#flow(res4))	voltage
+	303	v(n.x3b.nsg13_lv_nmos#flow(res5))	voltage
+	304	v(n.x3b.nsg13_lv_nmos#flow(res6))	voltage
+	305	v(n.x3b.nsg13_lv_nmos#flow(res7))	voltage
+	306	v(n.x3b.nsg13_lv_nmos#flow(res8))	voltage
+	307	v(n.x3b.nsg13_lv_nmos#flow(res9))	voltage
+	308	v(n.x3b.nsg13_lv_nmos#flow(spline1))	voltage
+	309	v(n.x3b.nsg13_lv_nmos#flow(spline2))	voltage
+	310	v(n.x3b.nsg13_lv_nmos#flow(spline3))	voltage
+	311	v(n.x3b.nsg13_lv_nmos#flow(spline4))	voltage
+	312	v(n.x3b.nsg13_lv_nmos#flow(spline5))	voltage
+	313	v(n.x3b.nsg13_lv_nmos#flow(spline6))	voltage
+	314	v(n.x3b.nsg13_lv_nmos#flow(spline7))	voltage
+	315	v(n.x3b.nsg13_lv_nmos#flow(spline8))	voltage
+	316	v(n.x3b.nsg13_lv_nmos#flow(spline9))	voltage
+	317	v(n.x3b.nsg13_lv_nmos#implicit_equation_0)	voltage
+	318	v(n.x3b.nsg13_lv_nmos#implicit_equation_1)	voltage
+	319	v(n.x3b.nsg13_lv_nmos#implicit_equation_2)	voltage
+	320	v(n.x4.nsg13_lv_pmos#bd)	voltage
+	321	v(n.x4.nsg13_lv_pmos#bi)	voltage
+	322	v(n.x4.nsg13_lv_pmos#bp)	voltage
+	323	v(n.x4.nsg13_lv_pmos#bs)	voltage
+	324	v(n.x4.nsg13_lv_pmos#di)	voltage
+	325	v(n.x4.nsg13_lv_pmos#gp)	voltage
+	326	v(n.x4.nsg13_lv_pmos#int1)	voltage
+	327	v(n.x4.nsg13_lv_pmos#int2)	voltage
+	328	v(n.x4.nsg13_lv_pmos#int3)	voltage
+	329	v(n.x4.nsg13_lv_pmos#int4)	voltage
+	330	v(n.x4.nsg13_lv_pmos#int5)	voltage
+	331	v(n.x4.nsg13_lv_pmos#int6)	voltage
+	332	v(n.x4.nsg13_lv_pmos#int7)	voltage
+	333	v(n.x4.nsg13_lv_pmos#int8)	voltage
+	334	v(n.x4.nsg13_lv_pmos#int9)	voltage
+	335	v(n.x4.nsg13_lv_pmos#noi)	voltage
+	336	v(n.x4.nsg13_lv_pmos#si)	voltage
+	337	v(n.x4.nsg13_lv_pmos#flow(noii))	voltage
+	338	v(n.x4.nsg13_lv_pmos#flow(res1))	voltage
+	339	v(n.x4.nsg13_lv_pmos#flow(res2))	voltage
+	340	v(n.x4.nsg13_lv_pmos#flow(res3))	voltage
+	341	v(n.x4.nsg13_lv_pmos#flow(res4))	voltage
+	342	v(n.x4.nsg13_lv_pmos#flow(res5))	voltage
+	343	v(n.x4.nsg13_lv_pmos#flow(res6))	voltage
+	344	v(n.x4.nsg13_lv_pmos#flow(res7))	voltage
+	345	v(n.x4.nsg13_lv_pmos#flow(res8))	voltage
+	346	v(n.x4.nsg13_lv_pmos#flow(res9))	voltage
+	347	v(n.x4.nsg13_lv_pmos#flow(spline1))	voltage
+	348	v(n.x4.nsg13_lv_pmos#flow(spline2))	voltage
+	349	v(n.x4.nsg13_lv_pmos#flow(spline3))	voltage
+	350	v(n.x4.nsg13_lv_pmos#flow(spline4))	voltage
+	351	v(n.x4.nsg13_lv_pmos#flow(spline5))	voltage
+	352	v(n.x4.nsg13_lv_pmos#flow(spline6))	voltage
+	353	v(n.x4.nsg13_lv_pmos#flow(spline7))	voltage
+	354	v(n.x4.nsg13_lv_pmos#flow(spline8))	voltage
+	355	v(n.x4.nsg13_lv_pmos#flow(spline9))	voltage
+	356	v(n.x4.nsg13_lv_pmos#implicit_equation_0)	voltage
+	357	v(n.x4.nsg13_lv_pmos#implicit_equation_1)	voltage
+	358	v(n.x4.nsg13_lv_pmos#implicit_equation_2)	voltage
+	359	v(n.x5a.nsg13_lv_nmos#bd)	voltage
+	360	v(n.x5a.nsg13_lv_nmos#bi)	voltage
+	361	v(n.x5a.nsg13_lv_nmos#bp)	voltage
+	362	v(n.x5a.nsg13_lv_nmos#bs)	voltage
+	363	v(n.x5a.nsg13_lv_nmos#di)	voltage
+	364	v(n.x5a.nsg13_lv_nmos#gp)	voltage
+	365	v(n.x5a.nsg13_lv_nmos#int1)	voltage
+	366	v(n.x5a.nsg13_lv_nmos#int2)	voltage
+	367	v(n.x5a.nsg13_lv_nmos#int3)	voltage
+	368	v(n.x5a.nsg13_lv_nmos#int4)	voltage
+	369	v(n.x5a.nsg13_lv_nmos#int5)	voltage
+	370	v(n.x5a.nsg13_lv_nmos#int6)	voltage
+	371	v(n.x5a.nsg13_lv_nmos#int7)	voltage
+	372	v(n.x5a.nsg13_lv_nmos#int8)	voltage
+	373	v(n.x5a.nsg13_lv_nmos#int9)	voltage
+	374	v(n.x5a.nsg13_lv_nmos#noi)	voltage
+	375	v(n.x5a.nsg13_lv_nmos#si)	voltage
+	376	v(n.x5a.nsg13_lv_nmos#flow(noii))	voltage
+	377	v(n.x5a.nsg13_lv_nmos#flow(res1))	voltage
+	378	v(n.x5a.nsg13_lv_nmos#flow(res2))	voltage
+	379	v(n.x5a.nsg13_lv_nmos#flow(res3))	voltage
+	380	v(n.x5a.nsg13_lv_nmos#flow(res4))	voltage
+	381	v(n.x5a.nsg13_lv_nmos#flow(res5))	voltage
+	382	v(n.x5a.nsg13_lv_nmos#flow(res6))	voltage
+	383	v(n.x5a.nsg13_lv_nmos#flow(res7))	voltage
+	384	v(n.x5a.nsg13_lv_nmos#flow(res8))	voltage
+	385	v(n.x5a.nsg13_lv_nmos#flow(res9))	voltage
+	386	v(n.x5a.nsg13_lv_nmos#flow(spline1))	voltage
+	387	v(n.x5a.nsg13_lv_nmos#flow(spline2))	voltage
+	388	v(n.x5a.nsg13_lv_nmos#flow(spline3))	voltage
+	389	v(n.x5a.nsg13_lv_nmos#flow(spline4))	voltage
+	390	v(n.x5a.nsg13_lv_nmos#flow(spline5))	voltage
+	391	v(n.x5a.nsg13_lv_nmos#flow(spline6))	voltage
+	392	v(n.x5a.nsg13_lv_nmos#flow(spline7))	voltage
+	393	v(n.x5a.nsg13_lv_nmos#flow(spline8))	voltage
+	394	v(n.x5a.nsg13_lv_nmos#flow(spline9))	voltage
+	395	v(n.x5a.nsg13_lv_nmos#implicit_equation_0)	voltage
+	396	v(n.x5a.nsg13_lv_nmos#implicit_equation_1)	voltage
+	397	v(n.x5a.nsg13_lv_nmos#implicit_equation_2)	voltage
+	398	v(n.x5b.nsg13_lv_nmos#bd)	voltage
+	399	v(n.x5b.nsg13_lv_nmos#bi)	voltage
+	400	v(n.x5b.nsg13_lv_nmos#bp)	voltage
+	401	v(n.x5b.nsg13_lv_nmos#bs)	voltage
+	402	v(n.x5b.nsg13_lv_nmos#di)	voltage
+	403	v(n.x5b.nsg13_lv_nmos#gp)	voltage
+	404	v(n.x5b.nsg13_lv_nmos#int1)	voltage
+	405	v(n.x5b.nsg13_lv_nmos#int2)	voltage
+	406	v(n.x5b.nsg13_lv_nmos#int3)	voltage
+	407	v(n.x5b.nsg13_lv_nmos#int4)	voltage
+	408	v(n.x5b.nsg13_lv_nmos#int5)	voltage
+	409	v(n.x5b.nsg13_lv_nmos#int6)	voltage
+	410	v(n.x5b.nsg13_lv_nmos#int7)	voltage
+	411	v(n.x5b.nsg13_lv_nmos#int8)	voltage
+	412	v(n.x5b.nsg13_lv_nmos#int9)	voltage
+	413	v(n.x5b.nsg13_lv_nmos#noi)	voltage
+	414	v(n.x5b.nsg13_lv_nmos#si)	voltage
+	415	v(n.x5b.nsg13_lv_nmos#flow(noii))	voltage
+	416	v(n.x5b.nsg13_lv_nmos#flow(res1))	voltage
+	417	v(n.x5b.nsg13_lv_nmos#flow(res2))	voltage
+	418	v(n.x5b.nsg13_lv_nmos#flow(res3))	voltage
+	419	v(n.x5b.nsg13_lv_nmos#flow(res4))	voltage
+	420	v(n.x5b.nsg13_lv_nmos#flow(res5))	voltage
+	421	v(n.x5b.nsg13_lv_nmos#flow(res6))	voltage
+	422	v(n.x5b.nsg13_lv_nmos#flow(res7))	voltage
+	423	v(n.x5b.nsg13_lv_nmos#flow(res8))	voltage
+	424	v(n.x5b.nsg13_lv_nmos#flow(res9))	voltage
+	425	v(n.x5b.nsg13_lv_nmos#flow(spline1))	voltage
+	426	v(n.x5b.nsg13_lv_nmos#flow(spline2))	voltage
+	427	v(n.x5b.nsg13_lv_nmos#flow(spline3))	voltage
+	428	v(n.x5b.nsg13_lv_nmos#flow(spline4))	voltage
+	429	v(n.x5b.nsg13_lv_nmos#flow(spline5))	voltage
+	430	v(n.x5b.nsg13_lv_nmos#flow(spline6))	voltage
+	431	v(n.x5b.nsg13_lv_nmos#flow(spline7))	voltage
+	432	v(n.x5b.nsg13_lv_nmos#flow(spline8))	voltage
+	433	v(n.x5b.nsg13_lv_nmos#flow(spline9))	voltage
+	434	v(n.x5b.nsg13_lv_nmos#implicit_equation_0)	voltage
+	435	v(n.x5b.nsg13_lv_nmos#implicit_equation_1)	voltage
+	436	v(n.x5b.nsg13_lv_nmos#implicit_equation_2)	voltage
+	437	v(n.x7.nsg13_lv_nmos#bd)	voltage
+	438	v(n.x7.nsg13_lv_nmos#bi)	voltage
+	439	v(n.x7.nsg13_lv_nmos#bp)	voltage
+	440	v(n.x7.nsg13_lv_nmos#bs)	voltage
+	441	v(n.x7.nsg13_lv_nmos#di)	voltage
+	442	v(n.x7.nsg13_lv_nmos#gp)	voltage
+	443	v(n.x7.nsg13_lv_nmos#int1)	voltage
+	444	v(n.x7.nsg13_lv_nmos#int2)	voltage
+	445	v(n.x7.nsg13_lv_nmos#int3)	voltage
+	446	v(n.x7.nsg13_lv_nmos#int4)	voltage
+	447	v(n.x7.nsg13_lv_nmos#int5)	voltage
+	448	v(n.x7.nsg13_lv_nmos#int6)	voltage
+	449	v(n.x7.nsg13_lv_nmos#int7)	voltage
+	450	v(n.x7.nsg13_lv_nmos#int8)	voltage
+	451	v(n.x7.nsg13_lv_nmos#int9)	voltage
+	452	v(n.x7.nsg13_lv_nmos#noi)	voltage
+	453	v(n.x7.nsg13_lv_nmos#si)	voltage
+	454	v(n.x7.nsg13_lv_nmos#flow(noii))	voltage
+	455	v(n.x7.nsg13_lv_nmos#flow(res1))	voltage
+	456	v(n.x7.nsg13_lv_nmos#flow(res2))	voltage
+	457	v(n.x7.nsg13_lv_nmos#flow(res3))	voltage
+	458	v(n.x7.nsg13_lv_nmos#flow(res4))	voltage
+	459	v(n.x7.nsg13_lv_nmos#flow(res5))	voltage
+	460	v(n.x7.nsg13_lv_nmos#flow(res6))	voltage
+	461	v(n.x7.nsg13_lv_nmos#flow(res7))	voltage
+	462	v(n.x7.nsg13_lv_nmos#flow(res8))	voltage
+	463	v(n.x7.nsg13_lv_nmos#flow(res9))	voltage
+	464	v(n.x7.nsg13_lv_nmos#flow(spline1))	voltage
+	465	v(n.x7.nsg13_lv_nmos#flow(spline2))	voltage
+	466	v(n.x7.nsg13_lv_nmos#flow(spline3))	voltage
+	467	v(n.x7.nsg13_lv_nmos#flow(spline4))	voltage
+	468	v(n.x7.nsg13_lv_nmos#flow(spline5))	voltage
+	469	v(n.x7.nsg13_lv_nmos#flow(spline6))	voltage
+	470	v(n.x7.nsg13_lv_nmos#flow(spline7))	voltage
+	471	v(n.x7.nsg13_lv_nmos#flow(spline8))	voltage
+	472	v(n.x7.nsg13_lv_nmos#flow(spline9))	voltage
+	473	v(n.x7.nsg13_lv_nmos#implicit_equation_0)	voltage
+	474	v(n.x7.nsg13_lv_nmos#implicit_equation_1)	voltage
+	475	v(n.x7.nsg13_lv_nmos#implicit_equation_2)	voltage
+	476	v(out)	voltage
+	477	v(vb1)	voltage
+	478	i(vb1)	current
+	479	v(vb2)	voltage
+	480	i(vb2)	current
+	481	v(vdd)	voltage
+	482	i(vdd)	current
+	483	i(vin)	current
+Values:
+ 0	6.587336433962055e-01
+	1.118894290509697e-01
+	4.224252229899510e-01
+	6.591122921233553e-01
+	2.958594469550840e-01
+	8.733505514084237e-01
+	4.526422905717661e-01
+	3.000000000000000e-01
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	3.001265185981666e-01
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	3.000000000002694e-01
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	6.587336433974239e-01
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	6.591122921245699e-01
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	6.587336433974051e-01
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	6.591122921245919e-01
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	4.224252229276528e-01
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	4.224252229275575e-01
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	5.000000000003946e-01
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	4.526422904931487e-01
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	4.526422904664421e-01
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	5.999999999956632e-01
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	3.001265185978993e-01
+	5.000000000000000e-01
+	3.764766276503906e-13
+	6.000000000000000e-01
+	-1.315170194970960e-12
+	1.200000000000000e+00
+	-1.347761866969586e-06
+	3.335526299608205e-14
+

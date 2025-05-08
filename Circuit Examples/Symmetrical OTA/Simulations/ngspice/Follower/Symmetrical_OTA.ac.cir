@@ -1,0 +1,21 @@
+Simulation of the symmetrical OTA designed with the sEKV model
+
+.lib /Simulations/models/cornerMOSlv.lib mos_tt ; model file for PSP
+.include size_bias.par ; Size and bias values
+.include pulse.par ; Parameters for the PULSE parameters used in the netlist
+.include Symmetrical_OTA.net ; Circuit netlist
+
+.control
+ op
+ save v(out)
+ write $inputdir/Symmetrical_OTA.ac.op
+* reset all
+ ac dec 41 10 100MEG
+ let Aphdeg=180/PI*vp(out)
+ meas ac fc when Aphdeg=-45
+ set wr_singlescale
+ set wr_vecnames
+* wrdata $inputdir/Symmetrical_OTA.ac.dat AmagdB Aphdeg
+ wrdata $inputdir/Symmetrical_OTA.ac.dat vr(out) vi(out)
+.endc
+.end

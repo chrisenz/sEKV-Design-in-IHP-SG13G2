@@ -9,5 +9,6 @@ The sEKV design methodology is illustrated with several simple examples you can 
 * [Cascode Gain Stage with Bias](/Circuit%20Examples/Cascode%20Gain%20Stage%20with%20Bias/Cascode_gain_stage.pdf).
 * [Five transistors simple OTA](/Circuit%20Examples/Simple%20OTA/Simple_OTA.pdf).
 * [Symmetrical OTA](/Circuit%20Examples/Symmetrical%20OTA/Symmetrical_OTA.pdf).
+* [Miller OTA](/Circuit%20Examples/Miller%20OTA/Miller_OTA.pdf).
 
 The theoretical predictions are validated using ngspice and the models provided by the IHP PDK for the PSP compact model. In order to run the example in the Jupyter or Quarto Notebooks you need to install ngspice according to the instruction given in the [ngspice installation file](ngspice_installation.md).

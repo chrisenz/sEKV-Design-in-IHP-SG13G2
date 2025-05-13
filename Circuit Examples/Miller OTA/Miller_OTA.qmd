@@ -1,0 +1,3067 @@
+---
+title: "Design of the Miller OTA"
+subtitle: "Version 1"
+author: "Christian Enz"
+affiliation: "EPFL"
+date: today
+execute:
+  echo: false
+  warning: false
+toc: true
+number-sections: true
+number-depth: 3
+highlight-style: pygments
+bibliography: references.bib
+csl: ieee.csl
+format: 
+  html:
+    include-in-header: mathjax.html
+    code-fold: true
+    html-math-method: mathjax
+    css: styles.css
+  pdf:
+    keep-tex: true
+    link-citations: true
+    pdf-engine: pdflatex
+    documentclass: scrreprt
+    papersize: a4
+    geometry: 
+      - top=20mm
+      - bottom=20mm
+      - left=20mm
+      - right=20mm
+---
+
+```{python}
+#| init_cell: true
+
+from ekv_functions import *
+
+import pandas as pd
+import matplotlib.pyplot as plt
+import subprocess
+import shutil
+import os
+import os.path as op
+import sys
+import re
+
+from IPython.display import Markdown
+from tabulate import tabulate
+from matplotlib.ticker import EngFormatter
+
+#plt.rcParams['text.usetex'] = True
+plt.rcParams['svg.fonttype'] = 'none'
+plt.rcParams['pdf.fonttype'] = 42
+#plt.rcParams['ps.fonttype'] = 42
+plt.rcParams['font.family'] = 'Arial'
+#plt.rcParams['mathtext.fontset'] = 'cm'
+
+plt.rcParams['mathtext.fontset'] = 'custom'
+plt.rcParams['mathtext.rm'] = 'Arial'
+plt.rcParams['mathtext.it'] = 'Arial:italic'
+plt.rcParams['mathtext.bf'] = 'Arial:bold'
+
+sys.path.append(".")
+inkscapePath = r"C:\\Program Files\\Inkscape\\bin\\inkscape.exe"
+#savePath = "./Figures/"
+savePath = "./Plots/"
+
+#plt.rcParams['text.usetex'] = True
+plt.rcParams['svg.fonttype'] = 'none'
+plt.rcParams['pdf.fonttype'] = 42
+#plt.rcParams['ps.fonttype'] = 42
+plt.rcParams['font.family'] = 'Arial'
+#plt.rcParams['mathtext.fontset'] = 'cm'
+
+plt.rcParams['mathtext.fontset'] = 'custom'
+plt.rcParams['mathtext.rm'] = 'Arial'
+plt.rcParams['mathtext.it'] = 'Arial:italic'
+plt.rcParams['mathtext.bf'] = 'Arial:bold'
+
+plt.style.use('plt_style_medium.mplstyle')
+lw=1
+msize=4
+mevery=4
+
+otaName="Miller_OTA"
+version = "_v1" # Allows you to save different versions
+#newDesign=True
+newDesign=False
+#newSim=True
+newSim=False
+refloat=r'.*?([+-]?\d+([.]\d*)?([eE][+-]?\d+)?|[.]\d+([eE][+-]?\d+)?)'
+```
+
+# Introduction
+
+![Schematic of the Miller OTA.](Figures/Miller_OTA_schematic.png){#fig-miller_ota_schematic}
+
+::: {.callout-note}
+Note that all nMOS transistors in @fig-miller_ota_schematic have an odd number and all the pMOS transistors an even number which explains the numbering process.
+:::
+
+This notebook presents the analysis, design and simulation of the Miller OTA which schematic is presented in @fig-miller_ota_schematic. The design phase is using the sEKV model and the inversion coefficient approach @bib:enz:book:2006, @bib:enz:sscmag:autumn:2017, @bib:enz:sscmag:winter:2017. The Miller OTA is a two-stage OTA which requires frequency compensation to ensure that it will remain stable in all feedback configurations. The compensation is achieved by adding capacitor $C_c$ which takes advantage of the Miller effect hence its name of Miller compensation or Miller OTA. We will see below that in differential mode the effects of the source transconductances on the common source node voltage are actually canceled.
+
+We will start with a detailed analysis of the OTA which will allow to derive all the design equations that will be used in the design phase. The OTA is then designed for a given set of specifications for the chosen IHP SG13G2 130nm BiCMOS technology @bib:ihp:2025. We have selected this technology because IHP provides an open source PDK which is then used for the validation of the design by simulation with ngspice @bib:ngspice:2024 using the PSP compact model @bib:psp103.6:2017 provided by the open source PDK @bib:ihp:2025.
+
+# Analysis
+## Small-signal analysis
+
+![Small-signal schematic of the Miller OTA.](Figures/Small_signal_schematic.png){#fig-ssc}
+
+::: {.callout-note}
+This small-signal analysis and the frequency compensation analysis is largely based on @bib:allen:book:2012.
+:::
+
+We start with the small-signal analysis. The small-signal schematic corresponding to the Miller OTA is shown in @fig-ssc. Assuming perfect matching and differential operation $\Delta V_{Gb1} = -\Delta V_{Ga1} = V_{id}/2$, the voltage at the source of M~1a~-M~1b~ (node 3) remains unchanged and hence $\Delta V_3=0$. The source transconductances can then be omitted leading to the simplified small-signal circuit in differential mode shown in @fig-ssc_dm.
+
+![Small-signal schematic of the Miller OTA in differential mode.](Figures/Small_signal_schematic_dm.png){#fig-ssc_dm}
+
+If the capacitance $C_4$ at the current mirror node 4 is neglected and recalling that $G_4 = G_{m4} + G_{ds4} \cong G_{m4}$, then $\Delta V_4 = -G_{m1}/G_{m4} \cdot V_{id}/2$. The two transconductances connected to node 1 can then be replaced by a single transconductance resulting in the simplified schematic shown in @fig-simplified_ssc_dm.
+
+![Simplified small-signal schematic of the Miller OTA in differential mode.](Figures/Simplified_small_signal_schematic.png){#fig-simplified_ssc_dm}
+
+The small-signal differential gain of the simplified circuit shown in @fig-simplified_ssc_dm is then given by
+\begin{align}
+  A_{dm} &\triangleq \frac{\Delta V_{out}}{\Delta V_{id}} = A_{dc} \cdot \frac{1-s/z_1}{(1-s/p_1)(1-s/p_2)}\\
+  &= A_{dc} \cdot \frac{1+n_1\,s}{1+d_1\,s+d_2\,s^2} = A_{dc} \cdot \frac{1-\frac{s}{z_1}}{1-\frac{s}{p_1+p_2}+\frac{s^2}{p_1\,p_2}}
+\end{align}
+with
+\begin{align}
+  A_{dc} &= \frac{G_{m1}}{G_1} \cdot \frac{G_{m2}}{G_2},\\
+  n_1 &= -\frac{1}{z_1} = -\frac{C_c}{G_{m2}},\\
+  d_1 &= -\left(\frac{1}{p_1}+\frac{1}{p_2}\right)
+  = \frac{C_1}{G_1}+\frac{C_2}{G_2}+\frac{C_c}{G_1}\,\left(1+\frac{G_1}{G_2}+\frac{G_{m2}}{G_2}\right),\\
+  d_2 &= \frac{1}{p_1\,p_2} = \frac{C_c\,C_2+C_c\,C_1+C_1\,C_2}{G_1\,G_2}.
+\end{align}
+
+Note that $G_{m1}/G_1$ and $G_{m2}/G_2$ are the voltage gains of the first and second stage, respectively. $G_1$ and $G_2$ are the total conductances at nodes 1 and 2
+\begin{align}
+  G_1 &= G_{ds1b} + G_{ds4b},\\
+  G_2 &= G_{ds2} + G_{ds5b},
+\end{align}
+whereas $C_1$ and $C_2$ are the total capacitances at nodes 1 and 2. Note that $C_2$ is usually dominated by $C_L$.
+
+If we ignore the compensation capacitor ($C_c=0$), the zero disappears and the two poles are simply given by
+\begin{align}
+  p_1' &= -\frac{G_1}{C_1},\\
+  p_2' &= -\frac{G_2}{C_2}.
+\end{align}
+We see that the poles are actually associated to the nodes 1 and 2 (output).
+
+The compensation capacitor introduces a right half-plane (RHP) zero
+\begin{equation}
+  z_1=\frac{G_{m2}}{C_c}
+\end{equation}
+and the transfer function $A_{dm}$ has two real poles $p_1$ and $p_2$. Assuming that $C_1 \ll C_2$ and that $G_1$ and $G_2$ are of the same order of magnitude, the poles can be considered as widely separated $|p_1| \ll |p_2|$ then
+\begin{equation}
+  d_1 \cong -\frac{1}{p_1}
+  = \frac{C_1}{G_1}+\frac{C_2}{G_2}+\frac{C_c}{G_1} \cdot \left(1+\frac{G_1}{G_2}+\frac{G_{m2}}{G_2}\right).
+\end{equation}
+We can further assume that $G_{m2}/G_2 \gg 1$ and the dominant pole $p_1$ is approximately given by
+\begin{equation}
+  p_1 \cong -\frac{G_1\,G_2}{G_{m2}\,C_c}.
+\end{equation}
+The gain-bandwidth product $GBW$ is then approximately given by
+\begin{equation}
+  GBW = |p_1| \cdot A_{dc} \cong \frac{G_{m1}}{C_c}.
+\end{equation}
+Contrary to the single-stage OTAs (simple OTA, symmetrical OTA, telescopic OTA), the $GBW$ is no more set by the load capacitance but by the compensation capacitance $C_c$. Note that $|p_2|$ must be at least equal to $GBW$ for the above approximation to hold
+\begin{equation}
+  GBW < \frac{G_{m2}}{C_2}.
+\end{equation}
+
+![The mechanism of pole splitting.](Figures/Pole_splitting.png){#fig-pole_splitting}
+
+![The frequency compensation process.](Figures/Compensation.png){#fig-compensation}
+
+The non-dominant pole $p_2$ is then approximately given by
+\begin{equation}
+  p_2 \cong \frac{1}{p_1\,d_2} \cong -\frac{G_{m2} C_c}{C_c C_2 + C_c C_1 + C_1 C_2}.
+\end{equation}
+We see that the dominant pole magnitude $|p_1|$ decreases as $C_c$ increases, whereas $|p_2|$ increases as $C_c$ increases. Thus, increasing $C_c$ causes the poles to split apart as illustrated in @fig-pole_splitting. If $C_2$ and $C_c$ can be considered much larger than $C_1$, the non-dominant pole is approximately set by the output capacitance
+\begin{equation}
+  p_2 \cong -\frac{G_{m2}}{C_2}.
+\end{equation}
+
+It can be shown that if the zero is ten times higher than the $GBW$, then in order to achieve a phase margin better than $60^{\circ}$, the second pole must be placed at least 2.2 times higher than the $GBW$. This translates into the following constraints
+\begin{align}
+  |z_1|> 10\,GBW\;\Rightarrow\;\frac{G_{m2}}{C_c}>10\,\frac{G_{m1}}{C_c}\;\Rightarrow\;G_{m2}>10\,G_{m1},\\
+%  |p_2|>2.2\,GBW\;\Rightarrow\;\frca{G_{m2}}{C_o}>2.2\,\frac{G_{m1}}{C_c}.
+\end{align}
+which results in
+\begin{equation}
+  C_c > 2.2\,\frac{G_{m1}}{G_{m2}}\,C_2 > 0.22\,C_2.
+\end{equation}
+
+The dominant-pole is often called a Miller pole because it takes advantage of the Miller effect. The dominant-pole can actually be found by using the Miller approximation. Using the result obtained earlier without the compensation capacitor and replacing $C_1$ by the Miller capacitance
+\begin{equation}
+  C_M \cong \frac{G_{m2}}{G_2}\cdot C_2
+\end{equation}
+results in
+\begin{equation}
+  p_1 \cong -\frac{G_1 G_2}{G_{m2}\,C_c}
+\end{equation}
+which is identical to the result found above. However, the Miller approximation does account for the RHP zero. The latter introduces very undesirable effects with regards to stability: it increases the phase shift and at the same time increases the magnitude. The effects of the RHP zero can be mitigated by different means @bib:allen:book:2012.
+
+## Noise analysis
+
+![Small-signal schematic for noise analysis.](Figures/Noise_schematic.png){#fig-noise_schematic}
+
+The small-signal schematic for the noise analysis is shown in @fig-noise_schematic. We can reuse the noise analysis performed for the simple OTA. If we neglect the capacitances at the 1^st^-stage current mirror node and assume a perfect matching, the noise coming from the first stage can be modeled by the noisy current source $I_{n1}$ due to transistors M~1a~-M~1b~ and M~3a~-M~3b~, whereas $I_{n2}$ models the noise coming from transistors M~2~ and M~5b~. The input-referred equivalent noise voltage is then given by
+\begin{equation}
+  V_{neq} = \frac{I_{n1}}{G_{m1}} - \frac{G_1}{G_{m1}\,G_{m2}} \cdot \frac{1+s\,(C_1+C_c)/G_1}{1-s\,C_c/G_{m2}} \cdot I_{n2}.
+\end{equation}
+For $\omega \ll G_1/(C_1+C_c)<G_{m2}/C_c$, $V_{neq}$ can be approximated by
+\begin{equation}
+  V_{neq} \cong \frac{I_{n1}}{G_{m1}} - \frac{G_1}{G_{m1}\,G_{m2}} \cdot I_{n2}.
+\end{equation}
+
+The input-referred PSD is then given by
+\begin{equation}
+  S_{V_{neq}} \cong \frac{S_{I_{n1}}}{G_{m1}^2} + \left(\frac{G_1}{G_{m1}\,G_{m2}}\right)^2 \cdot S_{I_{n2}}.
+\end{equation}
+
+### Input-referred thermal noise
+For thermal noise we have
+\begin{align}
+  S_{I_{n1}} &= 4 kT \cdot 2 \cdot (\gamma_{n1} \cdot G_{m1}+\gamma_{n4} \cdot G_{m4}),\\
+  S_{I_{n2}} &= 4 kT \cdot (\gamma_{n2} \cdot G_{m2}+2\gamma_{n5} \cdot G_{m5}).
+\end{align}
+
+The input-referred thermal noise resistance $R_{nin,th}$ is then given by
+\begin{equation}
+  R_{nin,th} = \frac{2 \gamma_{n1}}{G_{m1}} \cdot (1 + \eta_{th})
+\end{equation}
+where
+\begin{equation}
+  \eta_{th} = \frac{\gamma_{n4}}{\gamma_{n1}}\,\frac{G_{m4}}{G_{m1}} + \frac{G_1^2}{2 G_{m1}\,G_{m2}} \cdot \left(\frac{\gamma_{n2}}{\gamma_{n1}} + \frac{2\gamma_{n5}}{\gamma_{n1}} \cdot \frac{G_{m5}}{G_{m2}}\right)
+\end{equation}
+is the contribution of the current mirror M~4a~-M~4b~, 2^nd^-stage M~2~ and current mirror M~5a~-M~5b~ relative to that of the differential pair M~1a~-M~1b~.
+
+The input-referred thermal noise resistance $R_{nin,th}$ can also be written as
+\begin{equation}
+  R_{nin,th} = \frac{\gamma_{neq}}{G_{m1}}
+\end{equation}
+where $\gamma_{neq}$ is the amplifier equivalent thermal noise excess factor given by
+\begin{equation}
+  \gamma_{neq}= 2\,\gamma_{n1}\,(1+\eta_{th}) = 2\,\gamma_{n1}\,\left[1 + \frac{\gamma_{n4}}{\gamma_{n1}}\,\frac{G_{m4}}{G_{m1}} + \frac{G_1^2}{2 G_{m1}\,G_{m2}} \cdot \left(\frac{\gamma_{n2}}{\gamma_{n1}} + \frac{2\gamma_{n5}}{\gamma_{n1}} \cdot \frac{G_{m5}}{G_{m2}}\right)\right].
+\end{equation}
+We see that the contribution of the current mirror M~4a~-M~4b~ can be minimized by choosing $G_{m1} \gg G_{m4}$ (same as for the simple OTA). The contribution of M~2~ and M~5a~-M~5b~ are small thanks to the term
+\begin{equation}
+  \frac{G_1^2}{2 G_{m1}\,G_{m2}} = \frac{(G_{ds1}+G_{ds4})^2}{2 G_{m1}\,G_{m2}} \gg 1 
+\end{equation}
+which is in the order of the DC gain. The contribution of the current mirror M~5a~-M~5b~ can be made negligible by choosing $G_{m2} \gg G_{m5}$.
+
+### Input-referred flicker noise
+For flicker noise we have
+\begin{align}
+  S_{I_{n1}} &= \frac{4 kT}{f} \cdot 2 \cdot \left(G_{m1}^2\,\frac{\rho_n}{W_1 L_1} + G_{m4}^2\,\frac{\rho_p}{W_4 L_4}\right),\\
+  S_{I_{n2}} &= \frac{4 kT}{f} \cdot \left(G_{m2}^2\,\frac{\rho_p}{W_2 L_2} + 2 G_{m5}^2\,\frac{\rho_n}{W_5 L_5}\right).
+\end{align}
+
+The input-referred flicker noise resistance is then given by
+\begin{equation}
+  f \cdot R_{nin,fl} = 2\,\left[\frac{\rho_n}{W_1 L_1} + \left(\frac{G_{m4}}{G_{m1}}\right)^2\,\frac{\rho_p}{W_4 L_4}\right] + \left(\frac{G_1}{G_{m1}}\right)^2\,\left[\frac{\rho_p}{W_2 L_2} + 2\left(\frac{G_{m5}}{G_{m2}}\right)^2\,\frac{\rho_n}{W_5 L_5}\right]
+\end{equation}
+which can be written in terms of the individual contributions relative to that of the differential pair
+\begin{equation}
+  f \cdot R_{nin,fl} = \frac{2 \rho_n}{W_1 L_1} \cdot (1+\eta_{fl}),
+\end{equation}
+with
+\begin{equation}
+  \eta_{fl} = \left(\frac{G_{m4}}{G_{m1}}\right)^2\,\frac{\rho_p}{\rho_n}\,\frac{W_1 L_1}{W_4 L_4} + \frac{1}{2}\,\left(\frac{G_1}{G_{m1}}\right)^2\,\left[\frac{\rho_p}{\rho_n}\,\frac{W_1 L_1}{W_2 L_2} + 2\left(\frac{G_{m5}}{G_{m1}}\right)^2\,\frac{W_1 L_1}{W_5 L_5}\right].
+\end{equation}
+
+We see that the contribution of the current mirror M~4a~-M~4b~ can be minimized by choosing $G_{m1} \gg G_{m4}$ (same as for the simple OTA). The contribution of M~2~ and M~5a~-M~5b~ are small thanks to the first stage gain
+\begin{equation}
+  \left(\frac{G_1}{G_{m1}}\right)^2 = \left(\frac{G_{ds1}+G_{ds4}}{G_{m1}}\right)^2 \gg 1.
+\end{equation}
+The contribution of the current source M~5a~-M~5b~ can be made negligible by choosing $G_{m2} \gg G_{m5}$.
+
+## Input-referred offset voltage
+
+![Small-signal schematic for mismatch analysis.](Figures/Mismatch_schematic.png){#fig-mismatch_schematic}
+
+The estimation of the offset voltage can be handled similarly to the noise. It is essentially due to the first stage and is therefore similar to what was done for the simple OTA. Using the schematic shown in @fig-mismatch_schematic, we can derive the input-referred offset voltage variance as
+\begin{equation}
+  \sigma_{V_{os}}^2 = \sigma_{VT1}^2 + \left(\frac{G_{m4}}{G_{m1}}\right)^2 \cdot \sigma_{VT4}^2 + \left(\frac{I_b}{G_{m1}}\right)^2 \cdot \left(\sigma_{\beta 1}^2 + \sigma_{\beta 4}^2\right)
+\end{equation}
+where
+\begin{align}
+  \sigma_{VT1}^2 &= \frac{A_{VTn}^2}{W_1 L_1},\\
+  \sigma_{VT4}^2 &= \frac{A_{VTp}^2}{W_4 L_4},\\
+  \sigma_{\beta 1}^2 &= \frac{A_{\beta n}^2}{W_1 L_1},\\
+  \sigma_{\beta 4}^2 &= \frac{A_{\beta_p}^2}{W_4 L_4}.
+\end{align}
+
+We can rewrite the variance of the input-referred offset separating the contributions of the $V_T$- and $\beta$-mismatch
+\begin{equation}
+  \sigma_{V_{os}}^2 = \sigma_{V_T}^2 + \sigma_{\beta}^2
+\end{equation}
+where
+\begin{equation}
+  \sigma_{V_T}^2 = \sigma_{V_{T1}}^2 \cdot (1 + \xi_{V_T})
+\end{equation}
+and
+\begin{equation}
+  \sigma_{\beta}^2 = \left(\frac{I_b}{G_{m1}}\right)^2 \cdot \sigma_{\beta_1}^2 \cdot (1 + \xi_{\beta}).
+\end{equation}
+$\xi_{V_T}$ represents the $V_T$-mismatch contributions to the input-referred offset of the current mirror relative to that of the differential pair
+\begin{equation}
+  \xi_{V_T} = \left(\frac{G_{m4}}{G_{m1}}\right)^2 \cdot \left(\frac{A_{VTp}}{A_{VTn}}\right)^2 \cdot \frac{W_1 L_1}{W_4 L_4}
+\end{equation}
+and $\xi_{\beta}$ represents the $\beta$-mismatch contributions to the input-referred offset of the current mirror relative to that of the differential pair
+\begin{equation}
+  \xi_{\beta} = \left(\frac{A_{\beta p}}{A_{\beta n}}\right)^2 \cdot \frac{W_1 L_1}{W_4 L_4}.
+\end{equation}
+
+# Design
+## Specifications
+The OTA specifications are given in @tbl-ota_specs.
+
+::: {.callout-warning}
+An important limitation of the IHP SC13G2 BiCMOS technology @bib:ihp:2025 is the high output conductance and hence limited intrinsic gain of nMOS transistors. Because of this, the specification on the DC gain, that was initially set to 80 dB, has been downgraded to 70 dB.
+:::
+
+::: {.callout-note}
+The specifications given in @tbl-ota_specs are simplified specifications. They are mainly targeting the achievement of a certain gain-bandwidth product $GBW$ and DC gain at lowest current consumption. The $GBW$ sets the differential pair transconductance while the DC gain sets the output conductance. There is an additional specification on the random input-referred offset voltage which, if not met, might eventually require to increase the transistors area. There are no specifications on thermal noise since the transconductance is set by the $GBW$. There are no specifications on the flicker noise but if the corner frequency was set lower this would required to increase the transistors area. There are also no specifications on the slew-rate, which might be small because of the low-power objective. Finally, there are many more specifications such as CMRR, PSRR, input common-mode voltage range, output-voltage swing, etc... that are not discussed in this example.
+:::
+
+```{python}
+#| label: tbl-ota_specs
+#| tbl-cap: OTA specifications.
+
+from specs import *
+
+Adc=10**(AdcdB/20)
+wu=2*pi*GBWspec
+table = [["Minimum DC gain","$A_{{dc}}$",f'{AdcdB:.0f}',"$dB$"],
+         ["Minimum gain-bandwidth product","$GBW$",f'{GBWspec/1e6:.3f}',"$MHz$"],
+         ["Load capacitance","$C_L$",f'{CL/1e-12:.0f}',"$pF$"],
+         ["Maximum input-referred random offset voltage","$V_{{os}}$",f'{Vosmax/1e-3:.0f}',"$mV$"],
+         ["Phase margin","$PM$",f'{PMdeg:.0f}',"$^{\\circ}$"]
+         ]
+Markdown(tabulate(
+  table,
+  headers=["Specification","Symbol","Value","Unit"],
+  numalign="center",
+  stralign="center",
+  colalign=("left","center","center","center")
+))
+```
+
+## Process
+We will design the cascode gain stage for the open source IHP 13G2 BiCMOS process @bib:ihp:2025. The physical parameters are given in @tbl-physics_param, the global process parameters in @tbl-process_param and finally the MOSFET parameters in @tbl-mos_param. 
+
+::: {.callout-warning}
+The matching parameters for IHP 130nm are unknown. We will use those from a generic 180nm technology.
+:::
+
+```{python}
+#| label: tbl-physics_param
+#| tbl-cap: Physical parameters
+
+from ihp130g2_sekv import *
+
+table = [["$T$",f'{T:.0f}',"$K$"],
+         ["$U_T$",f'{UT/1e-3:.3f}',"$mV$"]
+         ]
+Markdown(tabulate(
+  table,
+  headers=["Parameter","Value","Unit"],
+  numalign="center",
+  stralign="center",
+  colalign=("center", "center", "center")
+))
+```
+
+```{python}
+#| label: tbl-process_param
+#| tbl-cap: Process parameters.
+
+table = [["$t_{{ox}}$",f'{tox/1e-9:.3f}',"$nm$","SiO~2~ oxyde thickness"],
+         ["$C_{{ox}}$",f'{Cox*1e3:.3f}',"$\\frac{{fF}}{{\\mu m^2}}$","Oxyde capacitance per unit area"],
+         ["$V_{{DD}}$",f'{VDD:.1f}',"$V$", "Nominal supply voltage"],
+         ["$L_{{min}}$",f'{Lmin/1e-9:.0f}',"$nm$","Minimum drawn gate length"],
+         ["$W_{{min}}$",f'{Wmin/1e-9:.0f}',"$nm$","Minimum drawn gate width"],
+         ["$z_1$",f'{z1/1e-9:.0f}',"$nm$","Minimum outer diffusion width"],
+         ["$z_2$",f'{z2/1e-9:.0f}',"$nm$","Minimum diffusion width between two fingers"]
+        ]
+Markdown(tabulate(
+  table,
+  headers=["Parameter","Value","Unit","Comment"],
+  numalign="center",
+  stralign="center",
+  colalign=("center", "center", "center","left")
+))
+```
+
+```{python}
+#| label: tbl-mos_param
+#| tbl-cap: Transistors parameters.
+
+table = [["Length and width correction parameters for current"],
+         ["$DL$",f'{DLn/1e-9:.0f}',f'{DLp/1e-9:.0f}',"$nm$"],
+         ["$DW$",f'{DWn/1e-9:.0f}',f'{DWp/1e-9:.0f}',"$nm$"],
+         ["Length and width correction for intrinsic and overlap capacitances"],
+         ["$DLCV$",f'{DLCVn/1e-9:.0f}',f'{DLCVp/1e-9:.0f}',"$nm$"],
+         ["$DWCV$",f'{DWCVn/1e-9:.0f}',f'{DWCVp/1e-9:.0f}',"$nm$"],
+         ["Length and width correction parameter for fringing capacitances"],
+         ["$DLGCV$",f'{DLGCVn/1e-9:.0f}',f'{DLGCVp/1e-9:.0f}',"$nm$"],
+         ["$DWGCV$",f'{DWGCVn/1e-9:.0f}',f'{DWGCVp/1e-9:.0f}',"$nm$"],
+         ["Long-channel sEKV parameters parameters"],
+         ["$n$",f'{n0n:.2f}',f'{n0p:.2f}',"-"],
+         ["$I_{{spec\\Box}}$",f'{Ispecsqn/1e-9:.0f}',f'{Ispecsqp/1e-9:.0f}',"$nA$"],
+         ["$V_{{T0}}$",f'{VT0n/1e-3:.0f}',f'{VT0p/1e-3:.0f}',"$mV$"],
+         ["Short-channel sEKV parameters parameters"],
+         ["$L_{{sat}}$",f'{Lsatn/1e-9:.3f}',f'{Lsatp/1e-9:.3f}',"$nm$"],
+         ["$\\lambda$",f'{lambdan*1e-6:.3f}',f'{lambdap*1e-6:.3f}',"$\\frac{{V}}{{\\mu m}}$"],
+         ["Junction capacitances parameters"],
+         ["$C_J$",f'{CJn*1e3:.3f}',f'{CJp*1e3:.3f}',"$\\frac{{fF}}{{\\mu m^2}}$"],
+         ["$C_{{JSWSTI}}$",f'{CJSWSTIn*1e9:.3f}',f'{CJSWSTIp*1e9:.3f}',"$\\frac{{fF}}{{\\mu m}}$"],
+         ["$C_{{JSWGAT}}$",f'{CJSWGATn*1e9:.3f}',f'{CJSWGATp*1e9:.3f}',"$\\frac{{fF}}{{\\mu m}}$"],
+         ["Overlap capacitances parameters"],
+         ["$C_{{GSo}}$",f'{CGSOn*1e9:.3f}',f'{CGSOp*1e9:.3f}',"$\\frac{{fF}}{{\\mu m}}$"],
+         ["$C_{{GDo}}$",f'{CGDOn*1e9:.3f}',f'{CGDOp*1e9:.3f}',"$\\frac{{fF}}{{\\mu m}}$"],
+         ["$C_{{GBo}}$",f'{CGBOn*1e9:.3f}',f'{CGBOp*1e9:.3f}',"$\\frac{{fF}}{{\\mu m}}$"],
+         ["Fringing capacitances parameters"],
+         ["$C_{{GSf}}$",f'{CGSFn*1e9:.3f}',f'{CGSFp*1e9:.3f}',"$\\frac{{fF}}{{\\mu m}}$"],
+         ["$C_{{GDf}}$",f'{CGDFn*1e9:.3f}',f'{CGDFp*1e9:.3f}',"$\\frac{{fF}}{{\\mu m}}$"],
+         ["Flicker noise parameters"],
+         ["$K_F$",f'{KFn:.3e}',f'{KFp:.3e}',"$V A s$"],
+         ["$AF$",f'{AFn:.1f}',f'{AFp:.1f}',"-"],
+         ["$\\rho$",f'{rhon:.3e}',f'{rhop:.3e}',"$\\frac{{V m^2}}{{A s}}$"],
+         ["Matching parameters"],
+         ["$A_{{VT}}$",f'{AVTn*1e9:.0f}',f'{AVTp*1e9:.0f}',"$mV \\cdot \\mu m$"],
+         ["$A_{{\\beta}}$",f'{Abetan*1e8:.0f}',f'{Abetap*1e8:.0f}',"$\\% \\cdot \\mu m$"]
+        ]
+
+Markdown(tabulate(
+  table,
+  headers=["Parameter","nMOS","pMOS","Unit"],
+  numalign="center",
+  stralign="center",
+  colalign=("right", "center", "center","left")
+))
+```
+
+## Design procedure
+If the DC gain of the second stage $G_{m2}/G_2$ can be assumed to be much larger than 1, the dominant pole can be approximated by
+\begin{equation}
+  \omega_{p1} = |p_1| \cong \frac{G_1\,G_2}{G_{m2}\,C_c}.
+\end{equation}
+
+Since $C_1$ is a parasitic capacitance, it is reasonable to consider that it is much smaller than the compensation capacitance $C_c$ and the load capacitance $C_L$. Both assumptions $C_1 \ll C_c$ and $C_1 \ll C_L$ lead to the following approximation of the non-dominant pole
+\begin{equation}
+  \omega_{p2} = |p_2| \cong \frac{G_{m2}}{C_L}.
+\end{equation}
+In the design procedure we need to make sure that the non-dominant pole $\omega_{p2}$ and the RHP zero $\omega_z=G_{m2}/C_c$ are sufficiently larger than the $GBW$ in order to secure enough phase margin. The ratio of the non-dominant pole and the zero to the unity gain frequency are given by
+\begin{align}
+  \frac{\omega_{p2}}{\omega_u} &= \frac{G_{m2}}{G_{m1}} \cdot \frac{C_c}{C_L},\\
+  \frac{\omega_z}{\omega_u} &= \frac{G_{m2}}{G_{m1}}
+\end{align}
+and hence
+\begin{align}
+  \frac{\omega_{p2}}{\omega_u} &= \frac{\omega_z}{\omega_u} \cdot \frac{C_c}{C_L},\\
+  \frac{\omega_z}{\omega_{p2}} &= \frac{C_L}{C_c}.
+\end{align}
+The unity gain frequency $\omega_u$, non-dominant pole $\omega_{p2}$ and zero $\omega_z$ need to satisfy
+\begin{equation}
+  \omega_u < \omega_{p2} < \omega_z,
+\end{equation}
+or
+\begin{equation}
+  1 < \frac{\omega_{p2}}{\omega_u} < \frac{\omega_z}{\omega_u}.
+\end{equation}
+This translates to the following inequality
+\begin{equation}
+  1 < \frac{C_L}{C_c} < \frac{G_{m2}}{G_{m1}}.
+\end{equation}
+This means that the compensation capacitance $C_c$ should stay smaller than the load capacitance $C_L$ and that the ratio  of the transconductance of M~2~ to that of M~1~ should be larger than $C_L/C_c$.
+
+Usually the compensation capacitance $C_c$ is a fraction of the load capacitance $C_L$ which can be determined from the specified phase margin $PM$ which is given by
+\begin{equation}
+  PM = \arctan\left(\frac{\omega_u}{\omega_z}\right)+\arctan\left(\frac{\omega_u}{\omega_{p2}}\right)-\frac{\pi}{2}.
+\end{equation}
+
+```{python}
+wp2_over_wu=4
+wz_over_wp2=2
+wz_over_wu=wp2_over_wu*wz_over_wp2
+PM=pi/2-atan(1/wz_over_wu)-atan(1/wp2_over_wu)
+PMdeg=180/pi*PM
+Cc=CL/2
+wu=2*pi*GBWspec
+Gm1=wu*Cc
+Ib1min=n0n*UT*Gm1
+Itotmin=10*Ib1min
+Gm2=8*Gm1
+IC1=0.1
+Ib1=n0n*UT*Gm1/gmsid_ic(IC1)
+```
+
+For example if $\omega_{p2}/\omega_u =$ `{python} f'{wp2_over_wu:.0f}'` and $\omega_z/\omega_{p2} =$ `{python} f'{wz_over_wp2:.0f}'`, then $\omega_z/\omega_u =$ `{python} f'{wz_over_wu:.0f}'` and $PM =$ `{python} f'{PMdeg:.3f}'` $^{\circ}$, which is usually more than sufficient. However we need to account for parasitic capacitances which add to the load capacitance and reduce the non-dominant pole. Therefore a good trade-off to start the design and achieve a sufficient $PM$ (typically larger than 45 degree) is to choose $\omega_{p2} =$ `{python} f'{wp2_over_wu:.0f}'` $\omega_u$, and $\omega_z =$ `{python} f'{wz_over_wp2:.0f}'` $\omega_{p2} =$ `{python} f'{wz_over_wu:.0f}'` $\omega_u$. This results in choosing
+
+$C_c = \frac{C_L}{\omega_z/\omega_{p2}} = C_L/$ `{python} f'{wz_over_wp2:.0f} = {Cc/1e-12:.1f}'` pF.
+
+It is important to note that choosing $\omega_z/\omega_u=G_{m2}/G_{m1}=$ `{python} f'{wz_over_wu:.0f}'` for securing enough phase margin has a direct impact on the power consumption. Indeed, if we assume that both M~1a~-M~1b~ and M~2~ are biased in weak inversion for maximizing the current efficiency, then $G_{m1}=I_{b1}/(n_n\,U_T)$ and $G_{m2}=I_{b2}/(n_p\,U_T)$. Assuming that $n_n=n_p$, $G_{m2}/G_{m1} = I_{b2}/I_{b1} = \omega_z/\omega_u =$ `{python} f'{wz_over_wu:.0f}'`. This means that the bias current of M~2~ is `{python} f'{wz_over_wu:.0f}'` times larger than that of M~1a~-M~1b~! The total current consumption, without accounting for the current flowing in M~3a~ and M~5a~, is then $I_{tot} = 2 I_{b1} + I_{b2} =$ `{python} f'{2+wz_over_wu:.0f}'` $\,I_{b1}$. We can express the minimum total current consumption in terms of the gain-bandwidth product $GBW$ as $I_{tot} \cong$ `{python} f'{2+wz_over_wu:.0f}'` $\,n U_T \cdot C_c \cdot GBW =$ `{python} f'{1+wz_over_wu/2:.0f}'` $\,n U_T \cdot C_L \cdot GBW$. This can be compared to the total current consumption of the symmetrical cascode OTA $I_{tot} = 4\,n U_T \cdot C_L \cdot GBW$. We deduce that for the same gain-bandwidth product $GBW$ and load capacitance $C_L$, the Miller OTA consumes about 25\% more current than the symmetrical cascode OTA.
+
+
+### Sizing the differential pair M~1a~-M~1b~
+We can now size the differential pair M~1a~-M~1b~ knowing that its transconductance is set by the gain-bandwidth product $GBW$ and the compensation capacitance $C_c$ according to $G_{m1} = \omega_u \cdot C_c =$ `{python} f'{Gm1/1e-6:.3f}'` $\mu A/V$. The minimum current to achieve this transconductance assuming that M~1a~-M~1b~ are biased in deep weak inversion is given by $I_{b1,min} =$ `{python} f'{Ib1min/1e-9:.0f}'` $nA$. We know that the differential pair M~1a~-M~1b~ should be biased in weak inversion in order to minimize the input-referred offset. If we set the inversion coefficient of M~1a~-M~1b~ to $IC_1=$ `{python} f'{IC1:.1f}'`, the required bias current $I_{b1}$ for M~1a~-M~1b~ to achieve $G_{m1} =$ `{python} f'{Gm1/1e-6:.3f}'` $\mu A/V$ with $IC_1=$ `{python} f'{IC1:.1f}'` is then given by $I_{b1}=$ `{python} f'{Ib1/1e-9:.0f}'` $nA$.
+
+```{python}
+Ib1=130E-9
+Gm1=Ib1/(n0n*UT)*gmsid_ic(IC1)
+GBWthe=Gm1/(2*pi*Cc)
+Ispec1=Ib1/IC1
+WoverL1=Ispec1/Ispecsqn
+```
+
+Let's take some margin and set $I_{b1}=$ `{python} f'{Ib1/1e-9:.0f}'` $nA$. The transconductance can be recalculated from the $G_m/I_D$ function as $G_{m1} =$ `{python} f'{Gm1/1e-6:.3f}'` $\mu A/V$. The corresponding $GBW$ is then given by $GBW =$ `{python} f'{GBWthe/1e6:.1f}'` $MHz$, which is slightly higher than the target specification offering some margin. The specific current is then given by $I_{spec1} =$ `{python} f'{Ispec1/1e-6:.1f}'` $\mu A$ and the aspect ratio  by $W_1/L_1 =$ `{python} f'{WoverL1:.1f}'`. The length $L_1$ will be calculated below from the specifications on the DC gain.
+
+The biasing of M~2~ should however be compatible with that of M~4a~-M~4b~. The latter should be biased in strong inversion for better matching but also to achieve a transconductance $G_{m4}$ smaller than $G_{m1}$ in order to reduce its noise contribution. So we will first size M~4a~-M~4b~.
+
+### Sizing the pMOS current mirror M~4a~-M~4b~
+
+```{python}
+Vicmax=0.8
+VS1=0.4
+VGS1=VT0n+(n0n-1)*VS1
+#VGS1=VT0n+n0n*UT*vps_ic(IC1)
+VDSsat1=UT*vdssat_ic(IC1)
+VSG4=VDD-Vicmax+VGS1-VDSsat1
+IC4=ic_vps((VSG4-VT0p)/(n0p*UT))
+VDSsat4=n0p*UT*vdssat_ic(IC4)
+Ispec4=Ib1/IC4
+WoverL4=Ispec4/Ispecsqp
+Gm4=Ispec4/(n0p*UT)*gms_ic(IC4)
+```
+
+The maximum gate voltage of M~4a~ is set by the maximum common mode input voltage still keeping M~1a~ in saturation according to
+\begin{equation}
+  V_{SG4} = V_{DD} - V_{icmax} + V_{GS1} - V_{DSsat1}.
+\end{equation}
+The gate-to-source voltage $V_{GS1}$ is given by
+\begin{equation}
+  V_{GS1} = V_{T0n} + (n_{0n}-1)\,V_{S1} + n_{0n} \, U_T \, (v_p-v_s).
+\end{equation}
+Unfortunately, at this point we don't know the value of the source voltage $V_{S1}$ of M~1a~-M~1b~ (voltage at common-source node 1). In weak inversion $v_p-v_s \cong 0$ so that
+\begin{equation}
+  V_{GS1} \cong V_{T0n} + (n_{0n}-1)\,V_{S1}
+\end{equation}
+For a common-mode input voltage $V_{ic}$ set at $V_{DD}/2 =$ `{python} f'{VDD/2:.1f}'`, we estimate $V_{S1}$ to be about $V_{S1} =$ `{python} f'{VS1/1e-3:.0f}'` $mV$. This gives $V_{GS1} \cong$ `{python} f'{VGS1/1e-3:.0f}'` $mV$. The saturation voltage $V_{DSsat1}$ of M~1a~-M~1b~ is given by $V_{DSsat1}  =$ `{python} f'{VDSsat1/1e-3:.0f}'` $mV$.
+
+For a maximum input common-mode voltage given by $V_{ic,max} =$ `{python} f'{Vicmax:.1f}'` $V$, the maximum source-to-gate voltage of M~4a~-M~4b~ $V_{SG4}$ is equal to $V_{SG4} =$ `{python} f'{VSG4/1e-3:.0f}'` $mV$, which corresponds to an inversion coefficient $IC_4 =$ `{python} f'{IC4:.3f}'` and a saturation voltage $V_{DSsat4}  =$ `{python} f'{VDSsat4/1e-3:.0f}'` $mV$. The specific current is equal to $I_{spec4} =$ `{python} f'{Ispec4/1e-9:.2f}'` $nA$, the aspect ratio to $W_4/L_4 =$ `{python} f'{WoverL4:.3f}'` and the transconductance to $G_{m4}  =$ `{python} f'{Gm4/1e-6:.3f}'` $\mu A/V$.
+
+```{python}
+Adc=pow(10,AdcdB/20)
+Adc1=sqrt(Adc)
+G1=Gm1/Adc1
+L1=2/G1*Ib1/lambdan
+L1=round(1E8*L1)/1E8
+W1=WoverL1*L1
+W1=round(1E8*W1)/1E8
+L4=2/G1*Ib1/lambdap
+L4=round(1E8*L4)/1E8
+W4=WoverL4*L4
+W4=round(1E8*W4)/1E8
+```
+
+We will use the specification on the DC gain to set the length of the various transistors. The DC gain is given by $A_{dc} = A_{dc1} \cdot A_{dc2} =$ `{python} f'{Adc:.0e}'`, where $A_{dc1}$ and $A_{dc2}$ are the DC gains of the first and second stage, respectively. We can distribute the DC gain equally among the first and second stage so that $A_{dc1} = A_{dc2} =$ `{python} f'{Adc1:.1f}'`.
+
+The conductance $G_1$ at node 1 is then given by $G_1  =$ `{python} f'{G1/1e-9:.3f}'` $nA/V$. $G_1$ depends on the output conductances of M~1b~ and M~4b~ according to $G_1 = G_{ds1b} + G_{ds4b}$. We can split it half-half between M~1b~ and M~4b~, which leads to the length of M~1b~ $L_1 =$ `{python} f'{L1/1e-6:.2f}'` $\mu m$, from which we get the width $W_1 =$ `{python} f'{W1/1e-6:.2f}'` $\mu m$.
+
+```{python}
+L4=2/G1*Ib1/lambdap
+L4=round(1E8*L4)/1E8
+W4=WoverL4*L4
+W4=round(1E8*W4)/1E8
+```
+
+Similarly for M~4~ we get the length from the output conductance $G_{ds4}$ as $L_4 =$ `{python} f'{L4/1e-6:.2f}'` $\mu m$, from which we get the width $W_4 =$ `{python} f'{W4/1e-9:.2f}'` $nm$, which is smaller than the minimum width $W_{min} =$ `{python} f'{Wmin/1e-9:.0f}'` $nm$.
+
+```{python}
+W4=Wmin
+W4ini=W4
+L4=W4/WoverL4
+L4=round(1E8*L4)/1E8
+L4ini=L4
+```
+
+We then set $W_4$ to the minimum width $W_4 = W_{min} =$ `{python} f'{W4/1e-9:.0f}'` $nm$ and get the length $L_4 =$ `{python} f'{L4/1e-6:.2f}'` $\mu m$.
+
+```{python}
+Ispec4=Ispecsqp*W4/L4
+IC4=Ib1/Ispec4
+Gm4=Ispec4/(n0p*UT)*gms_ic(IC4)
+etafl4=(Gm4/Gm1)**2*rhop/rhon*(W1*L1)/(W4*L4)
+```
+
+We can estimate the relative contribution of M~4a~-M~4b~ to the input-referred flicker noise PSD from
+\begin{equation}
+  \left.\eta_{fl}\right|_{M_{4a}\textsf{-}M_{4b}} = \left(\frac{G_{m4}}{G_{m1}}\right)^2\,\frac{\rho_p}{\rho_n}\,\frac{W_1 L_1}{W_4 L_4}.
+\end{equation}
+which is equal to `{python} f'{etafl4:.3f}'`. This is quite large!
+
+```{python}
+etafl4=1
+WL4=(Gm4/Gm1)**2*rhop/rhon*(W1*L1)/etafl4
+W4=sqrt(WL4*WoverL4)
+W4=round(1E8*W4)/1E8
+L4=sqrt(WL4/WoverL4)
+L4=round(1E8*L4)/1E8
+```
+
+We can try to reduce $\left.\eta_{fl}\right|_{M_{4a}\textsf{-}M_{4b}}$ by increasing the area $W_4\,L_4$, but we need to watch out not ending with a too large capacitance at node 4 and a too long transistor M~4a~-M~4b~. Let's ty to reduce $\left.\eta_{fl}\right|_{M_{4a}\textsf{-}M_{4b}}$ to `{python} f'{etafl4:.0f}'`, so that the contribution of M~4a~-M~4b~ to the input-referred flicker noise PSD is about `{python} f'{etafl4:.0f}'` times that of M~1a~-M~1b~. This leads to $W_4 =$ `{python} f'{W4/1e-9:.0f}'` $nm$ and $L_4 =$ `{python} f'{L4/1e-6:.2f}'` $\mu m$, which is way too long.
+
+```{python}
+W4=W4ini
+L4=L4ini
+```
+
+Since there are no specifications on the flicker noise or corner frequency, we will keep the initial values $W_4 =$ `{python} f'{W4/1e-9:.0f}'` $nm$ and $L_4 =$ `{python} f'{L4/1e-6:.2f}'` $\mu m$, understanding that the flicker noise will be totally dominated by the current mirror M~4a~-M~4b~.
+
+### Sizing the second-stage M~2~
+
+```{python}
+Gm2=8*Gm1
+Adc2=Adc1
+```
+
+We now set $G_{m2}$ to `{python} f'{wz_over_wu:.0f}'` times the recalculated value of $G_{m1}$ resulting in $G_{m2}  =$ `{python} f'{Gm2/1e-6:.3f}'` $\mu A/V$. To size M~2~, we first calculate the second stage voltage gain $A_{dc2} =$ `{python} f'{Adc2:.1f}'`.
+
+The sizing of M~2~ is tricky. Indeed, ideally, for low-power we would choose to bias M~2~ in weak inversion for a maximum current efficiency. This will set the bulk-to-gate voltage of M~2~ to about $V_{T0p}$. On the other hand the quiescent voltage at node 1 (gate of M~2~) is equal to that of node 4 which is equal to $V_{SG4}$. Having chosen to bias M~4a~-M~4b~ in strong inversion results in $V_{SG4}$ to be larger than $V_{T0p}$ by the overdrive voltage of M~4a~-M~4b~, $V_{SG4}-V_{T0p}$. Therefore the bulk-to-gate voltage of M~2~ is actually larger than $V_{T0p}$ and since M~2~ is biased in weak inversion, the current that M~2~ would need to carry is much larger than the current imposed by the current source M~5b~. The only degree of freedom left is the source-to-drain voltage of M~2~ which becomes very small to reduce the current to the level of the bias current imposed by M~5b~. M~2~ is therefore biased in the linear region with a source-to-drain voltage close to zero. That means that the output voltage will saturate to $V_{DD}$. In order to bring the output voltage back into the high gain region (for example equal to the input common-mode voltage), a differential input voltage needs to be applied which actually corresponds to a systematic offset which can be quite large. If the OTA is used in a closed-loop configuration, which is usually the case, this offset voltage should not be a problem.
+
+A more important consequence of biasing M~2~ in weak inversion is that this results in a very large transistor increasing the parasitic capacitance at node 1 and therefore reducing the non-dominant pole and hence the phase margin. Increasing the inversion coefficient $IC_2$ keeping the same transconductance $G_{m2}$ and DC gain $A_{dc2} = G_{m2}/G_2$ (or keeping the same conductance $G_2$), reduces the gate area of M~2~ at the cost of less current efficiency.
+
+To find what is the optimum inversion coefficient for M~2~ that minimizes the parasitic capacitance at node 1 and secures enough phase margin, we can plot its area $W_2\,L_2$ versus $IC_2$ for a given value of $G_{m2}$ and of the second stage gain $A_{dc2}$ which is presented in @fig-wl_ic.
+
+```{python}
+#| label: fig-wl_ic
+#| fig-cap: "Gate area $W_2 L_2$ versus inversion coefficient $IC_2$ for given $G_{m2}$ and dc gain $A_{dc2}$."
+
+def WL(IC2,Gm2,Adc2):
+    Ib2=Gm2*n0p*UT/gmsid_ic(IC2)
+    Ispec2=Ib2/IC2
+    WoverL2=Ispec2/Ispecsqp
+    G2=Gm2/Adc2
+    L2=2/G2*Ib2/lambdap
+    W2=WoverL2*L2
+    return W2*L2
+
+Npts=101
+logICmin=-2
+logICmax=2
+ICmin=pow(10,logICmin)
+ICmax=pow(10,logICmax)
+ICsw=np.logspace(logICmin,logICmax,Npts,endpoint=True,base=10.0)
+WL2=np.zeros(Npts)
+
+for k in range(0,Npts):
+    WL2[k]=WL(ICsw[k],Gm2,Adc2)
+
+WL2min=min(WL2)
+idxmin=np.where(WL2 == WL2min)[0]
+IC2min=ICsw[idxmin][0]
+
+lw=1
+plt.style.use('plt_style_small.mplstyle')
+plt.loglog([ICmin,IC2min],[WL2min/1e-12,WL2min/1e-12],'k--', linewidth=lw)
+plt.loglog([IC2min,IC2min],[1e0,WL2min/1e-12],'k--', linewidth=lw)
+plt.loglog(ICsw,WL2/1e-12,'r')
+plt.xlim(ICmin,ICmax)
+plt.xlabel('$IC_2$ [-]')
+plt.ylabel('$W_2\\,L_2 \\quad [\\mu m^2]$')
+plt.ylim(1e0,1e2)
+textstr = '\n'.join((
+  f'$G_{{m2}} =$ {Gm2/1e-6:.3f} $\\mu A/V$',
+  f'$A_{{dc2}} =$ {Adc2:.1f}',
+  f'$IC_{{2,min}} =$ {IC2min:.1f}',
+  f'$W_2\\,L_2 =$ {WL2min/1e-12:.1f} $\\mu m^2$'))
+plt.text(0.6, 0.95, textstr, ha='left', va='top', size=9, transform=plt.gca().transAxes,
+         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+plt.text(8e-2, WL2min/1e-12, f'$W_2\\,L_{{2,min}} =$ {WL2min/1e-12:.1f}', ha='center', va='bottom', size=9)
+plt.text(3, 1.2, f'$IC_{{2,min}} =$ {IC2min:.1f}', ha='left', va='bottom', size=9, bbox={'facecolor':'w', 'alpha':0.7, 'linewidth':0})
+plt.show()
+```
+
+```{python}
+IC2=IC2min
+Ib2=Gm2*n0p*UT/gmsid_ic(IC2)
+Ib2min=Gm2*n0p*UT
+Ib2ratio=Ib2/Ib2min
+```
+
+From @fig-wl_ic, we observe that there is an optimum value of $IC_2$ for which the area of M~2~ and hence its related parasitic capacitance are minimum. This optimum $IC$ is in the moderate inversion. Let's now set $IC_2$ to this optimum value $IC_2 = IC_{2,min} =$ `{python} f'{IC2:.1f}'`. The current can be derived from $G_{m2}$ and the $G_m/I_D$ ratio as $I_{b2} =$ `{python} f'{Ib2/1e-6:.3f}'` $\mu A$, which is about twice the minimum value we would get if M~2~ is biased in weak inversion $I_{b2}/I_{b2,min} =$ `{python} f'{Ib2ratio:.1f}'`.
+
+```{python}
+Ib2=2e-6
+Gm2=Ib2/(n0p*UT)*gmsid_ic(IC2)
+Ispec2=Ib2/IC2
+WoverL2=Ispec2/Ispecsqp
+G2=Gm2/Adc2
+L2=2/G2*Ib2/lambdap
+L2=round(1E8*L2)/1E8
+W2=WoverL2*L2
+W2=round(1E8*W2)/1E8
+L5=2/G2*Ib2/lambdan
+L5=round(1E8*L5)/1E8
+VDSsat5=0.3
+IC5=ic_vdssat(VDSsat5/UT)
+Ispec5=Ib2/IC5
+WoverL5=Ispec5/Ispecsqn
+W5=WoverL5*L5
+W5=round(1E8*W5)/1E8
+```
+
+We round $I_{b2}$ to `{python} f'{Ib2/1e-6:.1f}'` $\mu A$. We can now recompute $G_{m2}$ as $G_{m2}  =$ `{python} f'{Gm2/1e-6:.3f}'` $\mu A/V$ and derive the specific current $I_{spec2} =$ `{python} f'{Ispec2/1e-9:.2f}'` $nA$ and aspect ratio $W_2/L_2 =$ `{python} f'{WoverL2:.3f}'`. The conductance $G_2$ at the output node is then given by $G_2  =$ `{python} f'{G2/1e-9:.1f}'` $nA/V$, which we split equally among M~2~ and M~5b~ leading to $L_2 =$ `{python} f'{L2/1e-6:.2f}'` $\mu m$, from which we get the width $W_2 =$ `{python} f'{W2/1e-6:.2f}'` $\mu m$. M~2~ is now fully sized.
+
+### Sizing the nMOS current mirrors M~5a~-M~5b~
+Similarly for M~5b~ we get $L_5 =$ `{python} f'{L5/1e-6:.2f}'` $\mu m$ from the gain of the 2^nd^ stage $A_{dc2} =$ `{python} f'{Adc2:.0f}'`. To finalize the sizing of M~5b~ we can set its saturation voltage to $V_{DSsat5}  =$ `{python} f'{VDSsat5/1e-3:.0f}'` $mV$, which corresponds to an inversion coefficient equal to $IC_5 =$ `{python} f'{IC5:.1f}'`. Having $I_D$ and $IC$ we get $W_5/L_5 =$ `{python} f'{WoverL5:.1e}'` and finally its width $W_5 =$ `{python} f'{W5/1e-9:.0f}'` $nm$.
+
+```{python}
+Vicmin=0.55
+VDSsat3=Vicmin-VGS1
+IC3=ic_vdssat(VDSsat3/UT)
+Ispec3=2*Ib1/IC3
+WoverL3=Ispec3/Ispecsqn
+W3=Wmin
+L3=W3/WoverL3
+L3=round(1E8*L3)/1E8
+```
+
+### Sizing the nMOS current mirrors M~3a~-M~3b~
+Because of the substrate effect, the $V_{GS1}$ voltage of M~1a~-M~1b~ is rather large $V_{GS1} =$ `{python} f'{VGS1/1e-3:.0f}'` $mV$. Therefore the minimum common-mode input voltage is quite limited. On the other hand we want the current mirror M~3a~-M~3b~ to be biased as far in strong inversion as possible. If we choose $V_{ic,min} =$ `{python} f'{Vicmin:.2f}'` $V$, which leads to the saturation voltage of M~3b~ equal to $V_{DSsat3} = V_{ic,min} - V_{GS1} =$  `{python} f'{VDSsat3/1e-3:.0f}'` $mV$. We can derive the corresponding inversion coefficient as $IC_3 =$ `{python} f'{IC3:.1f}'`. From $I_{b1}$ and $IC_3$ we can get the specific current $I_{spec3} =$ `{python} f'{Ispec3/1e-9:.2f}'` $nA$ and the aspect ratio $W_3/L_3 =$ `{python} f'{WoverL3:.3f}'`. Since $W_3/L_3$ is very small, we need to set $W_3$ to the minimum width $W_3 = W_{min} =$ `{python} f'{W3/1e-9:.0f}'` $nm$ and get the length $L_3 =$ `{python} f'{L3/1e-6:.2f}'` $\mu m$.
+
+The sizing process is now finalized. We will summarize the transistor sizes and bias currents in the next section.
+
+## Summary
+### Specifications
+The specifications are recalled in @tbl-ota_specs2.
+
+```{python}
+#| label: tbl-ota_specs2
+#| tbl-cap: OTA specifications.
+
+from specs import *
+from IPython.display import Markdown
+from tabulate import tabulate
+
+ota_specs_df=pd.DataFrame(
+{
+    "Name": ["AdcdB","GBWspec","CL","Vosmax","PMdeg"],
+    "Value": [AdcdB,GBWspec,CL,Vosmax,PMdeg]
+})
+#pd.set_option('display.float_format', '{:.2E}'.format)
+#ota_specs_df
+
+Adc=10**(AdcdB/20)
+wu=2*pi*GBWspec
+table = [["Minimum DC gain","$A_{dc}$",AdcdB,"$dB$"],
+         ["Minimum gain-bandwidth product","$GBW$",GBWspec/1e6,"$MHz$"],
+         ["Load capacitance","$C_L$",CL/1e-12,"$pF$"],
+         ["Maximum input-referred random offset voltage","$V_{os}$",Vosmax/1e-3,"$mV$"],
+         ["Phase margin","$PM$",PMdeg,"$^{\\circ}$"]
+         ]
+
+Markdown(tabulate(
+  table,
+  headers=["Specification","Symbol","Value","Unit"],
+  numalign="center",
+  stralign="center",
+  colalign=("left","center","center","center"),
+  floatfmt=".0f"
+))
+```
+
+### Bias
+The bias information are summarized in @tbl-ota_bias.
+
+```{python}
+#| label: tbl-ota_bias
+#| tbl-cap: OTA bias.
+
+ota_bias_df=pd.DataFrame(
+{
+    "Name": ["VDD","Ib1","Ib2","Cc"],
+    "Value": [VDD,Ib1,Ib2,Cc]
+})
+#pd.set_option('display.float_format', '{:.1E}'.format)
+#ota_bias_df
+
+table = [["Supply voltage","$V_{DD}$",f'{VDD:.1f}',"$V$"],
+         ["1^st^-stage bias current","$I_{b1}$",f'{Ib1/1e-9:.0f}',"$nA$"],
+         ["2^nd^-stage bias current","$I_{b2}$",f'{Ib2/1e-6:.0f}',"$\\mu A$"],
+         ["Compensation capacitance","$C_c$",f'{Cc/1e-12:.1f}',"$pF$"]
+         ]
+Markdown(tabulate(
+  table,
+  headers=["Bias voltage or current","Symbol","Value","Unit"],
+  numalign="center",
+  stralign="center",
+  colalign=("left","center","center","center"),
+  floatfmt=".1f"
+))
+```
+
+
+### Transistor information
+The transistor sizes and large-signal variables are summarized in @tbl-transistor_info1, whereas @tbl-transistor_info2 gives the small-signal and thermal noise parameters. An Excel table is generated with more information (e.g. all the parasitic capacitances).
+
+```{python}
+#| label: tbl-transistor_info1
+#| tbl-cap: Transistor size and bias information.
+
+excelFilename = otaName + version + ".xlsx"
+
+transistor_info={
+    "Type": ["n","n","p","n","n","p","p","n","n"],
+    "Function": ["DP","DP","CS","CM","CM","CM","CM","CM","CM"],
+    "W": [W1,W1,W2,W3,W3,W4,W4,W5,W5],
+    "L": [L1,L1,L2,L3,L3,L4,L4,L5,L5],
+    "ID": [Ib1,Ib1,Ib2,2*Ib1,2*Ib1,Ib1,Ib1,Ib2,Ib2]
+}
+transistor_list=["M1a","M1b","M2","M3a","M3b","M4a","M4b","M5a","M5b"]
+ota_df=pd.DataFrame(transistor_info, index=transistor_list)
+
+ota_df["W/L"]=ota_df["W"]/ota_df["L"]
+ota_df["AD"]=ota_df["W"]*z1
+ota_df["PD"]=2*(ota_df["W"]+z1)
+ota_df["AS"]=ota_df["AD"]
+ota_df["PS"]=ota_df["PD"]
+ota_df["Ispec"]=np.where(ota_df["Type"]=="n",
+                                     ota_df["W/L"]*Ispecsqn,
+                                     ota_df["W/L"]*Ispecsqp)
+ota_df["IC"]=ota_df["ID"]/ota_df["Ispec"]
+ota_df["VP-VS"]=UT*vps_ic(ota_df["IC"])
+ota_df["n"]=np.where(ota_df["Type"]=="n",
+                                     n0n,
+                                     n0p)
+ota_df["VG-VT0"]=np.where(ota_df["Type"]=="n",
+                                     ota_df["VP-VS"]/n0n,
+                                     ota_df["VP-VS"]/n0p)
+ota_df["VDSsat"]=UT*vdssat_ic(ota_df["IC"])
+ota_df["Gspec"]=ota_df["Ispec"]/UT
+ota_df["Gms"]=ota_df["Gspec"]*gms_ic(ota_df["IC"])
+ota_df["Gm"]=np.where(ota_df["Type"]=="n",
+                                     ota_df["Gms"]/n0n,
+                                     ota_df["Gms"]/n0p)
+ota_df["Gds"]=np.where(ota_df["Type"]=="n",
+                                     ota_df["ID"]/(lambdan*ota_df["L"]),
+                                     ota_df["ID"]/(lambdap*ota_df["L"]))
+ota_df["gamman"]=np.where(ota_df["Type"]=="n",
+                                     gamman_ic(ota_df["IC"],n0n),
+                                     gamman_ic(ota_df["IC"],n0p))
+ota_df["COX"]=Cox*ota_df["W"]*ota_df["L"]
+ota_df["CGSi"]=ota_df["COX"]*cgsi_ic(ota_df["IC"])
+ota_df["CGDi"]=0
+ota_df["CGBi"]=np.where(ota_df["Type"]=="n",
+                                     ota_df["COX"]*cgbi_ic(ota_df["IC"],n0n),
+                                     ota_df["COX"]*cgbi_ic(ota_df["IC"],n0p))
+ota_df["CBSi"]=np.where(ota_df["Type"]=="n",
+                                     ota_df["COX"]*cbsi_ic(ota_df["IC"],n0n),
+                                     ota_df["COX"]*cbsi_ic(ota_df["IC"],n0p))
+ota_df["CBDi"]=np.where(ota_df["Type"]=="n",
+                                     ota_df["CGDi"]*(n0n-1),
+                                     ota_df["CGDi"]*(n0p-1))
+ota_df["CGSo"]=np.where(ota_df["Type"]=="n",
+                                     ota_df["W"]*CGSOn,
+                                     ota_df["W"]*CGSOp)
+ota_df["CGDo"]=np.where(ota_df["Type"]=="n",
+                                     ota_df["W"]*CGDOn,
+                                     ota_df["W"]*CGDOp)
+ota_df["CGBo"]=np.where(ota_df["Type"]=="n",
+                                    ota_df["W"]*CGBOn,
+                                    ota_df["W"]*CGBOp)
+ota_df["CGSf"]=np.where(ota_df["Type"]=="n",
+                                     ota_df["W"]*CGSFn,
+                                     ota_df["W"]*CGSFp)
+ota_df["CGDf"]=np.where(ota_df["Type"]=="n",
+                                     ota_df["W"]*CGDFn,
+                                     ota_df["W"]*CGDFp)
+ota_df["CBSj"]=np.where(ota_df["Type"]=="n",
+                                    ota_df["AS"]*CJn+(ota_df["PS"]-ota_df["W"])*CJSWSTIn+ota_df["W"]*CJSWGATn,
+                                    ota_df["AS"]*CJp+(ota_df["PS"]-ota_df["W"])*CJSWSTIp+ota_df["W"]*CJSWGATp)
+ota_df["CBDj"]=np.where(ota_df["Type"]=="n",
+                                    ota_df["AD"]*CJn+(ota_df["PD"]-ota_df["W"])*CJSWSTIn+ota_df["W"]*CJSWGATn,
+                                    ota_df["AD"]*CJp+(ota_df["PD"]-ota_df["W"])*CJSWSTIp+ota_df["W"]*CJSWGATp)
+ota_df["CGS"]=ota_df["CGSi"]+ota_df["CGSo"]+ota_df["CGSf"]
+ota_df["CGD"]=ota_df["CGDi"]+ota_df["CGDo"]+ota_df["CGDf"]
+ota_df["CGB"]=ota_df["CGBi"]+ota_df["CGBo"]
+ota_df["CBS"]=ota_df["CBSi"]+ota_df["CBSj"]
+ota_df["CBD"]=ota_df["CBDi"]+ota_df["CBDj"]
+#pd.set_option('display.float_format', '{:.2E}'.format)
+#ota_df
+
+if newDesign:
+  with pd.ExcelWriter(excelFilename) as writer:
+    ota_specs_df.to_excel(writer, sheet_name="Specs", index=False)
+    ota_bias_df.to_excel(writer, sheet_name="Bias", index=False)
+    ota_df.to_excel(writer, sheet_name="Transistors")
+
+# Generate the table from dataframe
+feature_list=["W","L","ID","Ispec","IC","VG-VT0","VDSsat"]
+Nmos=len(transistor_list)
+Nfeature=len(feature_list)
+table=[]
+for mos in transistor_list:
+  row=[mos]
+  for feature in feature_list:
+    row.append(ota_df.at[mos,feature])
+  table.append(row)
+
+# Scale data for proper units
+for i in range(Nmos):
+  for j in [1,2]:
+    table[i][j]=table[i][j]/1e-6
+  for j in [3,4]:
+    table[i][j]=table[i][j]/1e-9
+  for j in [6,7]:
+    table[i][j]=table[i][j]/1e-3
+
+Markdown(tabulate(
+  table,
+  headers=["Transistor","$W\\;[\\mu m]$","$L\\;[\\mu m]$","$I_D\\;[nA]$","$I_{{spec}}\\;[nA]$","$IC$","$V_G-V_{{T0}}\\;[mV]$","$V_{{DSsat}}\\;[mV]$"],
+  numalign="center",
+  stralign="center",
+  colalign=("center","center","center","center","center","center","center","center"),
+  floatfmt=(".3f",".2f",".2f",".0f",".0f",".1f",".0f",".0f")
+))
+```
+
+```{python}
+#| label: tbl-transistor_info2
+#| tbl-cap: Transistor small-signal and thermal noise parameters.
+
+# Generate the table from dataframe
+feature_list=["Gspec","Gms","Gm","Gds","gamman"]
+Nmos=len(transistor_list)
+Nfeature=len(feature_list)
+table=[]
+for mos in transistor_list:
+  row=[mos]
+  for feature in feature_list:
+    row.append(ota_df.at[mos,feature])
+  table.append(row)
+
+# Scale data for proper units
+for i in range(Nmos):
+  for j in [1,2,3]:
+    table[i][j]=table[i][j]/1e-6
+  for j in [4]:
+    table[i][j]=table[i][j]/1e-9
+
+Markdown(tabulate(
+  table,
+  headers=["Transistor","$G_{{spec}}\\;[\\mu A/V]$","$G_{{ms}}\\;[\\mu A/V]$","$G_m\\;[\\mu A/V]$","$G_{{ds}}\\;[nA/V]$","$\\gamma_n$"],
+  numalign="center",
+  stralign="center",
+  colalign=("center","center","center","center","center","center"),
+  floatfmt=(".3f",".3f",".3f",".3f",".3f",".3f")
+))
+```
+
+
+# OTA Characteristics
+In this section, we check whether the specs are achieved.
+
+## Open-loop gain
+We start with cheking the open-loop transfer function. The DC gains of the 1^st^- and 2^nd^-stage and the overall gain are estimated and given in @tbl-ota_dc_gain. We see that the 1^st^-stage DC gain is slightly larger than required whereas the 2^nd^-stage DC gain is right on target. This leads to a DC gain that is sligtly larger than the specifications. This is OK accounting for the fact that the DC gain is strongly depending on the output conductances for which we use a very crude model.
+
+```{python}
+#| label: tbl-ota_dc_gain
+#| tbl-cap: OTA DC gains.
+
+Gm1=ota_df.at['M1a','Gm']
+Gds1=ota_df.at['M1a','Gds']
+Gds4=ota_df.at['M4a','Gds']
+G1=Gds1+Gds4
+Gm2=ota_df.at['M2','Gm']
+Gds2=ota_df.at['M2','Gds']
+Gds5=ota_df.at['M5b','Gds']
+G2=Gds2+Gds5
+Adc1=Gm1/G1
+Adc2=Gm2/G2
+Adcthe=Adc1*Adc2
+Adc1dB=20*log(Adc1)
+Adc2dB=20*log(Adc2)
+AdcdBthe=20*log(Adcthe)
+
+table = [["1^st^-stage gain $A_{dc1}$",Adc1,Adc1dB,"-"],
+         ["2^nd^-stage gain $A_{dc2}$",Adc2,Adc2dB,"-"],
+         ["Overall gain $A_{dc}$",Adcthe,AdcdBthe,"-"]
+         ]
+Markdown(tabulate(
+  table,
+  headers=["Symbol","Value","Value in dB","Unit"],
+  numalign="center",
+  stralign="center",
+  colalign=("center","center","center","center"),
+  floatfmt=".1f"
+))
+```
+
+Plotting the open-loop transfer function also requires an estimation of the dominant pole $f_{p1}$, the non-dominant ploe $f_{p2}$ and the zero $f_z$. They depend on the estimation of the capacitance $C_1$ and $C_2$ at each node 1 and 2. They are given in @tbl-c1 and @tbl-c2. The resulting poles and zero are then given in @tbl-poles. 
+
+```{python}
+#| label: tbl-c1
+#| tbl-cap: Estimation of the parasitic capacitance at node 1 $C_1$.
+
+CGS2=ota_df.at['M2','CGS']
+CGB2=ota_df.at['M2','CGB']
+CBD4=ota_df.at['M4b','CBD']
+CBD1=ota_df.at['M1b','CBD']
+CGD1=ota_df.at['M1b','CGD']
+C1=CGS2+CGB2+CBD4+CBD1+CGD1
+
+table = [["$C_{GS2}$",CGS2/1e-15,"fF"],
+         ["$C_{GB2}$",CGB2/1e-15,"fF"],
+         ["$C_{BD4}$",CBD4/1e-15,"fF"],
+         ["$C_{BD1}$",CBD1/1e-15,"fF"],
+         ["$C_{GD1}$",CGD1/1e-15,"fF"],
+         ["$C_1$",C1/1e-15,"fF"]
+         ]
+Markdown(tabulate(
+  table,
+  headers=["Symbol","Theoretical Value","Unit"],
+  numalign="center",
+  stralign="center",
+  colalign=("center","center","center"),
+  floatfmt=".1f"
+))
+```
+
+```{python}
+#| label: tbl-c2
+#| tbl-cap: Estimation of the parasitic capacitance at node 2 $C_2$.
+
+CBD2=ota_df.at['M2','CBD']
+CBD5=ota_df.at['M5b','CBD']
+C2=CBD2+CBD5+CL
+
+table = [["$C_{BD2}$",CBD2/1e-15,"fF"],
+         ["$C_{BD5}$",CBD5/1e-15,"fF"],
+         ["$C_L$",CL/1e-12,"pF"],
+         ["$C_2$",C2/1e-12,"pF"]
+         ]
+Markdown(tabulate(
+  table,
+  headers=["Symbol","Theoretical Value","Unit"],
+  numalign="center",
+  stralign="center",
+  colalign=("center","center","center"),
+  floatfmt=".3f"
+))
+```
+
+```{python}
+#| label: tbl-poles
+#| tbl-cap: Estimation of the poles and zero.
+
+from scipy.optimize import fsolve
+
+def Adm(s,Adc,wz,wp1,wp2):
+    num=Adc*(1-s/wz)
+    den=(1+s/wp1)*(1+s/wp2)
+    return num/den
+
+def fun(f):
+    jw=1j*2*pi*f
+    AmagdB=20*log(abs(Adm(jw,Adcthe,wz,wp1,wp2)))
+    return AmagdB
+
+GBWest=Gm1/(2*pi*Cc)
+wp1=G1*G2/(Gm2*Cc)
+fp1=wp1/(2*pi)
+wp2=Gm2*Cc/(Cc*C2+Cc*C1+C1*C2)
+fp2=wp2/(2*pi)
+wz=Gm2/Cc
+fz=wz/(2*pi)
+GBWguess=GBWest
+GBWsol=fsolve(fun,GBWguess)
+GBWthe=GBWsol[0]
+
+table = [["$GBW$",GBWspec/1e6,"MHz","Specification"],
+         ["$GBW = G_{m1}/C_c$",GBWest/1e6,"MHz","Estimation without effect of zero"],
+         ["$GBW$",GBWthe/1e6,"MHz","Estimation including effect of zero"],
+         ["$f_{p1}$",fp1,"Hz","Dominant pole at node 1"],
+         ["$f_{p2}$",fp2/1e6,"MHz","Non-dominant pole at node 2"],
+         ["$f_{p2}/GBW$",fp2/GBWest,"-","Non-dominant pole ratio"],
+         ["$f_z$",fz/1e6,"MHz","Zero"],
+         ["$f_z/GBW$",fz/GBWest,"-","Zero ratio"],
+         ]
+Markdown(tabulate(
+  table,
+  headers=["Symbol","Value","Unit","Comment"],
+  numalign="center",
+  stralign="center",
+  colalign=("center","center","center","left"),
+  floatfmt=".3f"
+))
+```
+
+From @tbl-poles, we see that the non-dominant pole $f_{p2}$ is `{python} f'{fp2/GBWest:.1f}'` times higher than the $GBW$ which should ensure the desired phase margin $PM$. We can now plot the magnitude and phase of the open-loop gain which is shown in @fig-ota_tf_the.
+
+```{python}
+#| label: fig-ota_tf_the
+#| fig-cap: "OTA theoretical transfer function."
+
+import matplotlib.patches as mpatches
+import matplotlib.ticker
+
+Npts=101
+logfmin=1
+logfmax=8
+fmin=pow(10,logfmin)
+fmax=pow(10,logfmax)
+#x=np.linspace(xmin,xmax,Npts,endpoint=True)
+fthe=np.logspace(logfmin,logfmax,Npts,endpoint=True,base=10.0)
+
+AmagdBthe=np.zeros(Npts)
+Aphiradthe=np.zeros(Npts)
+Aphidegthe=np.zeros(Npts)
+for k in range(0,Npts):
+    jw=1j*2*pi*fthe[k]
+    AmagdBthe[k]=20*log(abs(Adm(jw,Adcthe,wz,wp1,wp2)))
+    Aphiradthe[k]=np.angle(Adm(jw,Adcthe,wz,wp1,wp2))
+
+Aphidegthe=np.unwrap(Aphiradthe)*180/pi
+
+PGBWthe=np.angle(Adm(1j*2*pi*GBWthe,Adcthe,wz,wp1,wp2),deg=True)
+PMthe=180+PGBWthe
+
+plt.style.use('plt_style_small.mplstyle')
+params = {'figure.figsize': (5,5)}
+plt.rcParams.update(params)
+
+fig, axs = plt.subplots(2, sharex=True)
+lw=1
+
+axs[0].semilogx([fmin,GBWthe],[0,0],'k--', linewidth=lw)
+axs[0].semilogx([GBWthe,GBWthe],[0,-60],'k--', linewidth=lw)
+axs[0].semilogx(fthe,AmagdBthe,'r',label='Theory')
+axs[0].set(xlim=(fmin,fmax), ylim=(-60,80), ylabel='$|A_{vd}|$ [dB]')
+axs[0].set_yticks([-60,-40,-20,0,20,40,60,80])
+#axs[0].legend(loc='best')
+textstr1 = '\n'.join((
+    f'$A_{{dc}} =$ {AdcdBthe:.1f} dB',
+    f'$GBW =$ {GBWthe/1e6:.3f} GHz'))
+axs[0].text(0.67, 0.93, textstr1, ha='left', va='top', transform=axs[0].transAxes, size=9,
+            bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+
+axs[1].semilogx([fmin,GBWthe],[PGBWthe,PGBWthe],'k--', linewidth=lw)
+axs[1].semilogx([GBWthe,GBWthe],[PGBWthe,0],'k--', linewidth=lw)
+axs[1].semilogx(fthe,Aphidegthe,'b',label='Theory')
+axs[1].set(ylim=(-180,0), xlabel='Frequency [Hz]', ylabel='$arg\\{A_{vd}\\}$ [deg]')
+axs[1].set_xticks([1e1,1e2,1e3,1e4,1e5,1e6,1e7,1e8])
+axs[1].set_yticks([-180,-135,-90,-45,0])
+#axs[1].legend(loc='best')
+arrow = mpatches.FancyArrowPatch((GBWthe, PGBWthe), (GBWthe, -180),
+                                 arrowstyle='<|-|>', color="black", mutation_scale=9)
+axs[1].add_patch(arrow)
+axs[1].annotate(f'Phase margin = {PMthe:.0f}$^{{\\circ}}$ ', (0, 0.5), xycoords=arrow, ha='right', va='center', size=9)
+plt.subplots_adjust(hspace=0.1)
+
+plt.show()
+```
+
+From @fig-ota_tf_the, we see that the specifications on the DC gain, gain-bandwidth product and phase margin are all met.
+
+## Input-referred noise
+We can also estimate the input-referred noise PSD. We start by evaluating the input-referred themal noise PSD $S_{ninth}$ and resistance $R_{nth}$. To this purpose we calculate all the parameters that are needed for computing $S_{ninth}$ which are given in @tbl-thermal.
+
+```{python}
+#| label: tbl-thermal
+#| tbl-cap: OTA thermal noise parameters.
+
+Gm1=ota_df.at['M1a','Gm']
+Gds1=ota_df.at['M1a','Gds']
+Gds4=ota_df.at['M4a','Gds']
+G1=Gds1+Gds4
+Gm2=ota_df.at['M2','Gm']
+Gm4=ota_df.at['M4a','Gm']
+Gm5=ota_df.at['M5a','Gm']
+gamman1=ota_df.at['M1a','gamman']
+gamman2=ota_df.at['M2','gamman']
+gamman4=ota_df.at['M4a','gamman']
+gamman5=ota_df.at['M5a','gamman']
+etath=gamman4/gamman1*Gm4/Gm1+G1**2/(2*Gm1*Gm2)*(gamman2/gamman1+2*gamman5/gamman1*Gm5/Gm2)
+gammanotathe=2*gamman1*(1+etath)
+Rninththe=2*gamman1/Gm1*(1+etath)
+Sninththe=4*kT*Rninththe
+SninthdBvthe=10*log(Sninththe)
+
+table = [["$G_{m1}$",Gm1/1e-6,"$\\frac{\mu A}{V}$"],
+         ["$G_{m2}$",Gm2/1e-6,"$\\frac{\mu A}{V}$"],
+         ["$G_{m4}$",Gm4/1e-9,"$\\frac{nA}{V}$"],
+         ["$G_{m5}$",Gm1/1e-6,"$\\frac{\mu A}{V}$"],
+         ["$G_{m1}/G_{m4}$",Gm1/Gm4,"-"],
+         ["$G_{m2}/G_{m5}$",Gm2/Gm5,"-"],
+         ["$2 G_{m1} G_{m2}/G_1^2$",2*Gm1*Gm2/G1**2,"-"],
+         ["$\\gamma_{n1}$",gamman1,"-"],
+         ["$\\gamma_{n2}$",gamman2,"-"],
+         ["$\\gamma_{n4}$",gamman4,"-"],
+         ["$\\gamma_{n5}$",gamman5,"-"],
+         ["$\\eta_{th}$",etath,"-"],
+         ["$2\\gamma_{n1}$",2*gamman1,"-"],
+         ["$\\gamma_{n,ota}$",gammanotathe,"-"],
+         ["$R_{nth}$",Rninththe/1e3,"$k \\Omega$"],
+         ["$\\sqrt{S_{ninth}}$",sqrt(Sninththe)/1e-9,"$\\frac{nV}{\\sqrt{Hz}}$"],
+         ["$10 \\cdot \\log(S_{ninth})$",SninthdBvthe,"$\\frac{dBv}{\\sqrt{Hz}}$"]
+         ]
+
+Markdown(tabulate(
+  table,
+  headers=["Symbol","Theoretical Value","Unit"],
+  numalign="center",
+  stralign="center",
+  colalign=("center","center","center"),
+  floatfmt=".3f"
+))
+```
+
+From @tbl-thermal, we see that M~4a~-M~4b~, M~2~ and M~5a~-M~5b~ only contribute `{python} f'{100*(etath):.0f}'` % of the total input-referred thermal noise. This leads to an OTA thermal noise excess factor that is only  `{python} f'{100*(gammanotathe/(2*gamman1)-1):.0f}'` % larger than the minimum `{python} f'{2*gamman1:.1f}'` contributed by the differential pair M~1a~-M~1b~ only.
+
+We can also calculate all the parameters required to compute the flicker noise. They are given in @tbl-flicker.
+
+```{python}
+#| label: tbl-flicker
+#| tbl-cap: OTA flicker noise parameters.
+
+W1=ota_df.at['M1a','W']
+L1=ota_df.at['M1a','L']
+W2=ota_df.at['M2','W']
+L2=ota_df.at['M2','L']
+W4=ota_df.at['M4a','W']
+L4=ota_df.at['M4a','L']
+W5=ota_df.at['M5b','W']
+L5=ota_df.at['M5b','L']
+etafl=(Gm4/Gm1)**2*rhop/rhon*W1*L1/(W4*L4)+1/2*(G1/Gm1)**2*(rhop/rhon*W1*L1/(W2*L2)+2*(Gm5/Gm2)**2*W1*L1/(W5*L5))
+fkthe=2*rhon/(W1*L1*Rninththe)*(1+etafl)
+
+table = [["$(G_{m1}/G_{m4})^2$",(Gm1/Gm4)**2,"-"],
+         ["$(G_{m1}/G_1)^2$",(Gm1/G1)**2,"-"],
+         ["$(G_{m2}/G_{m5})^2$",(Gm2/Gm5)**2,"-"],
+         ["$\\frac{W_1 \\cdot L_1}{W_4 \\cdot L_4}$",W1*L1/(W4*L4),"-"],
+         ["$\\frac{W_1 \\cdot L_1}{W_2 \\cdot L_2}$",W1*L1/(W2*L2),"-"],
+         ["$\\frac{W_1 \\cdot L_1}{W_5 \\cdot L_5}$",W1*L1/(W5*L5),"-"],
+         ["$\\eta_{fl}$",etafl,"-"],
+         ["$f_k$",fkthe/1e3,"$kHz$"]
+         ]
+
+Markdown(tabulate(
+  table,
+  headers=["Symbol","Theoretical Value","Unit"],
+  numalign="center",
+  stralign="center",
+  colalign=("center","center","center"),
+  floatfmt=".3f"
+))
+```
+
+From @tbl-flicker, we see that $\eta-{fl} =$ `{python} f'{etath:.1f}'`, which means that the input-referred flicker noise PSD is dominated by M~4a~-M~4b~, M~2~ and M~5a~-M~5b~. From From @tbl-flicker,  we can actually identify that the dominant contribtuion to the input-referred flicker noise PSD is due to M~4a~-M~4b~. As discussed when sizing M~4a~-M~4b~, we could increase the area of M~4a~-M~4b~ but at the cost of more paraisitc capacitance at the node 4 and hence les phase margin, which is undesirable. The corner frequency is actually quite low at $f_k =$ `{python} f'{fkthe/1e3:.1f}'` kHz. The input-referred noise PSD is plotted in @fig-ota_noise_the.
+
+```{python}
+#| label: fig-ota_noise_the
+#| fig-cap: "OTA theoretical input-referred noise PSD."
+
+def Snflicker(f,S0,fk):
+    return(S0*fk/f)
+
+def Sntot(f,S0,fk):
+    return(S0*(1+fk/f))
+
+Npts=101
+logfminnz=0
+logfmaxnz=8
+fminnz=pow(10,logfminnz)
+fmaxnz=pow(10,logfmaxnz)
+fthenz=np.logspace(logfminnz,logfmaxnz,Npts,endpoint=True,base=10.0)
+
+S0=4*kT*Rninththe
+S0dBvthe=10*log(S0)
+
+Sninth=np.zeros(Npts)
+Sninfl=np.zeros(Npts)
+Snin=np.zeros(Npts)
+SninthdBvthe=np.zeros(Npts)
+SninfldBvthe=np.zeros(Npts)
+SnindBvthe=np.zeros(Npts)
+
+for k in range(0,Npts):
+    Sninth[k]=S0
+    Sninfl[k]=Snflicker(fthenz[k],S0,fkthe)
+    Snin[k]=Sntot(fthenz[k],S0,fkthe)
+    SninthdBvthe[k]=10*log(Sninth[k])
+    SninfldBvthe[k]=10*log(Sninfl[k])
+    SnindBvthe[k]=10*log(Snin[k])
+
+lw=1
+plt.style.use('plt_style_small.mplstyle')
+#plt.semilogx([fmin,fkthe],[S0dBvthe,S0dBvthe],'k--',linewidth=lw)
+plt.semilogx([fkthe,fkthe],[-150,S0dBvthe],'k--',linewidth=lw)
+plt.semilogx(fthenz,SninthdBvthe,'b--',label='Thermal')
+plt.semilogx(fthenz,SninfldBvthe,'g--',label='Flicker')
+plt.semilogx(fthenz,SnindBvthe,'r',label='Total')
+plt.xlim(fminnz,fmaxnz)
+plt.xticks([1e0,1e1,1e2,1e3,1e4,1e5,1e6,1e7,1e8])
+plt.xlabel('Frequency [Hz]')
+plt.ylim(-150,-100)
+#plt.yticks(np.arange(-150,-110,10))
+plt.ylabel('Input Noise PSD $[dBv/\\sqrt{Hz}]$')
+plt.legend(loc='center right', fontsize=9)
+textstr = '\n'.join((
+    f'$S_{{nin,th}} =$ {S0dBvthe:.1f} $dBv/\\sqrt{{Hz}}$',
+    f'$f_k =${fkthe/1e3:.1f} kHz'))
+plt.text(0.5, 0.95, textstr, ha='left', va='top', size=9, transform=plt.gca().transAxes,
+         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+# saveFigures(savePath, 'Input_referred_noise')
+plt.show()
+```
+
+## Input-referred random offset voltage
+We have seen that the input-referred offset voltage is given by
+\begin{equation}
+  \sigma_{V_{os}}^2 = \sigma_{V_T}^2 + \sigma_{\beta}^2
+\end{equation}
+where
+\begin{equation}
+  \sigma_{V_T}^2 = \sigma_{V_{T1}}^2 \cdot (1 + \xi_{V_T})
+\end{equation}
+and
+\begin{equation}
+  \sigma_{\beta}^2 = \left(\frac{I_b}{G_{m1}}\right)^2 \cdot \sigma_{\beta_1}^2 \cdot (1 + \xi_{\beta}).
+\end{equation}
+$\xi_{V_T}$ represents the $V_T$-mismatch contributions to the input-referred offset of the current mirror relative to that of the differential pair
+\begin{equation}
+  \xi_{V_T} = \left(\frac{G_{m4}}{G_{m1}}\right)^2 \cdot \left(\frac{A_{VTp}}{A_{VTn}}\right)^2 \cdot \frac{W_1 L_1}{W_4 L_4}
+\end{equation}
+and $\xi_{\beta}$ represents the $\beta$-mismatch contributions to the input-referred offset of the current mirror relative to that of the differential pair
+\begin{equation}
+  \xi_{\beta} = \left(\frac{A_{\beta p}}{A_{\beta n}}\right)^2 \cdot \frac{W_1 L_1}{W_4 L_4}.
+\end{equation}
+The various parameters used to calculate the input-referred offset voltage are given in
+
+
+```{python}
+#| label: tbl-offset
+#| tbl-cap: OTA input-referred offset parameters.
+
+W1=ota_df.at['M1a','W']
+L1=ota_df.at['M1a','L']
+W4=ota_df.at['M4a','W']
+L4=ota_df.at['M4a','L']
+Gm1=ota_df.at['M1a','Gm']
+Gm4=ota_df.at['M4a','Gm']
+sigma2vt1=AVTn**2/(W1*L1)
+sigmavt1=sqrt(sigma2vt1)
+sigma2beta1=Abetan**2/(W1*L1)
+sigmabeta1=sqrt(sigma2beta1)
+sigma2vt4=AVTp**2/(W4*L4)
+sigmavt4=sqrt(sigma2vt4)
+sigma2beta4=Abetap**2/(W4*L4)
+sigmabeta4=sqrt(sigma2beta4)
+xivt=(Gm4/Gm1)**2*(AVTp/AVTn)**2*W1*L1/(W4*L4)
+xibeta=(Abetap/Abetan)**2*W1*L1/(W4*L4)
+sigma2vt=sigma2vt1*(1+xivt)
+sigmavt=sqrt(sigma2vt)
+sigma2beta=(Ib1/Gm1)**2*sigma2beta1*(1+xibeta)
+sigmabeta=sqrt(sigma2beta)
+sigma2Vos=sigma2vt+sigma2beta
+sigmaVos=sqrt(sigma2Vos)
+
+table = [["$\\sigma_{VT1}$",sigmavt1/1e-3,"$mV$","$V_T$-mismatch of M~1a~-M~1b~"],
+         ["$\\sigma_{VT4}$",sigmavt4/1e-3,"$mV$","$V_T$-mismatch of M~4a~-M~4b~"],
+         ["$\\xi_{V_T}$",xivt,"-","Input-referred $V_T$-mismatch of M~4a~-M~4b~ relative to M~1a~-M~1b~"],
+         ["$\\sigma_{\\beta1}$",100*sigmabeta1,"$\\%$","$\\beta$-mismatch of M~1a~-M~1b~"],
+         ["$\\sigma_{\\beta4}$",100*sigmabeta4,"$\\%$","$\\beta$-mismatch of M~4a~-M~4b~"],
+         ["$\\xi_{\\beta}$",xibeta,"-","Input-referred $\\beta$-mismatch of M~4a~-M~4b~ relative to M~1a~-M~1b~"],
+         ["$\\sigma_{V_T}$",sigmavt/1e-3,"$mV$","Total input-referred $V_T$-mismatch"],
+         ["$\\sigma_{\\beta}$",sigmabeta/1e-3,"$mV$","Total input-referred $\\beta$-mismatch"],
+         ["$\\sigma_{{Vos}}$",sigmaVos/1e-3,"$mV$","Total input-referred offset voltage"]
+         ]
+
+Markdown(tabulate(
+  table,
+  headers=["Symbol","Theoretical Value","Unit","Comment"],
+  numalign="center",
+  stralign="center",
+  colalign=("center","center","center","left"),
+  floatfmt=".3f"
+))
+```
+
+The various parameters needed to compute the input-referred random offset voltage standard deviation are given in @tbl-offset. For the same reason discussed for the flicker noise, the current mirror M~4a~-M~4b~ is contributing `{python} f'{xivt:.3f}'` times more than the differential pair M~1a~-M~1b~ to the $V_T$-mismatch and `{python} f'{xibeta:.1f}'` times more than the differential pair M~1a~-M~1b~ to the $\beta$-mismatch.
+
+## Power consumption
+
+```{python}
+Itot=2*Ib1+Ib2
+P=VDD*Itot
+Itele=0.5e-6
+```
+
+The total current consumption, without the current flowing in M~3a~ and M~5a~, is given by $I_{tot} =$ `{python} f'{Itot/1e-6:.2f}'` $\mu A$, resulting in a total power consumption $P =$ `{python} f'{P/1e-6:.3f}'` $\mu W$.
+
+We can compare the current and power consumption of the Miller OTA to the telescopic OTA which offers the lowest power consumption for similar $GBW$ and DC gain specifications. The current consumption of the telescopic OTA for the actual specifications can be estimated to $I_{tot,telescopic} \cong$ `{python} f'{Itele/1e-6:.1f}'` $\mu A$. The current and power consumption of the Miller OTA is `{python} f'{Itot/Itele:.2f}'` times larger than that of the telescopic OTA for the same specifications and performance. 
+
+# Simulation results from ngspice
+The above theoretical estimations can be validated with the results obtained from simulations performed with ngspice. In order to run the simulations you need to have ngspice correctly installed. Please refer to the installation instructions.
+
+::: {.callout-note}
+The simulations are performed with the PSP 103.6 compact model @bib:psp103.6:2017 using the parameters from the IHP open source PDK @bib:ihp:2025. For ngspice, we use the Verilog-A implementation given in the IHP package @bib:ihp:2025 and compiled the OSDI file with OpenVAF @bib:openvaf:2025 to run with ngspice @bib:dwarning:2024. In addition to the PSP user manual @bib:psp103.6:2017 a documentation of PSP and other MOSFET compact models and their parameter extraction can be found in @bib:iccap:2008.
+:::
+
+## Operating point
+We first write the parameter file for this specific design for running the ngspice simulations.
+Before running the AC and NOISE simulations, we first need to check the quiescent voltages and currents and the operating points of all transistors by running a .OP simulation.
+
+```{python}
+#| label: tbl-ng_openloop_voltages1
+#| tbl-cap: OTA node voltages with the OTA in open-loop without offset correction.
+
+simtype = ".op"
+fileName = otaName + simtype
+simulationPath = "./Simulations/ngspice/Gain/"
+simulationFile = simulationPath + fileName + ".cir"
+simulationLog = simulationPath + fileName + ".log"
+simulationVoltages = simulationPath + fileName + ".ic"
+simulationData = simulationPath + fileName + ".dat"
+ngspiceNodeVoltageFile = simulationPath + otaName + version + simtype + "1.ic"
+ngspiceDataFile = simulationPath + otaName + version + simtype + "1.dat"
+
+W1=ota_df.at['M1a','W']
+L1=ota_df.at['M1a','L']
+AS1=ota_df.at['M1a','AS']
+PS1=ota_df.at['M1a','PS']
+AD1=ota_df.at['M1a','AD']
+PD1=ota_df.at['M1a','PD']
+W2=ota_df.at['M2','W']
+L2=ota_df.at['M2','L']
+AS2=ota_df.at['M2','AS']
+PS2=ota_df.at['M2','PS']
+AD2=ota_df.at['M2','AD']
+PD2=ota_df.at['M2','PD']
+W3=ota_df.at['M3a','W']
+L3=ota_df.at['M3a','L']
+AS3=ota_df.at['M3a','AS']
+PS3=ota_df.at['M3a','PS']
+AD3=ota_df.at['M3a','AD']
+PD3=ota_df.at['M3a','PD']
+W4=ota_df.at['M4a','W']
+L4=ota_df.at['M4a','L']
+AS4=ota_df.at['M4a','AS']
+PS4=ota_df.at['M4a','PS']
+AD4=ota_df.at['M4a','AD']
+PD4=ota_df.at['M4a','PD']
+W5=ota_df.at['M5a','W']
+L5=ota_df.at['M5a','L']
+AS5=ota_df.at['M5a','AS']
+PS5=ota_df.at['M5a','PS']
+AD5=ota_df.at['M5a','AD']
+PD5=ota_df.at['M5a','PD']
+
+Vic=0.6
+Vos=0
+
+if newSim:
+  paramstr = '\n'.join((
+    f'.param VDD={VDD:.1f} Vic={Vic:.1f} Vos={Vos/1e-6:.3f}u Ib1={Ib1/1e-9:.0f}n Ib2={Ib2/1e-6:.1f}u',
+    f'.param CL={CL/1e-12:.0f}p Cc={Cc/1e-12:.1f}p',
+    f'.param W1={W1/1e-6:.2f}u L1={L1/1e-6:.2f}u AS1={AS1:.3e} PS1={PS1:.3e} AD1={AD1:.3e} PD1={PD1:.3e}',
+    f'.param W2={W2/1e-6:.2f}u L2={L2/1e-6:.2f}u AS2={AS2:.3e} PS2={PS2:.3e} AD2={AD2:.3e} PD2={PD2:.3e}',
+    f'.param W3={W3/1e-6:.2f}u L3={L3/1e-6:.2f}u AS3={AS3:.3e} PS3={PS3:.3e} AD3={AD3:.3e} PD3={PD3:.3e}',
+    f'.param W4={W4/1e-6:.2f}u L4={L4/1e-6:.2f}u AS4={AS4:.3e} PS4={PS4:.3e} AD4={AD4:.3e} PD4={PD4:.3e}',
+    f'.param W5={W5/1e-6:.2f}u L5={L5/1e-6:.2f}u AS5={AS5:.3e} PS5={PS5:.3e} AD5={AD5:.3e} PD5={PD5:.3e}'
+    ))
+  #print(paramstr)
+  with open(simulationPath+'size_bias.par', 'w') as f:
+    f.write(paramstr)
+  #print('Starting ngspice simulation...\n')
+  result = subprocess.run(f"""ngspice_con -b -o "{simulationLog}" "{simulationFile}" """, shell=True, capture_output=True, text=True)
+  # We need to copy the resulting operating point information file because it will be overwritten by subsequent simulations
+  shutil.copy2(simulationVoltages, ngspiceNodeVoltageFile)
+  shutil.copy2(simulationData, ngspiceDataFile)
+
+nodeList=["vdd","inp","inn","out","ic","id","1","3","4","5","6"]
+v_df=pd.DataFrame(index=nodeList)
+Nnodes=len(nodeList)
+for k in range(0,Nnodes):
+  nodeName=nodeList[k]
+  regexp = re.compile(r'v\(' + nodeName + r'\)' + refloat)
+  with open(ngspiceNodeVoltageFile) as f:
+    for line in f:
+      match = re.search(regexp, line)
+      if match:
+        v_df.at[nodeName, 'Voltage']=float(match.group(1))
+
+Voutq=v_df.loc['out','Voltage']
+#pd.set_option('display.float_format', '{:.2f}'.format)
+#v_df
+
+Markdown( 
+  tabulate(v_df,
+  showindex=True,
+  headers=["Node","Voltage"],
+  numalign="center",
+  stralign="center",
+  colalign=("center","center")
+))
+```
+
+We can extract the OTA quiescent node voltages from the .ic file. They are presented in @tbl-ng_openloop_voltages1. As expected, we see that the output voltage $V_{outq} =$ `{python} f'{Voutq:.3f}'` $V$ is saturated to $V_{DD}$ pushing M~2~ in the linear region. This is due to the fact that M~2~ is biased in moderate inversion with a source-to-gate voltage $V_{SG2}$ about equal to $V_{T0p}$. However, for a zero differential input voltage, the voltage at node 1 is actually set to the same value than the voltage at node 4 which is equal to the $V_{SG4}$ voltage of M~4~. This voltage is larger than $V_{T0p}$ by its overdrive voltage $V_{BG4}-V_{T0p}$ because M~4a~-M~4b~ are biased in strong inversion. The only way for M~2~ to carry the current it would carry in moderate inversion if it was biased in saturation is to reduce its $V_{SD}$ voltage and therefore drive M~2~ in the linear region with a $V_{SD}$ voltage almost equal to zero. For this reason, the output voltage is saturating to $V_{DD}$. We therefore cannot simulate the open-loop transfer function because the operating points, in particular that of M~2~, are wrong.
+
+Simulating the open-loop gain for high gain amplifiers is not easy to perform without closing the loop. There are basically two approaches to simulate the open-loop gain for high-gain amplifiers:
+
+1) Imposing a DC offset voltage to the amplifier in open-loop configuration that brings the output voltage back to the high gain region (for example equal to the input common-mode voltage) or
+2) Simulating the closed-loop gain (for example in voltage follower mode with a feedback gain of 1) and extracting the open-loop gain from the closed loop gain according to
+\begin{equation}
+  A_{open\textsf{-}loop}(\omega)= \frac{A_{closed\textsf{-}loop}(\omega)}{1 - A_{closed\textsf{-}loop}(\omega)},
+\end{equation}
+where $A_{closed\textsf{-}loop}(\omega)$ is the simulated closed-loop transfer function and $A_{open\textsf{-}loop}(\omega)$, the computed open-loop transfer function. The above relation assumes that the open-loop DC gain is large enough for the input-referred offset voltage to be ignored.
+
+The input-referred offset voltage can be extracted from the closed-loop voltage follower circuit as
+\begin{equation}
+  V_{os} = V_{in} - \left(1+\frac{1}{A}\right) \cdot V_{out} \cong V_{in} - V_{out} \quad \textsf{for $A \gg 1$},
+\end{equation}
+where $A \triangleq A_{open\textsf{-}loop}(0)$ is the open-loop DC gain which can be assumed to be much larger than 1. This means that, provided the DC open-loop gain is sufficiently large, the offset voltage can be measured at the amplifier differential input after imposing the proper input common-mode voltage $V_{ic}$.
+
+We can now simulate the OTA in closed-loop as a voltage follower.
+
+```{python}
+#| label: tbl-ng_closedloop_voltages
+#| tbl-cap: OTA node voltages with the OTA in voltage follower configuration.
+
+from IPython.display import Markdown
+from tabulate import tabulate
+
+simtype = ".op"
+fileName = otaName + simtype
+simulationPath = "./Simulations/ngspice/Follower/"
+simulationFile = simulationPath + fileName + ".cir"
+simulationLog = simulationPath + fileName + ".log"
+simulationVoltages = simulationPath + fileName + ".ic"
+simulationData = simulationPath + fileName + ".dat"
+ngspiceNodeVoltageFile = simulationPath + otaName + version + simtype + ".ic"
+ngspiceDataFile = simulationPath + otaName + version + simtype + ".dat"
+
+if newSim:
+  paramstr = '\n'.join((
+    f'.param VDD={VDD:.1f} Vic={Vic:.1f} Vos={Vos/1e-6:.3f}u Ib1={Ib1/1e-9:.0f}n Ib2={Ib2/1e-6:.1f}u',
+    f'.param CL={CL/1e-12:.0f}p Cc={Cc/1e-12:.1f}p',
+    f'.param W1={W1/1e-6:.2f}u L1={L1/1e-6:.2f}u AS1={AS1:.3e} PS1={PS1:.3e} AD1={AD1:.3e} PD1={PD1:.3e}',
+    f'.param W2={W2/1e-6:.2f}u L2={L2/1e-6:.2f}u AS2={AS2:.3e} PS2={PS2:.3e} AD2={AD2:.3e} PD2={PD2:.3e}',
+    f'.param W3={W3/1e-6:.2f}u L3={L3/1e-6:.2f}u AS3={AS3:.3e} PS3={PS3:.3e} AD3={AD3:.3e} PD3={PD3:.3e}',
+    f'.param W4={W4/1e-6:.2f}u L4={L4/1e-6:.2f}u AS4={AS4:.3e} PS4={PS4:.3e} AD4={AD4:.3e} PD4={PD4:.3e}',
+    f'.param W5={W5/1e-6:.2f}u L5={L5/1e-6:.2f}u AS5={AS5:.3e} PS5={PS5:.3e} AD5={AD5:.3e} PD5={PD5:.3e}'
+    ))
+  #print(paramstr)
+  with open(simulationPath+'size_bias.par', 'w') as f:
+    f.write(paramstr)
+  #print('Starting ngspice simulation...\n')
+  result = subprocess.run(f"""ngspice_con -b -o "{simulationLog}" "{simulationFile}" """, shell=True, capture_output=True, text=True)
+  # We need to copy the resulting operating point information file because it will be overwritten by subsequent simulations
+  shutil.copy2(simulationVoltages, ngspiceNodeVoltageFile)
+  shutil.copy2(simulationData, ngspiceDataFile)
+
+nodeList=["vdd","inp","out","1","3","4","5","6"]
+v_df=pd.DataFrame(index=nodeList)
+
+Nnodes=len(nodeList)
+for k in range(0,Nnodes):
+  nodeName=nodeList[k]
+  regexp = re.compile(r'v\(' + nodeName + r'\)' + refloat)
+  with open(ngspiceNodeVoltageFile) as f:
+    for line in f:
+      match = re.search(regexp, line)
+      if match:
+        v_df.at[nodeName, 'Voltage']=float(match.group(1))
+
+Voutq=v_df.loc['out','Voltage']
+Vos=v_df.loc['inp','Voltage']-v_df.loc['out','Voltage']
+#pd.set_option('display.float_format', '{:.6f}'.format)
+#v_df
+
+Markdown( 
+  tabulate(v_df,
+  showindex=True,
+  headers=["Node","Voltage"],
+  numalign="center",
+  stralign="center",
+  colalign=("center","center")
+))
+```
+
+From the node voltages of the OTA in voltage follower configuration shown in @tbl-ng_closedloop_voltages, we see that now the ouput voltage $V_{outq} =$ `{python} f'{Voutq/1e-3:.0f}'` $mV$ is very close to the input voltage that has been set to $V_{ic} =$ `{python} f'{Vic/1e-3:.0f}'` $mV$. We can then extract the corresponding offset voltage $V_{os} \cong V_{in} - V_{out} =$ `{python} f'{Vos/1e-3:.3f}'` $mV$.
+
+We can now apply this offset voltage to the open-loop circuit for simulating the operating point.
+
+```{python}
+#| label: tbl-ng_openloop_voltages2
+#| tbl-cap: OTA node voltages with the OTA in open-loop including offset correction.
+
+from IPython.display import Markdown
+from tabulate import tabulate
+
+simtype = ".op"
+fileName = otaName + simtype
+simulationPath = "./Simulations/ngspice/Gain/"
+simulationFile = simulationPath + fileName + ".cir"
+simulationLog = simulationPath + fileName + ".log"
+simulationVoltages = simulationPath + fileName + ".ic"
+simulationData = simulationPath + fileName + ".dat"
+ngspiceNodeVoltageFile = simulationPath + otaName + version + simtype + "2.ic"
+ngspiceDataFile = simulationPath + otaName + version + simtype + "2.dat"
+
+if newSim:
+  paramstr = '\n'.join((
+    f'.param VDD={VDD:.1f} Vic={Vic:.1f} Vos={Vos/1e-6:.3f}u Ib1={Ib1/1e-9:.0f}n Ib2={Ib2/1e-6:.1f}u',
+    f'.param CL={CL/1e-12:.0f}p Cc={Cc/1e-12:.1f}p',
+    f'.param W1={W1/1e-6:.2f}u L1={L1/1e-6:.2f}u AS1={AS1:.3e} PS1={PS1:.3e} AD1={AD1:.3e} PD1={PD1:.3e}',
+    f'.param W2={W2/1e-6:.2f}u L2={L2/1e-6:.2f}u AS2={AS2:.3e} PS2={PS2:.3e} AD2={AD2:.3e} PD2={PD2:.3e}',
+    f'.param W3={W3/1e-6:.2f}u L3={L3/1e-6:.2f}u AS3={AS3:.3e} PS3={PS3:.3e} AD3={AD3:.3e} PD3={PD3:.3e}',
+    f'.param W4={W4/1e-6:.2f}u L4={L4/1e-6:.2f}u AS4={AS4:.3e} PS4={PS4:.3e} AD4={AD4:.3e} PD4={PD4:.3e}',
+    f'.param W5={W5/1e-6:.2f}u L5={L5/1e-6:.2f}u AS5={AS5:.3e} PS5={PS5:.3e} AD5={AD5:.3e} PD5={PD5:.3e}'
+    ))
+  #print(paramstr)
+  with open(simulationPath+'size_bias.par', 'w') as f:
+    f.write(paramstr)
+  #print('Starting ngspice simulation...\n')
+  result = subprocess.run(f"""ngspice_con -b -o "{simulationLog}" "{simulationFile}" """, shell=True, capture_output=True, text=True)
+  # We need to copy the resulting operating point information file because it will be overwritten by subsequent simulations
+  shutil.copy2(simulationVoltages, ngspiceNodeVoltageFile)
+  shutil.copy2(simulationData, ngspiceDataFile)
+
+nodeList=["vdd","inp","inn","out","ic","id","1","3","4","5","6"]
+v_df=pd.DataFrame(index=nodeList)
+
+Nnodes=len(nodeList)
+for k in range(0,Nnodes):
+  nodeName=nodeList[k]
+  regexp = re.compile(r'v\(' + nodeName + r'\)' + refloat)
+  with open(ngspiceNodeVoltageFile) as f:
+    for line in f:
+      match = re.search(regexp, line)
+      if match:
+        v_df.at[nodeName, 'Voltage']=float(match.group(1))
+
+Voutq=v_df.loc['out','Voltage']
+#pd.set_option('display.float_format', '{:.6f}'.format)
+#v_df
+
+Markdown( 
+  tabulate(v_df,
+  showindex=True,
+  headers=["Node","Voltage"],
+  numalign="center",
+  stralign="center",
+  colalign=("center","center")
+))
+```
+
+From the node voltages of the OTA in open-loop configuration shown in @tbl-ng_openloop_voltages2 after adding the offset voltage at the input, we see that now the ouput voltage $V_{outq} =$ `{python} f'{Voutq/1e-3:.0f}'` $mV$ of the open-loop circuit is sufficiently close to the common-mode input voltage $V_{ic} =$ `{python} f'{Vic/1e-3:.0f}'` $mV$.
+
+The operating point information for all transistors are extracted from the ngspice .op file. The data is split into the large-signal operating point informations in @tbl-ng_op1, the small-signal operating point informations in @tbl-ng_op2 and the noise operating point informations in @tbl-ng_op3.
+
+We can compare the results of the .op file (for example the inversion coefficient $IC$) to the results of the design given in @tbl-transistor_info1. We observe that the values are close.
+
+Similarly we can compare the small-signal parameters (for example the gate transconductance $G_m$) resulting from the .op file to the results of the design presented in @tbl-transistor_info2. Again, we see that they are reasonably close.
+
+```{python}
+#| label: tbl-ng_op1
+#| tbl-cap: Operating point information extracted from ngspice .op file for each transistor.
+
+df_mos=pd.read_table(ngspiceDataFile, sep=r'\s+', skiprows=[2,4,6,8,10,12,14,16,18,20,22], dtype=np.float64, engine='python')
+df_mos=df_mos.rename(columns={'@n.x1a.nsg13_lv_nmos[weff]': 'Transistor',
+                              '@n.x1a.Nsg13_lv_nmos[weff]': 'Weff', '@n.x1a.Nsg13_lv_nmos[leff]': 'Leff',
+                              '@n.x1a.Nsg13_lv_nmos[ids]': 'ID',
+                              '@n.x1a.Nsg13_lv_nmos[vgs]': 'VGS', '@n.x1a.Nsg13_lv_nmos[vds]': 'VDS', '@n.x1a.Nsg13_lv_nmos[vsb]': 'VSB',
+                              '@n.x1a.Nsg13_lv_nmos[vgt]': 'VG-VT', '@n.x1a.Nsg13_lv_nmos[vdss]': 'VDsat',
+                              '@n.x1a.Nsg13_lv_nmos[gm]': 'Gm', '@n.x1a.Nsg13_lv_nmos[gmb]': 'Gmb', '@n.x1a.Nsg13_lv_nmos[gds]': 'Gds',
+                              '@n.x1a.Nsg13_lv_nmos[sid]': 'SIDth', '@n.x1a.Nsg13_lv_nmos[sfl]': 'SIDfl at 1Hz'})
+df_mos['Transistor'] = df_mos['Transistor'].astype(str)
+
+for k in range(Nmos):
+  df_mos.at[k, 'Transistor'] = transistor_list[k]
+
+df_mos.set_index('Transistor', inplace=True)
+df_mos.rename_axis(index=None, inplace=True)
+pd.set_option('display.float_format', '{:.2E}'.format)
+#df_mos
+
+feature_list=["ID","VGS","VDS","VSB","VG-VT","VDsat"]
+
+Nfeature=len(feature_list)
+table=[]
+for mos in transistor_list:
+  row=[mos]
+  for feature in feature_list:
+    row.append(df_mos.at[mos,feature])
+  table.append(row)
+
+for i in range(Nmos):
+  for j in [1]:
+    table[i][j]=table[i][j]/1e-9
+  for j in [2,3,4,5,6]:
+    table[i][j]=table[i][j]/1e-3
+
+Markdown(tabulate(
+  table,
+  headers=["Transistor","$I_D\\;[nA]$","$V_{GS}\\;[mV]$","$V_{DS}\\;[mV]$","$V_{SB}\\;[mV]$","$V_{GS}-V_T\\;[mV]$","$V_{Dsat}\\;[mV]$"],
+  numalign="center",
+  stralign="center",
+  colalign=("center","center","center","center","center","center","center"),
+  floatfmt=(".3f",".3f",".0f",".0f",".0f",".0f",".0f")
+))
+```
+
+```{python}
+#| label: tbl-ng_op2
+#| tbl-cap: PSP small-signal operating point information extracted from ngspice .op file for each transistor.
+
+feature_list=["Gm","Gmb","Gds"]
+
+Nfeature=len(feature_list)
+table=[]
+for mos in transistor_list:
+  row=[mos]
+  for feature in feature_list:
+    row.append(df_mos.at[mos,feature])
+  table.append(row)
+
+for i in range(Nmos):
+  for j in [1,2]:
+    table[i][j]=table[i][j]/1e-6
+  for j in [3]:
+    table[i][j]=table[i][j]/1e-9
+
+Markdown(tabulate(
+  table,
+  headers=["Transistor","$G_m\\;[\\mu A/V]$","$G_{mb}\\;[\\mu A/V]$","$G_{ds}\\;[nA/V]$"],
+  numalign="center",
+  stralign="center",
+  colalign=("center","center","center","center"),
+  floatfmt=(".3f",".3f",".3f",".3f")
+))
+```
+
+```{python}
+#| label: tbl-ng_op3
+#| tbl-cap: PSP noise operating point information extracted from ngspice .op file for each transistor.
+
+feature_list=["SIDth","SIDfl at 1Hz"]
+
+Nfeature=len(feature_list)
+table=[]
+for mos in transistor_list:
+  row=[mos]
+  for feature in feature_list:
+    row.append(df_mos.at[mos,feature])
+  table.append(row)
+
+#for i in range(Nmos):
+#  for j in [2]:
+#    table[i][j]=table[i][j]/1e3
+#  for j in [3]:
+#    table[i][j]=table[i][j]/1e-9
+#  for j in [4]:
+#    table[i][j]=table[i][j]/1e-6
+
+Markdown(tabulate(
+  table,
+  headers=["Transistor","$S_{ID,th}\\;[A^2/Hz]$","$S_{ID,fl}$ at 1Hz $[A^2/Hz]$"],
+  numalign="center",
+  stralign="center",
+  colalign=("center","center","center"),
+  floatfmt=(".3e",".3e",".3e")
+))
+```
+
+```{python}
+#| label: tbl-ng_op4
+#| tbl-cap: sEKV parameters calculated from the values extracted from the simulation.
+
+transistor_info={
+    "Type": ["n","n","p","n","n","p","p","n","n"],
+}
+#transistor_list=["M1a","M1b","M2a","M2b","M2c","M2d","M3a","M3b","M4","M5a","M5b","M7"]
+
+df_mos_sekv=pd.DataFrame(transistor_info, index=transistor_list)
+
+df_mos_sekv["Weff"]=df_mos["Weff"]
+df_mos_sekv["Leff"]=df_mos["Leff"]
+df_mos_sekv["Weff/Leff"]=df_mos["Weff"]/df_mos["Leff"]
+df_mos_sekv["Ispec"]=np.where(df_mos_sekv["Type"]=="n",
+                                     df_mos_sekv["Weff/Leff"]*Ispecsqn,
+                                     df_mos_sekv["Weff/Leff"]*Ispecsqp)
+df_mos_sekv["IC"]=df_mos["ID"]/df_mos_sekv["Ispec"]
+df_mos_sekv["Gspec"]=df_mos_sekv["Ispec"]/UT
+df_mos_sekv["n"]=df_mos["Gmb"]/df_mos["Gm"]+1
+df_mos_sekv["Gm"]=df_mos["Gm"]
+df_mos_sekv["Gms"]=df_mos_sekv["n"]*df_mos["Gm"]
+df_mos_sekv["Gds"]=df_mos["Gds"]
+df_mos_sekv["Vninth"]=sqrt(df_mos["SIDth"])/df_mos["Gm"]
+df_mos_sekv["Rninth"]=df_mos["SIDth"]/(4*kT*df_mos["Gm"]**2)
+df_mos_sekv["gamman"]=df_mos["Gm"]*df_mos_sekv["Rninth"]
+df_mos_sekv["Vninfl at 1 Hz"]=sqrt(df_mos["SIDfl at 1Hz"])/df_mos["Gm"]
+#df_mos_sekv
+
+feature_list=["Weff","Leff","Weff/Leff","Ispec","IC"]
+
+Nfeature=len(feature_list)
+table=[]
+for mos in transistor_list:
+  row=[mos]
+  for feature in feature_list:
+    row.append(df_mos_sekv.at[mos,feature])
+  table.append(row)
+
+for i in range(Nmos):
+  for j in [1,2,4]:
+    table[i][j]=table[i][j]/1e-6
+
+Markdown(tabulate(
+  table,
+  headers=["Transistor","$W_{eff}\\;[\\mu m]$","$L_{eff}\\;[\\mu m]$","$W_{eff}/L_{eff}$","$I_{spec}\\;[\\mu A]$","$IC$"],
+  numalign="center",
+  stralign="center",
+  colalign=("center","center","center","center","center","center"),
+  floatfmt=(".3f",".3f",".3f",".3f",".3f",".3f")
+))
+```
+
+```{python}
+#| label: tbl-ng_op5
+#| tbl-cap: sEKV small-signal parameters calculated from the values extracted from the simulation.
+
+feature_list=["Gspec","n","Gm","Gms","Gds"]
+
+Nfeature=len(feature_list)
+table=[]
+for mos in transistor_list:
+  row=[mos]
+  for feature in feature_list:
+    row.append(df_mos_sekv.at[mos,feature])
+  table.append(row)
+
+for i in range(Nmos):
+  for j in [1,3,4]:
+    table[i][j]=table[i][j]/1e-6
+  for j in [5]:
+    table[i][j]=table[i][j]/1e-9
+
+Markdown(tabulate(
+  table,
+  headers=["Transistor","$G_{spec}\\;[\\mu A/V]$","$n$","$G_m\\;[\\mu A/V]$","$G_{ms}\\;[\\mu A/V]$","$G_{ds}\\;[nA/V]$"],
+  numalign="center",
+  stralign="center",
+  colalign=("center","center","center","center","center","center"),
+  floatfmt=(".3f",".3f",".3f",".3f",".3f",".3f")
+))
+```
+
+```{python}
+#| label: tbl-ng_op6
+#| tbl-cap: sEKV noise parameters calculated from the values extracted from the simulation.
+
+feature_list=["Vninth","Rninth","gamman","Vninfl at 1 Hz"]
+
+Nfeature=len(feature_list)
+table=[]
+for mos in transistor_list:
+  row=[mos]
+  for feature in feature_list:
+    row.append(df_mos_sekv.at[mos,feature])
+  table.append(row)
+
+for i in range(Nmos):
+  for j in [1,4]:
+    table[i][j]=table[i][j]/1e-9
+  for j in [2]:
+    table[i][j]=table[i][j]/1e3
+
+Markdown(tabulate(
+  table,
+  headers=["Transistor","$\\sqrt{S_{nin,th}}\\;[nV/\\sqrt{Hz}]$","$R_{nin,th}\\;[k\\Omega]$","$\\gamma_n\\;[-]$","$\\sqrt{S_{nin,fl}}\\;[nV/\\sqrt{Hz}]$"],
+  numalign="center",
+  stralign="center",
+  colalign=("center","center","center","center","center"),
+  floatfmt=(".3f",".3f",".3f",".3f",".3f")
+))
+```
+
+We can also check the bias voltages and operating region of each transistor which are given in @tbl-ng_bias.
+
+```{python}
+#| label: tbl-ng_bias
+#| tbl-cap: Bias voltages and operating regions extracted from ngspice for each transistor.
+
+VGB1a=v_df.loc['inp','Voltage']
+VGB1b=v_df.loc['inn','Voltage']
+VBG2=v_df.loc['vdd','Voltage']-v_df.loc['1','Voltage']
+VGB3a=v_df.loc['5','Voltage']
+VGB3b=v_df.loc['5','Voltage']
+VBG4a=v_df.loc['vdd','Voltage']-v_df.loc['4','Voltage']
+VBG4b=v_df.loc['vdd','Voltage']-v_df.loc['4','Voltage']
+VGB5a=v_df.loc['6','Voltage']
+VGB5b=v_df.loc['6','Voltage']
+
+VSB1a=v_df.loc['3','Voltage']
+VSB1b=v_df.loc['3','Voltage']
+VBS2=0
+VSB3a=0
+VSB3b=0
+VBS4a=0
+VBS4b=0
+VSB5a=0
+VSB5b=0
+
+VDB1a=v_df.loc['4','Voltage']
+VDB1b=v_df.loc['1','Voltage']
+VBD2=v_df.loc['vdd','Voltage']-v_df.loc['out','Voltage']
+VDB3a=v_df.loc['5','Voltage']
+VDB3b=v_df.loc['3','Voltage']
+VBD4a=v_df.loc['vdd','Voltage']-v_df.loc['4','Voltage']
+VBD4b=v_df.loc['vdd','Voltage']-v_df.loc['1','Voltage']
+VDB5a=v_df.loc['6','Voltage']
+VDB5b=v_df.loc['out','Voltage']
+
+VDS1a=VDB1a-VSB1a
+VDS1b=VDB1b-VSB1b
+VSD2=VBD2-VBS2
+VDS3a=VDB3a-VSB3a
+VDS3b=VDB3b-VSB3b
+VSD4a=VBD4a-VBS4a
+VSD4b=VBD4b-VBS4b
+VDS5a=VDB5a-VSB5a
+VDS5b=VDB5b-VSB5b
+
+ID1a=df_mos.loc['M1a','ID']
+ID1b=df_mos.loc['M1b','ID']
+ID2=df_mos.loc['M2','ID']
+ID3a=df_mos.loc['M3a','ID']
+ID3b=df_mos.loc['M3b','ID']
+ID4a=df_mos.loc['M4a','ID']
+ID4b=df_mos.loc['M4b','ID']
+ID5a=df_mos.loc['M5a','ID']
+ID5b=df_mos.loc['M5b','ID']
+
+IC1a=df_mos_sekv.loc['M1a','IC']
+IC1b=df_mos_sekv.loc['M1b','IC']
+IC2=df_mos_sekv.loc['M2','IC']
+IC3a=df_mos_sekv.loc['M3a','IC']
+IC3b=df_mos_sekv.loc['M3b','IC']
+IC4a=df_mos_sekv.loc['M4a','IC']
+IC4b=df_mos_sekv.loc['M4b','IC']
+IC5a=df_mos_sekv.loc['M5a','IC']
+IC5b=df_mos_sekv.loc['M5b','IC']
+
+VDsat1a=df_mos.loc['M1a','VDsat']
+VDsat1b=df_mos.loc['M1b','VDsat']
+VDsat2=df_mos.loc['M2','VDsat']
+VDsat3a=df_mos.loc['M3a','VDsat']
+VDsat3b=df_mos.loc['M3b','VDsat']
+VDsat4a=df_mos.loc['M4a','VDsat']
+VDsat4b=df_mos.loc['M4b','VDsat']
+VDsat5a=df_mos.loc['M5a','VDsat']
+VDsat5b=df_mos.loc['M5b','VDsat']
+
+df_mosop={
+  "Type": ["n","n","p","n","n","p","p","n","n"],
+  "Function": ["DP","DP","CS","CM","CM","CM","CM","CM","CM"],
+  "ID": [ID1a,ID1b,ID2,ID3a,ID3b,ID4a,ID4b,ID5a,ID5b],
+  "IC": [IC1a,IC1b,IC2,IC3a,IC3b,IC4a,IC4b,IC5a,IC5b],
+  "VG": [VGB1a,VGB1b,VBG2,VGB3a,VGB3b,VBG4a,VBG4b,VGB5a,VGB5b],
+  "VS": [VSB1a,VSB1b,VBS2,VSB3a,VSB3b,VBS4a,VBS4b,VSB5a,VSB5b],
+  "VD": [VDB1a,VDB1b,VBD2,VDB3a,VDB3b,VBD4a,VBD4b,VDB5a,VDB5b],
+  "VDS": [VDS1a,VDS1b,VSD2,VDS3a,VDS3b,VSD4a,VSD4b,VDS5a,VDS5b],
+  "VDsat": [VDsat1a,VDsat1b,VDsat2,VDsat3a,VDsat3b,VDsat4a,VDsat4b,VDsat5a,VDsat5b]
+  }
+
+df_mosop=pd.DataFrame(df_mosop, index=transistor_list)
+df_mosop["Region"]=np.where(df_mosop["IC"]<0.1,
+                                     "WI",
+                                     np.where(df_mosop["IC"]<10,
+                                     "MI",
+                                     "SI"))
+df_mosop["Saturation"]=np.where(df_mosop["VDS"]>df_mosop["VDsat"],
+                                     "sat",
+                                     "lin")
+#pd.set_option('display.float_format', '{:.3E}'.format)
+#df_mosop
+
+feature_list=["Type","Function","VG","VS","VD","VDS","VDsat","Region","Saturation"]
+#Nmos=len(transistor_list)
+Nfeature=len(feature_list)
+table=[]
+for mos in transistor_list:
+  row=[mos]
+  for feature in feature_list:
+    row.append(df_mosop.at[mos,feature])
+  table.append(row)
+
+for i in range(Nmos):
+  for j in [6,7]:
+    table[i][j]=table[i][j]/1e-3
+
+Markdown(tabulate(
+  table,
+  headers=["Trans.","Type","Funct.","$V_G\\;[V]$","$V_S\\;[V]$","$V_D\\;[V]$","$V_{DS}\\;[mV]$","$V_{DSsat}\\;[mV]$","Reg.","Sat."],
+  numalign="center",
+  stralign="center",
+  colalign=("center","center","center","center","center","center","center","center","center","center"),
+  floatfmt=(".3f",".3f",".3f",".3f",".3f",".3f",".0f",".0f",".3f",".3f")
+))
+```
+
+From @tbl-ng_bias, we see that all transistors are biased in saturation. The operating points look fine. We can now proceed with the simulation of the open-loop large-signal transfer characteristic.
+
+## Large-signal differential transfer characteristic
+We now simulate the DC differential transfer characteristic. We can then check the systematic offset voltage that was extracted above. The simulation of the large-signal input-output characteristic is presented in @fig-ng_large_signal.
+
+```{python}
+#| label: fig-ng_large_signal
+#| fig-cap: "Simulated large-signal input-output characteristic."
+
+simtype = ".dc"
+fileName = otaName + simtype
+simulationPath = "./Simulations/ngspice/Gain/"
+simulationFile = simulationPath + fileName + ".cir"
+simulationLog = simulationPath + fileName + ".log"
+simulationData = simulationPath + fileName + ".dat"
+ngspiceDataFile = simulationPath + otaName + version + simtype + "1.dat"
+ngspiceLogFile = simulationPath + otaName + version + simtype + "1.log"
+
+Vidmin=-0.6
+Vidmax=0.6
+dVid=2e-3
+
+if newSim:
+  simpar = '\n'.join((
+    f'.csparam Vidmin={Vidmin:.3e}',
+    f'.csparam Vidmax={Vidmax:.3e}',
+    f'.csparam dVid={dVid:.3e}'
+  ))
+  simparFile = simulationPath + "simulation.dc.par"
+  with open(simparFile, 'w') as f:
+    f.write(simpar)
+  #print('Starting NGSpice simulation...\n')
+  result = subprocess.run(f"""ngspice_con -b -o "{simulationLog}" "{simulationFile}" """, shell=True, capture_output=True, text=True)
+  # We need to copy the resulting dc simulation data file because it will be overwritten by the next dc simulation
+  shutil.copy2(simulationData, ngspiceDataFile)
+  # We also need to copy the dc simulation log file because it will be overwritten by the next dc simulation
+  shutil.copy2(simulationLog, ngspiceLogFile)
+
+df_sim=pd.read_table(ngspiceDataFile, sep=' +', engine='python')
+
+Vidsim=df_sim['v-sweep'].to_numpy()
+Voutsim=df_sim['Vout'].to_numpy()
+
+regexp = re.compile(r'voutmax' + refloat)
+with open(ngspiceLogFile) as f:
+  for line in f:
+    match = re.search(regexp, line)
+    if match:
+      Voutmax=float(match.group(1))
+
+regexp = re.compile(r'voutmin' + refloat)
+with open(ngspiceLogFile) as f:
+  for line in f:
+    match = re.search(regexp, line)
+    if match:
+      Voutmin=float(match.group(1))
+
+Vswing=Voutmax-Voutmin
+
+lw=1
+plt.style.use('plt_style_small.mplstyle')
+plt.plot([Vidmin/1e-3,0],[Voutq,Voutq],'k--', linewidth=lw)
+plt.plot([0,0],[0,Voutq],'k--', linewidth=lw)
+plt.plot([Vidmin/1e-3,Vidmax/1e-3],[Voutmax,Voutmax],'k--', linewidth=lw)
+plt.plot([Vidmin/1e-3,Vidmax/1e-3],[Voutmin,Voutmin],'k--', linewidth=lw)
+plt.plot(Vidsim,Voutsim,'r')
+plt.xlim(Vidmin,Vidmax)
+#plt.xticks(np.arange(-0.6,0,0.3))
+plt.xlabel('$V_{id}$ [$V$]')
+plt.ylim(0,1.2)
+plt.yticks(np.arange(0,1.4,0.2))
+plt.ylabel('$V_{out}$ [V]')
+#plt.legend(loc='best')
+textstr = '\n'.join((
+  f'$V_{{DD}} =$ {VDD:.1f} V',
+  f'$V_{{ic}} =$ {Vic:.1f} V',
+  f'$V_{{outq}} =$ {Voutq:.3f} V',
+  f'$V_{{outmax}} =$ {Voutmax:.3f} V',
+  f'$V_{{outmin}} =$ {Voutmin:.3f} V',
+  f'$V_{{swing}} =$ {Vswing:.2f} V'))
+plt.text(0.65, 0.5, textstr, ha='left', va='center', size=9, transform=plt.gca().transAxes,
+         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+#saveFigures(savePath, 'Vout_Vid')
+plt.show()
+```
+
+We can now zoom into the high gain region in order to extract a more accurate value of the offset voltage and the output swing. The simulation results are presented in @fig-ng_large_signal_zoom.
+
+```{python}
+#| label: fig-ng_large_signal_zoom
+#| fig-cap: "Zoom of the simulated large-signal input-output characteristic in the high gain region."
+
+simtype = ".dc"
+fileName = otaName + simtype
+simulationPath = "./Simulations/ngspice/Gain/"
+simulationFile = simulationPath + fileName + ".cir"
+simulationLog = simulationPath + fileName + ".log"
+simulationData = simulationPath + fileName + ".dat"
+ngspiceDataFile = simulationPath + otaName + version + simtype + "2.dat"
+ngspiceLogFile = simulationPath + otaName + version + simtype + "2.log"
+
+Vidmin=-5.2e-3
+Vidmax=-4.6e-3
+#Vidmin=round(1e5*Vos)/1e5-1e-5
+#Vidmax=Vidmin+2e-5
+Npts=1001
+dVid=(Vidmax-Vidmin)/(Npts-1)
+
+if newSim:
+  simpar = '\n'.join((
+    f'.csparam Vidmin={Vidmin:.3e}',
+    f'.csparam Vidmax={Vidmax:.3e}',
+    f'.csparam dVid={dVid:.3e}'
+  ))
+  simparFile = simulationPath + "simulation.dc.par"
+  with open(simparFile, 'w') as f:
+    f.write(simpar)
+  #print('Starting NGSpice simulation...\n')
+  result = subprocess.run(f"""ngspice_con -b -o "{simulationLog}" "{simulationFile}" """, shell=True, capture_output=True, text=True)
+  # We need to copy the resulting dc simulation data file because it will be overwritten by the next dc simulation
+  shutil.copy2(simulationData, ngspiceDataFile)
+  # We also need to copy the dc simulation log file because it will be overwritten by the next dc simulation
+  shutil.copy2(simulationLog, ngspiceLogFile)
+
+df_sim=pd.read_table(ngspiceDataFile, sep=' +', engine='python')
+
+Vidsim=df_sim['v-sweep'].to_numpy()
+Voutsim=df_sim['Vout'].to_numpy()
+
+regexp = re.compile(r'voutmax' + refloat)
+with open(ngspiceLogFile) as f:
+  for line in f:
+    match = re.search(regexp, line)
+    if match:
+      Voutmax=float(match.group(1))
+
+regexp = re.compile(r'voutmin' + refloat)
+with open(ngspiceLogFile) as f:
+  for line in f:
+    match = re.search(regexp, line)
+    if match:
+      Voutmin=float(match.group(1))
+
+regexp = re.compile(r'vos' + refloat)
+with open(ngspiceLogFile) as f:
+  for line in f:
+    match = re.search(regexp, line)
+    if match:
+      Vos=float(match.group(1))
+
+Voutq=0.6
+Vswing=Voutmax-Voutmin
+
+lw=1
+plt.style.use('plt_style_small.mplstyle')
+plt.plot([Vidmin/1e-3,Vos/1e-3],[Vic,Vic],'k--', linewidth=lw)
+plt.plot([Vos/1e-3,Vos/1e-3],[0,Vic],'k--', linewidth=lw)
+plt.plot([Vidmin/1e-3,Vidmax/1e-3],[Voutmax,Voutmax],'k--', linewidth=lw)
+plt.plot([Vidmin/1e-3,Vidmax/1e-3],[Voutmin,Voutmin],'k--', linewidth=lw)
+plt.plot(Vidsim/1e-3,Voutsim,'r')
+plt.xlim(Vidmin/1e-3,Vidmax/1e-3)
+#plt.xticks(np.arange(54,76,2))
+plt.xlabel('$V_{id}\\;[mV]$')
+plt.ylim(0,1.2)
+#plt.yticks(np.arange(0.4,1.5,0.1))
+plt.ylabel('$V_{out}$ [V]')
+#plt.legend(loc='best')
+textstr = '\n'.join((
+  f'$V_{{DD}} =$ {VDD:.1f} V',
+  f'$V_{{ic}} =$ {Vic:.1f} V',
+  f'$V_{{outq}} =$ {Voutq:.3f} V',
+  f'$V_{{os}} =$ {Vos/1e-3:.3f} $mV$',
+  f'$V_{{outmax}} =$ {Voutmax:.3f} V',
+  f'$V_{{outmin}} =$ {Voutmin:.3f} V',
+  f'$V_{{swing}} =$ {Vswing:.2f} V'))
+plt.text(1.05, 0.5, textstr, ha='left', va='center', size=9, transform=plt.gca().transAxes,
+         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+#saveFigures(savePath, 'Vout_Vid_zoom')
+plt.show()
+
+paramstr = '\n'.join((
+  f'.param VDD={VDD:.1f} Vic={Vic:.1f} Vos={Vos/1e-6:.3f}u Ib1={Ib1/1e-9:.0f}n Ib2={Ib2/1e-6:.1f}u',
+  f'.param CL={CL/1e-12:.0f}p Cc={Cc/1e-12:.1f}p',
+  f'.param W1={W1/1e-6:.2f}u L1={L1/1e-6:.2f}u AS1={AS1:.3e} PS1={PS1:.3e} AD1={AD1:.3e} PD1={PD1:.3e}',
+  f'.param W2={W2/1e-6:.2f}u L2={L2/1e-6:.2f}u AS2={AS2:.3e} PS2={PS2:.3e} AD2={AD2:.3e} PD2={PD2:.3e}',
+  f'.param W3={W3/1e-6:.2f}u L3={L3/1e-6:.2f}u AS3={AS3:.3e} PS3={PS3:.3e} AD3={AD3:.3e} PD3={PD3:.3e}',
+  f'.param W4={W4/1e-6:.2f}u L4={L4/1e-6:.2f}u AS4={AS4:.3e} PS4={PS4:.3e} AD4={AD4:.3e} PD4={PD4:.3e}',
+  f'.param W5={W5/1e-6:.2f}u L5={L5/1e-6:.2f}u AS5={AS5:.3e} PS5={PS5:.3e} AD5={AD5:.3e} PD5={PD5:.3e}'
+  ))
+#print(paramstr)
+
+with open(simulationPath+'size_bias.par', 'w') as f:
+    f.write(paramstr)
+```
+
+We can now save a more accurate value of the offset voltage $V_{os} =$ `{python} f'{Vos/1e-3:.3f}'` $mV$ that is required to bring the output voltage to $V_{ic} =$  `{python} f'{Vic/1e-3:.0f}'` $mV$ and that will be used for the following .AC and .NOISE simulations.
+
+
+## Open-loop gain
+### Closed-loop circuit
+As explained above we can extract the open-loop gain from the simulated closed-loop gain with the amplifier operating as a voltage follower. The open-loop gain is then given by
+\begin{equation}
+  A_{open\textsf{-}loop}(\omega)= \frac{A_{closed\textsf{-}loop}(\omega)}{1 - A_{closed\textsf{-}loop}(\omega)},
+\end{equation}
+where $A_{closed\textsf{-}loop}(\omega)$ is the simulated closed-loop transfer function and $A_{open\textsf{-}loop}(\omega)$, the computed open-loop transfer function. The above relation assumes that the open-loop DC gain is large enough for the input-referred offset voltage to be ignored.
+
+Note that we need to have a sufficient number of digits for the simulated closed-loop gain because the latter is very close to 1. The simulations results are shown in @fig-ng_closed_loop_gain.
+
+```{python}
+#| label: fig-ng_closed_loop_gain
+#| fig-cap: "Open-loop gain response extracted from the closed-loop simulations and compared to theoretical estimation."
+
+simtype = ".ac"
+fileName = otaName + simtype
+simulationPath = "./Simulations/ngspice/Follower/"
+simulationFile = simulationPath + fileName + ".cir"
+simulationLog = simulationPath + fileName + ".log"
+simulationData = simulationPath + fileName + ".dat"
+ngspiceDataFile = simulationPath + otaName + version + simtype + ".dat"
+ngspiceLogFile = simulationPath + otaName + version + simtype + ".log"
+
+if newSim:
+  #print('Starting NGSpice simulation...\n')
+  result = subprocess.run(f"""ngspice_con -b -o "{simulationLog}" "{simulationFile}" """, shell=True, capture_output=True, text=True)
+  # We need to copy the resulting dc simulation data file because it will be overwritten by the next dc simulation
+  shutil.copy2(simulationData, ngspiceDataFile)
+  # We also need to copy the dc simulation log file because it will be overwritten by the next dc simulation
+  shutil.copy2(simulationLog, ngspiceLogFile)
+
+df_sim=pd.read_table(ngspiceDataFile, sep=' +', engine='python')
+fsim=df_sim['frequency'].to_numpy()
+ReAcl=df_sim['vr(out)'].to_numpy()
+ImAcl=df_sim['vi(out)'].to_numpy()
+ImAcl=df_sim['vi(out)'].to_numpy()
+AclmagdBng=df_sim['AclmagdB'].to_numpy()
+Aclphidegng=df_sim['Aclphdeg'].to_numpy()
+AolmagdBng=df_sim['AolmagdB'].to_numpy()
+Aolphdegng=df_sim['Aolphdeg'].to_numpy()
+Acl=ReAcl+ImAcl*1.0j
+Npts=len(fsim)
+fmin=fsim[0]
+fmax=fsim[Npts-1]
+
+Aol=np.zeros(Npts, dtype=complex)
+AclmagdBsim=np.zeros(Npts)
+AolmagdBsim=np.zeros(Npts)
+Aclphidegsim=np.zeros(Npts)
+Aolphidegsim=np.zeros(Npts)
+AclmagdBsim=20*log(np.absolute(Acl))
+Aclphidegsim=np.angle(Acl)
+#Aol=Acl/(1-Acl)
+#AolmagdBsim=20*log(np.absolute(Aol))
+#Aolphidegsim=np.angle(Aol, deg=True)
+
+for k in range(0,Npts):
+  Aol[k]=Acl[k]/(1-Acl[k])
+  AolmagdBsim[k]=20*log(np.absolute(Aol[k]))
+  Aolphidegsim[k]=np.angle(Aol[k])
+
+Aclphidegsim=np.unwrap(Aclphidegsim)*180/pi
+Aolphidegsim=np.unwrap(Aolphidegsim)*180/pi
+
+AdcdBsim=np.max(AolmagdBsim)
+idx=np.where(np.diff(np.sign(AolmagdBsim)))[0]
+GBWsim=fsim[idx][0]
+PGBWsim=Aolphidegsim[idx][0]
+PMsim=180+PGBWsim
+
+plt.style.use('plt_style_small.mplstyle')
+params = {'figure.figsize': (5,5)}
+plt.rcParams.update(params)
+    
+fig, axs = plt.subplots(2, sharex=True)
+lw=1
+
+axs[0].semilogx([fmin,GBWsim],[0,0],'k--', linewidth=lw)
+axs[0].semilogx([GBWsim,GBWsim],[0,-60],'k--', linewidth=lw)
+axs[0].semilogx(fsim,AclmagdBsim,'b',label='Closed-loop gain (Simulation)')
+axs[0].semilogx(fsim,AolmagdBsim,'r',label='Open-loop gain (Simulation)')
+#axs[0].semilogx(fsim,AolmagdBng,'m--',label='Open-loop gain (ngspice)')
+axs[0].semilogx(fthe,AmagdBthe,'r--',label='Open-loop gain (Theory)')
+axs[0].set(xlim=(fmin,fmax), ylim=(-60,100), ylabel='$|A_{vd}|$ [dB]')
+axs[0].set_yticks([-60,-40,-20,0,20,40,60,80,100])
+axs[0].legend(loc='lower left')
+textstr1 = '\n'.join((
+  f'$A_{{dc}} =$ {AdcdBthe:.1f} dB (theory)',
+  f'$A_{{dc}} =$ {AdcdBsim:.1f} dB (sim.)',
+  f'$GBW =$ {GBWthe/1e6:.1f} GHz (theory)',
+  f'$GBW =$ {GBWsim/1e6:.1f} GHz (sim.)'))
+axs[0].text(0.63, 0.93, textstr1, ha='left', va='top', transform=axs[0].transAxes, size=9,
+         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+
+axs[1].semilogx([fmin,GBWsim],[PGBWsim,PGBWsim],'k--', linewidth=lw)
+axs[1].semilogx([GBWsim,GBWsim],[PGBWsim,0],'k--', linewidth=lw)
+axs[1].semilogx(fsim,Aclphidegsim,'b',label='Closed-loop gain (Simulation)')
+axs[1].semilogx(fsim,Aolphidegsim,'r',label='Open-loop gain (Simulation)')
+#axs[1].semilogx(fsim,Aolphdegng,'m--',label='Open-loop gain (ngspice)')
+axs[1].semilogx(fthe,Aphidegthe,'r--',label='Open-loop gain (Theory)')
+axs[1].set(ylim=(-180,0), xlabel='Frequency [Hz]', ylabel='$arg\\{A_{vd}\\}$ [degree]')
+axs[1].set_xticks([1e1,1e2,1e3,1e4,1e5,1e6,1e7,1e8])
+axs[1].set_yticks([-180,-135,-90,-45,0])
+#axs[1].legend(loc='best')
+textstr2 = '\n'.join((
+  f'$PM =$ {PMthe:.1f}$^{{\\circ}}$ (theory)',
+  f'$PM =$ {PMsim:.1f}$^{{\\circ}}$ (sim.)'))
+axs[1].text(0.03, 0.05, textstr2, ha='left', va='bottom', transform=axs[1].transAxes, size=9,
+         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+arrow = mpatches.FancyArrowPatch((GBWsim, PGBWsim), (GBWsim, -180),
+                                 arrowstyle='<|-|>', color="black", mutation_scale=15)
+axs[1].add_patch(arrow)
+axs[1].annotate(f'Phase margin = {PMsim:.0f}$^{{\\circ}}$ ', (0, 0.5), xycoords=arrow, ha='right', va='center', size=9)
+plt.subplots_adjust(hspace=0.1)
+#saveFigures(savePath, 'open_loop_gain_response')
+plt.show()
+```
+
+From @fig-ng_closed_loop_gain, we see that the simulated $GBW$ is close to the theoretical value and slightly above the specs. The calculated open-loop gain does not seem to give correct results at low frequency neither in ngspice nor in the quarto notebook. This is probably due to the limited precision of the data output by ngspice. We can however simulate the open-loop gain directly in open-loop configuration.
+
+### Open-loop circuit
+After having checked the operating point information, extracted the offset voltage and making sure that the OTA output is not saturated, we can now proceed with the open-loop gain simulation. The simulation results are presented in @fig-ng_open_loop_gain.
+
+```{python}
+#| label: fig-ng_open_loop_gain
+#| fig-cap: "Simulated gain response compared to theoretical estimation."
+
+simtype = ".ac"
+fileName = otaName + simtype
+simulationPath = "./Simulations/ngspice/Gain/"
+simulationFile = simulationPath + fileName + ".cir"
+simulationLog = simulationPath + fileName + ".log"
+simulationData = simulationPath + fileName + ".dat"
+ngspiceDataFile = simulationPath + otaName + version + simtype + ".dat"
+ngspiceLogFile = simulationPath + otaName + version + simtype + ".log"
+
+if newSim:
+  #print('Starting NGSpice simulation...\n')
+  result = subprocess.run(f"""ngspice_con -b -o "{simulationLog}" "{simulationFile}" """, shell=True, capture_output=True, text=True)
+  # We need to copy the resulting dc simulation data file because it will be overwritten by the next dc simulation
+  shutil.copy2(simulationData, ngspiceDataFile)
+  # We also need to copy the dc simulation log file because it will be overwritten by the next dc simulation
+  shutil.copy2(simulationLog, ngspiceLogFile)
+
+df_sim=pd.read_table(ngspiceDataFile, sep=' +', engine='python')
+fsim=df_sim['frequency'].to_numpy()
+AmagdBsim=df_sim['AmagdB'].to_numpy()
+Aphidegsim=df_sim['Aphdeg'].to_numpy()
+Npts=len(fsim)
+fmin=fsim[0]
+#fmin=10
+fmax=fsim[Npts-1]
+
+for k in range(0,Npts):
+  if Aphidegsim[k]>0:
+    Aphidegsim[k]=Aphidegsim[k]-360
+
+regexp = re.compile(r'adc' + refloat)
+with open(ngspiceLogFile) as f:
+  for line in f:
+    match = re.match(regexp, line)
+    if match:
+      AdcdBsim=float(match.group(1))
+
+regexp = re.compile(r'gbw' + refloat)
+with open(ngspiceLogFile) as f:
+  for line in f:
+    match = re.match(regexp, line)
+    if match:
+      GBWsim=float(match.group(1))
+
+regexp = re.compile(r'pgbw' + refloat)
+with open(ngspiceLogFile) as f:
+  for line in f:
+    match = re.match(regexp, line)
+    if match:
+      PGBWsim=float(match.group(1))
+
+PMsim=180+PGBWsim
+
+plt.style.use('plt_style_small.mplstyle')
+params = {'figure.figsize': (5,5)}
+plt.rcParams.update(params)
+    
+fig, axs = plt.subplots(2, sharex=True)
+lw=1
+
+axs[0].semilogx([fmin,GBWsim],[0,0],'k--', linewidth=lw)
+axs[0].semilogx([GBWsim,GBWsim],[0,-60],'k--', linewidth=lw)
+axs[0].semilogx(fsim,AmagdBsim,'r',label='Simulation')
+axs[0].semilogx(fthe,AmagdBthe,'r--',label='Theory')
+axs[0].set(xlim=(fmin,fmax), ylim=(-60,100), ylabel='$|A_{vd}|$ [dB]')
+axs[0].set_yticks([-60,-40,-20,0,20,40,60,80,100])
+axs[0].legend(loc='upper right')
+textstr1 = '\n'.join((
+  f'$A_{{dc}} =$ {AdcdBthe:.1f} dB (theory)',
+  f'$A_{{dc}} =$ {AdcdBsim:.1f} dB (sim.)',
+  f'$GBW =$ {GBWthe/1e6:.1f} GHz (theory)',
+  f'$GBW =$ {GBWsim/1e6:.1f} GHz (sim.)'))
+axs[0].text(0.03, 0.07, textstr1, ha='left', va='bottom', transform=axs[0].transAxes, size=9,
+         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+
+axs[1].semilogx([fmin,GBWsim],[PGBWsim,PGBWsim],'k--', linewidth=lw)
+axs[1].semilogx([GBWsim,GBWsim],[PGBWsim,0],'k--', linewidth=lw)
+axs[1].semilogx(fsim,Aphidegsim,'b',label='Simulation')
+axs[1].semilogx(fthe,Aphidegthe,'b--',label='Theory')
+axs[1].set(xlim=(fmin,fmax), ylim=(-180,0), xlabel='Frequency [Hz]', ylabel='$arg\\{A_{vd}\\}$ [degree]')
+axs[1].set_xticks([1e1,1e2,1e3,1e4,1e5,1e6,1e7,1e8])
+axs[1].set_yticks([-180,-135,-90,-45,0])
+axs[1].legend(loc='best')
+textstr2 = '\n'.join((
+  f'$PM =$ {PMthe:.1f}$^{{\\circ}}$ (theory)',
+  f'$PM =$ {PMsim:.1f}$^{{\\circ}}$ (sim.)'))
+axs[1].text(0.03, 0.05, textstr2, ha='left', va='bottom', transform=axs[1].transAxes, size=9,
+         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+arrow = mpatches.FancyArrowPatch((GBWsim, PGBWsim), (GBWsim, -180),
+                                 arrowstyle='<|-|>', color="black", mutation_scale=15)
+axs[1].add_patch(arrow)
+axs[1].annotate(f'Phase margin = {PMsim:.0f}$^{{\\circ}}$ ', (0, 0.5), xycoords=arrow, ha='right', va='center', size=9)
+plt.subplots_adjust(hspace=0.1)
+#saveFigures(savePath, 'open_loop_gain_response')
+plt.show()
+```
+
+The results of the open-loop simulation in @fig-ng_open_loop_gain are close to the theoretical estimation. The simulated $GBW$ is equal to the value extracted from the closed-loop simulation and slightly smaller than the theoretical prediction but still above the specification. The DC gain is smaller than the theoretical prediction but right on target. Finally the phase margin is sligtly smaller than the theoretical estimation but still above the specification. This is probably due to the zero being at lower frequency.
+
+## Input-referred noise
+The simulated input-referred noise PSD is presented in @fig-ng_noise and compared to the theoretical estimation.
+
+```{python}
+#| label: fig-ng_noise
+#| fig-cap: "Simulated input-referred noise PSD compared to theoretical estimation."
+
+simtype = ".nz"
+fileName = otaName + simtype
+simulationPath = "./Simulations/ngspice/Gain/"
+simulationFile = simulationPath + fileName + ".cir"
+simulationLog = simulationPath + fileName + ".log"
+simulationData = simulationPath + fileName + ".dat"
+simulationRaw = simulationPath + fileName + ".raw"
+ngspiceDataFile = simulationPath + otaName + version + simtype + ".dat"
+ngspiceRawFile = simulationPath + otaName + version + simtype + ".raw"
+ngspiceLogFile = simulationPath + otaName + version + simtype + ".log"
+
+if newSim:
+  #print('Starting NGSpice simulation...\n')
+  result = subprocess.run(f"""ngspice_con -b -o "{simulationLog}" "{simulationFile}" """, shell=True, capture_output=True, text=True)
+  # We need to copy the resulting dc simulation data file because it will be overwritten by the next dc simulation
+  shutil.copy2(simulationData, ngspiceDataFile)
+  shutil.copy2(simulationRaw, ngspiceRawFile)
+  # We also need to copy the dc simulation log file because it will be overwritten by the next dc simulation
+  shutil.copy2(simulationLog, ngspiceLogFile)
+
+df_sim=pd.read_table(ngspiceDataFile, sep=' +', engine='python')
+
+fsim=df_sim['frequency'].to_numpy()
+Vnout=df_sim['onoise_spectrum'].to_numpy()
+Vnin=df_sim['inoise_spectrum'].to_numpy()
+SnoutdBvsim=20*log(Vnout)
+SnindBvsim=20*log(Vnin)
+
+Npts=len(fsim)
+fmin=fsim[0]
+fmax=fsim[Npts-1]
+
+plt.style.use('plt_style_small.mplstyle')
+plt.semilogx([fkthe,fkthe],[-150,S0dBvthe],'k--',linewidth=lw)
+plt.semilogx(fsim,SnindBvsim,'r-', markevery=25, label='Total (sim.)')
+plt.semilogx(fthenz,SninthdBvthe,'b--', label='Thermal (theory)')
+plt.semilogx(fthenz,SninfldBvthe,'g--', label='Flicker (theory)')
+plt.semilogx(fthenz,SnindBvthe,'r--', label='Total (theory)')
+plt.xlim(fmin,fmax)
+plt.xticks([1e0,1e1,1e2,1e3,1e4,1e5,1e6,1e7,1e8])
+plt.xlabel('Frequency [Hz]')
+plt.ylim(-150,-100)
+plt.ylabel(r'Input Noise PSD $[dBv/\sqrt{Hz}]$')
+#plt.legend(loc='best')
+plt.legend(loc='center left', fontsize=9, bbox_to_anchor=(1, 0.5))
+textstr = '\n'.join((
+    f'$S_{{nin,th}} =$ {S0dBvthe:.1f} $dBv/\\sqrt{{Hz}}$ (theory)',
+#    f'$S_{{nin,th}} =$ {S0dBvsim:.1f} $dBv/\\sqrt{{Hz}}$ (sim.)',
+    f'$f_k =$ {fkthe/1e3:.1f} kHz (theory)'))
+#    f'$f_k =$ {fksim/1e3:.1f} kHz (sim.)'))
+plt.text(0.35, 0.95, textstr, ha='left', va='top', size=9, transform=plt.gca().transAxes,
+         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+#saveFigures(savePath, 'Input_referred_noise_PSD')
+plt.show()
+```
+
+From @fig-ng_noise, we see that the simulated input-referred noise PSD is larger than the theoretical estimation for both flicker and white noise. We can have a closer look at the contributions of the various transistors to the input-referred white noise PSD.
+
+```{python}
+#| label: fig-ng_white_noise_contributions
+#| fig-cap: "Breakdown of the contributions to the simulated input-referred white noise PSD."
+
+regexp = re.compile(r'No. Variables:' + refloat)
+with open(ngspiceRawFile) as f:
+  for line in f:
+    match = re.match(regexp, line)
+    if match:
+      Nvar=int(match.group(1))
+
+#print(Nvar)
+
+regexp = re.compile(r'No. Points:' + refloat)
+with open(ngspiceRawFile) as f:
+  for line in f:
+    match = re.match(regexp, line)
+    if match:
+      Npts=int(match.group(1))
+
+#print(Npts)
+
+df_noise=pd.read_table(ngspiceRawFile, sep=r'\s+', skiprows=(25), skip_blank_lines=True, header=None, dtype=np.float64, engine='python')
+
+freq=np.zeros(Npts)
+Vnin=np.zeros(Npts)
+VnoutM1a=np.zeros(Npts)
+VnoutM1af=np.zeros(Npts)
+VnoutM1b=np.zeros(Npts)
+VnoutM1bf=np.zeros(Npts)
+VnoutM2=np.zeros(Npts)
+VnoutM2f=np.zeros(Npts)
+VnoutM4a=np.zeros(Npts)
+VnoutM4af=np.zeros(Npts)
+VnoutM4b=np.zeros(Npts)
+VnoutM4bf=np.zeros(Npts)
+VnoutM5a=np.zeros(Npts)
+VnoutM5af=np.zeros(Npts)
+VnoutM5b=np.zeros(Npts)
+VnoutM5bf=np.zeros(Npts)
+Vnout=np.zeros(Npts)
+SnoutM1=np.zeros(Npts)
+SnoutM1f=np.zeros(Npts)
+SnoutM1w=np.zeros(Npts)
+SnoutM2=np.zeros(Npts)
+SnoutM2f=np.zeros(Npts)
+SnoutM2w=np.zeros(Npts)
+SnoutM4=np.zeros(Npts)
+SnoutM4f=np.zeros(Npts)
+SnoutM4w=np.zeros(Npts)
+SnoutM5=np.zeros(Npts)
+SnoutM5f=np.zeros(Npts)
+SnoutM5w=np.zeros(Npts)
+SninM1=np.zeros(Npts)
+SninM1f=np.zeros(Npts)
+SninM1w=np.zeros(Npts)
+SninM1dBv=np.zeros(Npts)
+SninM1fdBv=np.zeros(Npts)
+SninM1wdBv=np.zeros(Npts)
+SninM2=np.zeros(Npts)
+SninM2f=np.zeros(Npts)
+SninM2w=np.zeros(Npts)
+SninM2dBv=np.zeros(Npts)
+SninM2fdBv=np.zeros(Npts)
+SninM2wdBv=np.zeros(Npts)
+SninM3=np.zeros(Npts)
+SninM3f=np.zeros(Npts)
+SninM3w=np.zeros(Npts)
+SninM3dBv=np.zeros(Npts)
+SninM3fdBv=np.zeros(Npts)
+SninM3wdBv=np.zeros(Npts)
+SninM4=np.zeros(Npts)
+SninM4f=np.zeros(Npts)
+SninM4w=np.zeros(Npts)
+SninM4dBv=np.zeros(Npts)
+SninM4fdBv=np.zeros(Npts)
+SninM4wdBv=np.zeros(Npts)
+SninM5=np.zeros(Npts)
+SninM5f=np.zeros(Npts)
+SninM5w=np.zeros(Npts)
+SninM5dBv=np.zeros(Npts)
+SninM5fdBv=np.zeros(Npts)
+SninM5wdBv=np.zeros(Npts)
+SnoutdBv=np.zeros(Npts)
+Snin=np.zeros(Npts)
+SnindBv=np.zeros(Npts)
+A=np.zeros(Npts)
+Sninf=np.zeros(Npts)
+SninfdBv=np.zeros(Npts)
+Sninw=np.zeros(Npts)
+SninwdBv=np.zeros(Npts)
+for k in range(0,Npts):
+  freq[k]=df_noise.iloc[Nvar*k,1]
+  Vnin[k]=df_noise.iloc[Nvar*k+1,0]
+  VnoutM1a[k]=df_noise.iloc[Nvar*k+2,0]
+  VnoutM1af[k]=df_noise.iloc[Nvar*k+3,0]
+  VnoutM1b[k]=df_noise.iloc[Nvar*k+4,0]
+  VnoutM1bf[k]=df_noise.iloc[Nvar*k+5,0]
+  VnoutM2[k]=df_noise.iloc[Nvar*k+6,0]
+  VnoutM2f[k]=df_noise.iloc[Nvar*k+7,0]
+  VnoutM4a[k]=df_noise.iloc[Nvar*k+8,0]
+  VnoutM4af[k]=df_noise.iloc[Nvar*k+9,0]
+  VnoutM4b[k]=df_noise.iloc[Nvar*k+10,0]
+  VnoutM4bf[k]=df_noise.iloc[Nvar*k+11,0]
+  VnoutM5a[k]=df_noise.iloc[Nvar*k+12,0]
+  VnoutM5af[k]=df_noise.iloc[Nvar*k+13,0]
+  VnoutM5b[k]=df_noise.iloc[Nvar*k+14,0]
+  VnoutM5bf[k]=df_noise.iloc[Nvar*k+15,0]
+  Vnout[k]=df_noise.iloc[Nvar*k+16,0]
+  SnoutM1[k]=VnoutM1a[k]**2+VnoutM1b[k]**2
+  SnoutM1f[k]=VnoutM1af[k]**2+VnoutM1bf[k]**2
+  SnoutM1w[k]=SnoutM1[k]-SnoutM1f[k]
+  SnoutM2[k]=VnoutM2[k]**2
+  SnoutM2f[k]=VnoutM2f[k]**2
+  SnoutM2w[k]=SnoutM2[k]-SnoutM2f[k]
+  SnoutM4[k]=VnoutM4a[k]**2+VnoutM4b[k]**2
+  SnoutM4f[k]=VnoutM4af[k]**2+VnoutM4bf[k]**2
+  SnoutM4w[k]=SnoutM4[k]-SnoutM4f[k]
+  SnoutM5[k]=VnoutM5a[k]**2+VnoutM5b[k]**2
+  SnoutM5f[k]=VnoutM5af[k]**2+VnoutM5bf[k]**2
+  SnoutM5w[k]=SnoutM5[k]-SnoutM5f[k]
+  A[k]=Vnout[k]/Vnin[k]
+  Snin[k]=Vnin[k]**2
+  SnindBv[k]=10*log(Snin[k])
+  SninM1[k]=SnoutM1[k]/A[k]**2
+  SninM1f[k]=SnoutM1f[k]/A[k]**2
+  SninM1w[k]=SnoutM1w[k]/A[k]**2
+  SninM1dBv[k]=10*log(SninM1[k])
+  SninM1fdBv[k]=10*log(SninM1f[k])
+  SninM1wdBv[k]=10*log(SninM1w[k])
+  SninM2[k]=SnoutM2[k]/A[k]**2
+  SninM2f[k]=SnoutM2f[k]/A[k]**2
+  SninM2w[k]=SnoutM2w[k]/A[k]**2
+  SninM2dBv[k]=10*log(SninM2[k])
+  SninM2fdBv[k]=10*log(SninM2f[k])
+  SninM2wdBv[k]=10*log(SninM2w[k])
+  SninM4[k]=SnoutM4[k]/A[k]**2
+  SninM4f[k]=SnoutM4f[k]/A[k]**2
+  SninM4w[k]=SnoutM4w[k]/A[k]**2
+  SninM4dBv[k]=10*log(SninM4[k])
+  SninM4fdBv[k]=10*log(SninM4f[k])
+  SninM4wdBv[k]=10*log(SninM4w[k])
+  SninM5[k]=SnoutM5[k]/A[k]**2
+  SninM5f[k]=SnoutM5f[k]/A[k]**2
+  SninM5w[k]=SnoutM5w[k]/A[k]**2
+  SninM5dBv[k]=10*log(SninM5[k])
+  SninM5fdBv[k]=10*log(SninM5f[k])
+  SninM5wdBv[k]=10*log(SninM5w[k])
+  Sninf[k]=SninM1f[k]+SninM2f[k]+SninM4f[k]+SninM5f[k]
+  Sninw[k]=SninM1w[k]+SninM2w[k]+SninM4w[k]+SninM5w[k]
+  SninfdBv[k]=10*log(Sninf[k])
+  SninwdBv[k]=10*log(Sninw[k])
+
+S0sim=Sninw[0]
+Rninthsim=S0sim/(4*kT)
+gammanotasim=df_mos.at["M1a","Gm"]*Rninthsim
+
+fmin=freq[0]
+fmax=freq[Npts-1]
+
+plt.style.use('plt_style_small.mplstyle')
+plt.semilogx(freq,SninM1wdBv,'b-', label='M1a-M1b')
+plt.semilogx(freq,SninM2wdBv,'g-', label='M2')
+plt.semilogx(freq,SninM4wdBv,'m-', label='M4a-M4b')
+plt.semilogx(freq,SninM5wdBv,'c-', label='M5a-M5b')
+plt.semilogx(freq,SninwdBv,'r-', label='Total (sim.)')
+plt.semilogx(fthenz,SninthdBvthe,'r--', label='Total (theory)')
+plt.xlim(fmin,fmax)
+plt.xticks([1e0,1e1,1e2,1e3,1e4,1e5,1e6,1e7,1e8])
+plt.xlabel('Frequency [Hz]')
+plt.ylim(-190,-120)
+#plt.yticks(range(-150,-100,10))
+plt.ylabel('Input Noise PSD $[dBv/\\sqrt{Hz}]$')
+#plt.legend(loc='lower left')
+plt.legend(loc='center left', fontsize=9, bbox_to_anchor=(1, 0.5))
+#textstr = '\n'.join((
+#    f'$S_{{nin,th}} =$ {S0dBvthe:.1f} $dBv/\\sqrt{{Hz}}$ (theory)',
+#    f'$S_{{nin,th}} =$ {S0dBvsim:.1f} $dBv/\\sqrt{{Hz}}$ (sim.)',
+#    f'$f_k =$ {fkthe/1e3:.1f} kHz (theory)'))
+#    f'$f_k =$ {fksim/1e3:.1f} kHz (sim.)'))
+#plt.text(0.35, 0.95, textstr, ha='left', va='top', size=9, transform=plt.gca().transAxes,
+#         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+#saveFigures(savePath, 'Input_referred_noise_PSD')
+plt.show()
+```
+
+The contributions of M~1a~-M~1b~, M~2~, M~4a~-M~4b~ and M~5a~-M~5b~ to the input-referred white noise PSD are detailed in @fig-ng_white_noise_contributions and compared to the theoretical white noise. As expected from the value of $\eta_{th} =$ `{python} f'{etath:.3f}'` in @tbl-thermal, we can observe that the white noise is dominated by the differential pair M~1a~-M~1b~ and M~4a~-M~4b~, while the contribution of  M~2~ and M~5a~-M~5b~ are more than 40 dB lower and can therefore be neglected. The total simulated white noise is slightly higher than the theoretical estimation, which is acceptable. This results in an OTA thermal noise excess factor $\gamma_{n,ota} =$  `{python} f'{gammanotasim:.3f}'` that is slightly larger than the predicted value $\gamma_{n,ota} =$  `{python} f'{gammanotathe:.3f}'`.
+
+@fig-ng_flicker_noise_contributions presents the breakdown of the contributions of the various transistors to the input-referred flicker noise. As expected from the value of $\eta_{fl} =$ `{python} f'{etafl:.3f}'` in @tbl-flicker, the flicker noise is dominated by the current mirror M~4a~-M~4b~. The contribution of the differential pair is about 10 dB lower and the contributions of M~2~ and M~5a~-M~5b~ more than 30 dB lower.
+
+The breakdown of the contributions of the various transistors to the total input-referred noise is presented in @fig-ng_flicker_noise_contributions. We can observe that the simulation is slightly smaller than the theoretical estimation, but reasonably close.
+
+```{python}
+#| label: fig-ng_flicker_noise_contributions
+#| fig-cap: "Breakdown of the contributions to the simulated input-referred flicker noise PSD."
+
+plt.style.use('plt_style_small.mplstyle')
+plt.semilogx(freq,SninM1fdBv,'b-', label='M1a-M1b')
+plt.semilogx(freq,SninM2fdBv,'g-', label='M2')
+plt.semilogx(freq,SninM4fdBv,'m-', label='M4a-M4b')
+plt.semilogx(freq,SninM5fdBv,'c-', label='M5a-M5b')
+plt.semilogx(freq,SninfdBv,'r-', label='Total (sim.)')
+plt.semilogx(fthenz,SninfldBvthe,'r--', label='Total (theory)')
+plt.xlim(fmin,1e5)
+#plt.xticks([1e1,1e2,1e3,1e4,1e5,1e6,1e7,1e8])
+plt.xlabel('Frequency [Hz]')
+plt.ylim(-160,-100)
+#plt.yticks(range(-170,-90,10))
+plt.ylabel('Input Noise PSD $[dBv/\\sqrt{Hz}]$')
+#plt.legend(loc='lower left')
+plt.legend(loc='center left', fontsize=9, bbox_to_anchor=(1, 0.5))
+#textstr = '\n'.join((
+#    f'$S_{{nin,th}} =$ {S0dBvthe:.1f} $dBv/\\sqrt{{Hz}}$ (theory)',
+#    f'$S_{{nin,th}} =$ {S0dBvsim:.1f} $dBv/\\sqrt{{Hz}}$ (sim.)',
+#    f'$f_k =$ {fkthe/1e3:.1f} kHz (theory)'))
+#    f'$f_k =$ {fksim/1e3:.1f} kHz (sim.)'))
+#plt.text(0.35, 0.95, textstr, ha='left', va='top', size=9, transform=plt.gca().transAxes,
+#         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+#saveFigures(savePath, 'Input_referred_noise_PSD')
+plt.show()
+```
+
+```{python}
+#| label: fig-ng_noise_contributions
+#| fig-cap: "Breakdown of the contributions to the simulated input-referred noise PSD."
+
+plt.style.use('plt_style_small.mplstyle')
+plt.semilogx(freq,SninM1dBv,'b-', label='M1a-M1b (total)')
+#plt.semilogx(freq,SninM1fdBv,'b-.', label='M1a-M1b (flicker)')
+#plt.semilogx(freq,SninM1wdBv,'b--', label='M1a-M1b (white)')
+plt.semilogx(freq,SninM2dBv,'g-', label='M2 (total)')
+#plt.semilogx(freq,SninM2fdBv,'g-.', label='M2a-M2b-M2c-M2d (flicker)')
+#plt.semilogx(freq,SninM2wdBv,'g--', label='M2a-M2b-M2c-M2d (white)')
+plt.semilogx(freq,SninM4dBv,'m-', label='M4a-M4b')
+plt.semilogx(freq,SninM5dBv,'c-', label='M5a-M5b')
+#plt.semilogx(freq,SninfdBv,'r--', label='Total (flicker)')
+#plt.semilogx(freq,SninwdBv,'r-.', label='Total (white)')
+plt.semilogx(freq,SnindBv,'r-', label='Total')
+#plt.semilogx(fthe,SninthdBvthe,'k--', label='Thermal (theory)')
+#plt.semilogx(fthe,SninfldBvthe,'k--', label='Flicker (theory)')
+plt.semilogx(fthenz,SnindBvthe,'r--', label='Total (theory)')
+plt.xlim(fmin,fmax)
+plt.xticks([1e0,1e1,1e2,1e3,1e4,1e5,1e6,1e7,1e8])
+plt.xlabel('Frequency [Hz]')
+plt.ylim(-150,-100)
+plt.yticks(range(-150,-90,10))
+plt.ylabel('Input Noise PSD $[dBv/\\sqrt{Hz}]$')
+#plt.legend(loc='lower left')
+plt.legend(loc='center left', fontsize=9, bbox_to_anchor=(1, 0.5))
+#textstr = '\n'.join((
+#    f'$S_{{nin,th}} =$ {S0dBvthe:.1f} $dBv/\\sqrt{{Hz}}$ (theory)',
+#    f'$S_{{nin,th}} =$ {S0dBvsim:.1f} $dBv/\\sqrt{{Hz}}$ (sim.)',
+#    f'$f_k =$ {fkthe/1e3:.1f} kHz (theory)'))
+#    f'$f_k =$ {fksim/1e3:.1f} kHz (sim.)'))
+#plt.text(0.35, 0.95, textstr, ha='left', va='top', size=9, transform=plt.gca().transAxes,
+#         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+#saveFigures(savePath, 'Input_referred_noise_PSD')
+plt.show()
+```
+
+## Input common-mode voltage range
+We can check the input common-mode voltage range by connecting the OTA as a voltage follower and sweeping the positive input. As shown in @fig-ng_cm_range, the output follows the input voltage up to $0.8\,V$. So the input common-mode voltage range is about $0.8\,V$.
+
+```{python}
+#| label: fig-ng_cm_range
+#| fig-cap: "Simulated input common-mode voltage range."
+
+simtype = ".dc"
+fileName = otaName + simtype
+simulationPath = "./Simulations/ngspice/Follower/"
+simulationFile = simulationPath + fileName + ".cir"
+simulationLog = simulationPath + fileName + ".log"
+simulationData = simulationPath + fileName + ".dat"
+ngspiceDataFile = simulationPath + otaName + version + simtype + "1.dat"
+ngspiceLogFile = simulationPath + otaName + version + simtype + "1.log"
+
+Vinmin=0
+Vinmax=VDD
+dVin=10e-3
+
+if newSim:
+  simpar = '\n'.join((
+    f'.csparam Vinmin={Vinmin:.3e}',
+    f'.csparam Vinmax={Vinmax:.3e}',
+    f'.csparam dVin={dVin:.3e}'
+  ))
+  simparFile = simulationPath + "simulation.dc.par"
+  with open(simparFile, 'w') as f:
+    f.write(simpar)
+  #print('Starting NGSpice simulation...\n')
+  result = subprocess.run(f"""ngspice_con -b -o "{simulationLog}" "{simulationFile}" """, shell=True, capture_output=True, text=True)
+  # We need to copy the resulting dc simulation data file because it will be overwritten by the next dc simulation
+  shutil.copy2(simulationData, ngspiceDataFile)
+  # We also need to copy the dc simulation log file because it will be overwritten by the next dc simulation
+  shutil.copy2(simulationLog, ngspiceLogFile)
+
+df_sim=pd.read_table(ngspiceDataFile, sep=' +', engine='python')
+
+Vinsim=df_sim['v-sweep'].to_numpy()
+Voutsim=df_sim['Vout'].to_numpy()
+plt.plot([0,0.8],[0,0.8],'k--', linewidth=lw)
+#plt.plot([0,0],[0,Voutq],'k--', linewidth=lw)
+#plt.plot([Vinmin,Vinmax/1e-3],[Voutmax,Voutmax],'k--', linewidth=lw)
+#plt.plot([Vidmin/1e-3,Vidmax/1e-3],[Voutmin,Voutmin],'k--', linewidth=lw)
+plt.plot(Vinsim,Voutsim,'r')
+plt.xlim(Vinmin,Vinmax)
+#plt.xticks(np.arange(-0.9,1,0.3))
+plt.xlabel('$V_{in}$ [$V$]')
+plt.ylim(0,1.2)
+#plt.yticks(np.arange(0,2.2,0.2))
+plt.ylabel('$V_{out}$ [V]')
+#plt.legend(loc='best')
+#textstr = '\n'.join((
+#  f'$V_{{DD}} =$ {VDD:.1f} V',
+#  f'$V_{{ic}} =$ {Vic:.1f} V',
+#  f'$V_{{outq}} =$ {Voutq:.3f} V',
+#  f'$V_{{outmax}} =$ {Voutmax:.3f} V',
+#  f'$V_{{outmin}} =$ {Voutmin:.3f} V',
+#  f'$V_{{swing}} =$ {Vswing:.2f} V'))
+#plt.text(0.65, 0.5, textstr, ha='left', va='center', size=9, transform=plt.gca().transAxes,
+#         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
+#saveFigures(savePath, 'Vout_Vid')
+plt.show()
+```
+
+## Step-response
+```{python}
+Vic=0.3
+DVin=10e-3
+```
+
+In this section we will check the step response of the OTA operating as a voltage follower (output connected to the negative input) with the same load capacitance $C_L =$ `{python} f'{CL/1e-12:.0f}'` $pF$. According to the input common-mode voltage range established above, we will set the input common-mode voltage to  $V_{ic} =$ `{python} f'{Vic:.1f}'` $V$ to leave enough room for the large step.
+
+### Small-step
+We start by imposing a small step $\Delta V_{in} =$ `{python} f'{DVin/1e-3:.0f}'` $mV$ on top of a common mode voltage $V_{ic} =$ `{python} f'{Vic:.1f}'` $V$. The simulation results are shown in @fig-ng_step_small where $\Delta V_{in}(t) \triangleq V_{in+}(t) - V_{ic}$ and $\Delta V_{out}(t) \triangleq V_{out}(t) - V_{outq}$ with $V_{outq} \cong V_{ic}$ is the quiescent output voltage. $\Delta V_{in}$ and $\Delta V_{out}$ are compared to the response of a single pole circuit having a cut-off frequency equal to the $GBW$. The difference between the simulation an the first-order model is due to the larger estimated value of the $GBW$ and the additional poles and the zero introduced by the current mirrors and the compensation capacitor, respectively.
+
+```{python}
+#| label: fig-ng_step_small
+#| fig-cap: "Step response of the OTA as a voltage follower for a small input step."
+
+simtype = ".tran"
+fileName = otaName + simtype
+simulationPath = "./Simulations/ngspice/Follower/"
+simulationFile = simulationPath + fileName + ".cir"
+simulationLog = simulationPath + fileName + ".log"
+simulationData = simulationPath + fileName + ".dat"
+simulationVoltages = simulationPath + fileName + ".ic"
+ngspiceDataFile = simulationPath + otaName + version + simtype + "1.dat"
+ngspiceNodeVoltageFile = simulationPath + otaName + version + simtype + "1.ic"
+
+V1=Vic
+V2=Vic+DVin
+td=0.1e-6
+tr=10e-12
+tf=10e-12
+pw=1
+per=1
+nper=0
+
+if newSim:
+  paramstr = '\n'.join((
+    f'.param VDD={VDD:.1f} Vic={Vic:.1f} Vos={Vos/1e-6:.3f}u Ib1={Ib1/1e-9:.0f}n Ib2={Ib2/1e-6:.1f}u',
+    f'.param CL={CL/1e-12:.0f}p Cc={Cc/1e-12:.1f}p',
+    f'.param W1={W1/1e-6:.2f}u L1={L1/1e-6:.2f}u AS1={AS1:.3e} PS1={PS1:.3e} AD1={AD1:.3e} PD1={PD1:.3e}',
+    f'.param W2={W2/1e-6:.2f}u L2={L2/1e-6:.2f}u AS2={AS2:.3e} PS2={PS2:.3e} AD2={AD2:.3e} PD2={PD2:.3e}',
+    f'.param W3={W3/1e-6:.2f}u L3={L3/1e-6:.2f}u AS3={AS3:.3e} PS3={PS3:.3e} AD3={AD3:.3e} PD3={PD3:.3e}',
+    f'.param W4={W4/1e-6:.2f}u L4={L4/1e-6:.2f}u AS4={AS4:.3e} PS4={PS4:.3e} AD4={AD4:.3e} PD4={PD4:.3e}',
+    f'.param W5={W5/1e-6:.2f}u L5={L5/1e-6:.2f}u AS5={AS5:.3e} PS5={PS5:.3e} AD5={AD5:.3e} PD5={PD5:.3e}'
+    ))
+  with open(simulationPath+'size_bias.par', 'w') as f:
+    f.write(paramstr)
+  pulsestr = f'.param V1={V1:.3f} V2={V2:.3f} td={td:.3e} tr={tr:.3e} tf={tf:.3e} pw={pw:.3e} per={per:.3e} np={nper:.0f}'
+  #print(pulsestr)
+  with open(simulationPath+'pulse.par', 'w') as f:
+    f.write(pulsestr)
+  Nsteps=1000
+  tstart=0
+  tstop=1.1e-6
+  tstep=(tstop-tstart)/Nsteps
+  simpar = '\n'.join((
+    f'.csparam tstep={tstep:.3e}',
+    f'.csparam tstop={tstop:.3e}',
+    f'.csparam tstart={tstart:.0f}'
+    ))
+  simparFile = simulationPath + "simulation.tran.par"
+  with open(simparFile, 'w') as f:
+    f.write(simpar)
+  #print('Starting NGSpice simulation...\n')
+  result = subprocess.run(f"""ngspice_con -b -o "{simulationLog}" "{simulationFile}" """, shell=True, capture_output=True, text=True)
+  # We need to copy the resulting tran simulation data file because it will be overwritten by the next tran simulation
+  shutil.copy2(simulationData, ngspiceDataFile)
+  # We need to copy the resulting operating point information file because it will be overwritten by subsequent simulations
+  shutil.copy2(simulationVoltages, ngspiceNodeVoltageFile)
+
+regexp = re.compile(r'v\(out\)' + refloat)
+with open(ngspiceNodeVoltageFile) as f:
+  for line in f:
+    match = re.search(regexp, line)
+    if match:
+      Voutq=float(match.group(1))
+
+df_sim=pd.read_table(ngspiceDataFile, sep=' +', engine='python')
+
+tsim=df_sim['time'].to_numpy()
+Vinsim=df_sim['v(inp)'].to_numpy()
+Voutsim=df_sim['v(out)'].to_numpy()
+DVinsim=Vinsim-Vic
+DVoutsim=Voutsim-Voutq
+
+Npts=len(tsim)
+tmin=tsim[0]
+tmax=tsim[Npts-1]
+
+#GBWthe=0.8e6
+DVoutthe=np.zeros(Npts)
+
+for k in range(0,Npts):
+  if tsim[k]<td:
+    DVoutthe[k]
+  else:
+    DVoutthe[k]=DVin*(1-exp(-2*pi*GBWthe*(tsim[k]-td)))
+
+Adcsim=pow(10,AdcdBsim/20)
+Voutfin=DVin*(1-1/Adcsim)
+
+lw=1
+plt.style.use('plt_style_small.mplstyle')
+plt.plot([td/1e-6,(td+1/(2*pi*GBWthe))/1e-6],[0,DVin/1e-3], 'k--', linewidth=lw)
+plt.plot([0,tmax/1e-6],[Voutfin/1e-3,Voutfin/1e-3], 'k--', linewidth=lw)
+plt.plot(tsim/1e-6,DVinsim/1e-3,'b-', label='Input')
+plt.plot(tsim/1e-6,DVoutthe/1e-3,'r--', label='Output (Theory)')
+plt.plot(tsim/1e-6,DVoutsim/1e-3,'r-', label='Output (Sim.)')
+plt.xlim(tmin/1e-6,tmax/1e-6)
+plt.xticks(np.arange(0,1.2,0.1))
+plt.xlabel('Time [$\\mu s$]')
+plt.ylim(0,12)
+plt.ylabel('$\\Delta V_{in}$, $\\Delta V_{out}$ [mV]')
+plt.legend(loc='lower right')
+#plt.legend(loc='center left', fontsize=9, bbox_to_anchor=(1, 0.5))
+#saveFigures(savePath, 'Input_referred_noise_PSD')
+plt.show()
+```
+
+### Large step
+```{python}
+DVin=0.3
+```
+
+We now impose a larger step $\Delta V_{in} =$ `{python} f'{DVin/1e-3:.0f}'` $mV$ on top of a common mode voltage $V_{ic} =$ `{python} f'{Vic/1e-3:.0f}'` $mV$. The simulation results are shown in @fig-ng_step_large where $\Delta V_{in}(t) \triangleq V_{in+}(t) - V_{ic}$ and $\Delta V_{out}(t) \triangleq V_{out}(t) - V_{outq}$ with $V_{outq} \cong V_{ic}$ is the quiescent output voltage. $\Delta V_{in}$ and $\Delta V_{out}$ are compared to the response of a single pole circuit having a cut-off frequency equal to the $GBW$. We now observe the effect of slew-rate which increases the settling time.
+
+```{python}
+#| label: fig-ng_step_large
+#| fig-cap: "Step response of the OTA as a voltage follower for a large input step highlighting the slew-rate effect."
+
+simtype = ".tran"
+fileName = otaName + simtype
+simulationPath = "./Simulations/ngspice/Follower/"
+simulationFile = simulationPath + fileName + ".cir"
+simulationLog = simulationPath + fileName + ".log"
+simulationData = simulationPath + fileName + ".dat"
+simulationVoltages = simulationPath + fileName + ".ic"
+ngspiceDataFile = simulationPath + otaName + version + simtype + "2.dat"
+ngspiceNodeVoltageFile = simulationPath + otaName + version + simtype + "2.ic"
+
+V1=Vic
+V2=Vic+DVin
+td=0.1e-6
+tr=10e-12
+tf=10e-12
+pw=1
+per=1
+nper=0
+
+if newSim:
+  pulsestr = f'.param V1={V1:.3f} V2={V2:.3f} td={td:.3e} tr={tr:.3e} tf={tf:.3e} pw={pw:.3e} per={per:.3e} np={nper:.0f}'
+  with open(simulationPath+'pulse.par', 'w') as f:
+    f.write(pulsestr)
+  Nsteps=1000
+  tstart=0
+  tstop=1.1e-6
+  tstep=(tstop-tstart)/Nsteps
+  simpar = '\n'.join((
+    f'.csparam tstep={tstep:.3e}',
+    f'.csparam tstop={tstop:.3e}',
+    f'.csparam tstart={tstart:.0f}'
+    ))
+  simparFile = simulationPath + "simulation.tran.par"
+  with open(simparFile, 'w') as f:
+    f.write(simpar)
+  #print('Starting NGSpice simulation...\n')
+  result = subprocess.run(f"""ngspice_con -b -o "{simulationLog}" "{simulationFile}" """, shell=True, capture_output=True, text=True)
+  # We need to copy the resulting tran simulation data file because it will be overwritten by the next tran simulation
+  shutil.copy2(simulationData, ngspiceDataFile)
+  # We need to copy the resulting operating point information file because it will be overwritten by subsequent simulations
+  shutil.copy2(simulationVoltages, ngspiceNodeVoltageFile)
+
+regexp = re.compile(r'v\(out\)' + refloat)
+with open(ngspiceNodeVoltageFile) as f:
+  for line in f:
+    match = re.search(regexp, line)
+    if match:
+      Voutq=float(match.group(1))
+
+df_sim=pd.read_table(ngspiceDataFile, sep=' +', engine='python')
+
+tsim=df_sim['time'].to_numpy()
+Vinsim=df_sim['v(inp)'].to_numpy()
+Voutsim=df_sim['v(out)'].to_numpy()
+DVinsim=Vinsim-Vic
+DVoutsim=Voutsim-Voutq
+
+Npts=len(tsim)
+tmin=tsim[0]
+tmax=tsim[Npts-1]
+
+DVoutthe=np.zeros(Npts)
+
+for k in range(0,Npts):
+  if tsim[k]<td:
+    DVoutthe[k]
+  else:
+    DVoutthe[k]=DVin*(1-exp(-2*pi*GBWthe*(tsim[k]-td)))
+
+Adcsim=pow(10,AdcdBsim/20)
+Voutfin=DVin*(1-1/Adcsim)
+
+lw=1
+plt.style.use('plt_style_small.mplstyle')
+plt.plot([td/1e-6,(td+1/(2*pi*GBWthe))/1e-6],[0,DVin/1e-3], 'k--', linewidth=lw)
+plt.plot([0,tmax/1e-6],[Voutfin/1e-3,Voutfin/1e-3], 'k--', linewidth=lw)
+plt.plot(tsim/1e-6,DVinsim/1e-3,'b-', label='Input')
+plt.plot(tsim/1e-6,DVoutthe/1e-3,'r--', label='Output (Theory)')
+plt.plot(tsim/1e-6,DVoutsim/1e-3,'r-', label='Output (Sim.)')
+plt.xlim(tmin/1e-6,tmax/1e-6)
+plt.xticks(np.arange(0,1.2,0.1))
+plt.xlabel('Time [$\\mu s$]')
+plt.ylim(0,350)
+plt.ylabel('$\\Delta V_{in}$, $\\Delta V_{out}$ [mV]')
+plt.legend(loc='lower right')
+#plt.legend(loc='center left', fontsize=9, bbox_to_anchor=(1, 0.5))
+#saveFigures(savePath, 'Input_referred_noise_PSD')
+plt.show()
+```
+
+## Power consumption
+
+```{python}
+Itot=2*Ib1+Ib2
+P=VDD*Itot
+Itele=500e-9
+Ptele=Itele*VDD
+```
+
+The total power consumption without accounting for the current flowing in M~3a~ and M~5a~ is equal to $I_{tot} =$ `{python} f'{Itot/1e-6:.2f}'` $\mu A$, resulting in a total power consumption $P =$ `{python} f'{P/1e-6:.3f}'` $\mu W$. We can compare the current and power consumption of the Miller OTA to the telescopic OTA which has a current consumption of about $I_{tot,telescopic} \cong$ `{python} f'{Itele/1e-6:.1f}'` $\mu A$. The current and power consumption of the Miller OTA is `{python} f'{Itot/Itele:.2f}'` times larger than that of the telescopic OTA for the same specifications and performance. 
+
+# Conclusion
+This notebook presented the detailed analysis, design and verification by simulation of the Miller OTA @bib:allen:book:2012. The analysis allowed to derive the design equations to achieve the target specifications. The OTA has been designed for specifications on the gain-bandwidth product and DC gain in the IHP SG13G2 130nm BiCMOS technology @bib:ihp:2025 using the inversion coefficient approach with the sEKV model and parameters @bib:enz:book:2006 @bib:enz:sscmag:autumn:2017 @bib:enz:sscmag:winter:2017. The design has been validated by simulations with the ngspice simulator @bib:ngspice:2024 using the PSP compact model @bib:psp103.6:2017 and the parameters provided by the open source PDK provided by IHP @bib:ihp:2025.  The simulations match the expected results derived from the analysis reasonably well even though the compact model used for the simulation is different than the EKV compact model. This highlights that the inversion coefficient approach with the sEKV model can do a good job for the design provided the sEKV parameters are correctly extracted for the selected technology. The simulations have shown that the gain-bandwidth and DC gain specifications are achieved despite the limited intrinsic gain of nMOS transistors of this technology. This seems to be a strong limitation of this technology since the DC gain of the Miller OTA is limited to about 70 dB.
+
+# References

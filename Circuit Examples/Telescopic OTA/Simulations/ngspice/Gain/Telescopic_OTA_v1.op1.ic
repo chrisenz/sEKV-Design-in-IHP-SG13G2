@@ -1,0 +1,19 @@
+* Intermediate Transient Solution
+* Circuit: simulation of the telescopic ota designed with the sekv model
+* Recorded at simulation time: 0
+.ic v(3) = 0.500225
+.ic v(inp) = 0.45
+.ic v(1) = 0.206571
+.ic v(4) = 0.500211
+.ic v(inn) = 0.45
+.ic v(5) = 0.948409
+.ic v(2) = 0.707524
+.ic v(vdd) = 1.2
+.ic v(6) = 0.948408
+.ic v(vb1) = 0.7
+.ic v(out) = 0.707078
+.ic v(vb2) = 0.6
+.ic v(8) = 0.208022
+.ic v(7) = 0.368022
+.ic v(ic) = 0.45
+.ic v(id) = 0

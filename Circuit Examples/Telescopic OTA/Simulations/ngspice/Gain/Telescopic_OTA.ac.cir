@@ -1,0 +1,22 @@
+Simulation of the Telescopic OTA designed with the sEKV model
+
+.lib /Simulations/models/cornerMOSlv.lib mos_tt ; model file for PSP
+.include size_bias.par ; Size and bias values
+.include Telescopic_OTA.net ; Circuit netlist
+
+.control
+ op
+ save v(out)
+ write $inputdir/Telescopic_OTA.ac.op
+* reset all
+ ac dec 51 10 100MEG
+ let AmagdB=vdb(out)
+ let Aphdeg=180/PI*vp(out)
+ meas ac Adc max AmagdB
+ meas ac GBW when AmagdB=0
+ meas ac PGBW find Aphdeg at=GBW
+ set wr_singlescale
+ set wr_vecnames
+ wrdata $inputdir/Telescopic_OTA.ac.dat AmagdB Aphdeg
+.endc
+.end

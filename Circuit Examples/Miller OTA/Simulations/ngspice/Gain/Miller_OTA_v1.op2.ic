@@ -1,0 +1,14 @@
+* Intermediate Transient Solution
+* Circuit: simulation of the miller ota designed with the sekv model
+* Recorded at simulation time: 0
+.ic v(4) = 0.590689
+.ic v(inn) = 0.602445
+.ic v(3) = 0.421524
+.ic v(1) = 0.759539
+.ic v(inp) = 0.597555
+.ic v(out) = 0.555555
+.ic v(vdd) = 1.2
+.ic v(5) = 0.426742
+.ic v(6) = 0.554209
+.ic v(ic) = 0.6
+.ic v(id) = -0.00489

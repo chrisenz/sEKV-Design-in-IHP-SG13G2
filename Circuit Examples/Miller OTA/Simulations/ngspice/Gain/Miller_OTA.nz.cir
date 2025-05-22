@@ -1,0 +1,25 @@
+Simulation of the Miller OTA designed with the sEKV model
+
+.lib /Simulations/models/cornerMOSlv.lib mos_tt ; model file for PSP
+.include size_bias.par ; Size and bias values
+.include Miller_OTA.net ; Circuit netlist
+
+.control
+ op
+ save inoise_spectrum onoise_spectrum
+ + onoise_n.x1a.nsg13_lv_nmos onoise_n.x1b.nsg13_lv_nmos
+ + onoise_n.x2.nsg13_lv_pmos
+ + onoise_n.x4a.nsg13_lv_pmos onoise_n.x4b.nsg13_lv_pmos
+ + onoise_n.x5a.nsg13_lv_nmos onoise_n.x5b.nsg13_lv_nmos
+ + onoise_n.x1a.nsg13_lv_nmos_flicker onoise_n.x1b.nsg13_lv_nmos_flicker
+ + onoise_n.x2.nsg13_lv_pmos_flicker
+ + onoise_n.x4a.nsg13_lv_pmos_flicker onoise_n.x4b.nsg13_lv_pmos_flicker
+ + onoise_n.x5a.nsg13_lv_nmos_flicker onoise_n.x5b.nsg13_lv_nmos_flicker
+ noise V(out) Vid dec 41 1 100MEG 1
+ setplot noise1
+ write $inputdir/Miller_OTA.nz.raw
+ set wr_singlescale
+ set wr_vecnames
+ wrdata $inputdir/Miller_OTA.nz.dat inoise_spectrum onoise_spectrum
+.endc
+.end

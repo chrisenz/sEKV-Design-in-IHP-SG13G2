@@ -79,7 +79,7 @@ plt.rcParams['mathtext.rm'] = 'Arial'
 plt.rcParams['mathtext.it'] = 'Arial:italic'
 plt.rcParams['mathtext.bf'] = 'Arial:bold'
 
-plt.style.use('plt_style_medium.mplstyle')
+plt.style.use('plt_style_small.mplstyle')
 lw=1
 msize=4
 mevery=4
@@ -2035,9 +2035,10 @@ simulationData = simulationPath + fileName + ".dat"
 ngspiceDataFile = simulationPath + otaName + version + simtype + "1.dat"
 ngspiceLogFile = simulationPath + otaName + version + simtype + "1.log"
 
-Vidmin=-0.6
-Vidmax=0.6
-dVid=2e-3
+Vidmin=-10e-3
+Vidmax=0
+Npts=1001
+dVid=(Vidmax-Vidmin)/(Npts-1)
 
 if newSim:
   simpar = '\n'.join((
@@ -2074,26 +2075,36 @@ with open(ngspiceLogFile) as f:
     if match:
       Voutmin=float(match.group(1))
 
+regexp = re.compile(r'vos' + refloat)
+with open(ngspiceLogFile) as f:
+  for line in f:
+    match = re.search(regexp, line)
+    if match:
+      Vos=float(match.group(1))
+
+Voutq=0.6
+Voutmax=1.05
+Voutmin=0.3
 Vswing=Voutmax-Voutmin
 
 lw=1
-plt.style.use('plt_style_small.mplstyle')
-plt.plot([Vidmin/1e-3,0],[Voutq,Voutq],'k--', linewidth=lw)
-plt.plot([0,0],[0,Voutq],'k--', linewidth=lw)
+plt.plot([Vidmin/1e-3,Vos/1e-3],[Voutq,Voutq],'k--', linewidth=lw)
+plt.plot([Vos/1e-3,Vos/1e-3],[0,Voutq],'k--', linewidth=lw)
 plt.plot([Vidmin/1e-3,Vidmax/1e-3],[Voutmax,Voutmax],'k--', linewidth=lw)
 plt.plot([Vidmin/1e-3,Vidmax/1e-3],[Voutmin,Voutmin],'k--', linewidth=lw)
-plt.plot(Vidsim,Voutsim,'r')
-plt.xlim(Vidmin,Vidmax)
-#plt.xticks(np.arange(-0.6,0,0.3))
-plt.xlabel('$V_{id}$ [$V$]')
+plt.plot(Vidsim/1e-3,Voutsim,'r')
+plt.xlim(Vidmin/1e-3,Vidmax/1e-3)
+#plt.xticks(np.arange(-50,60,10))
+plt.xlabel('$V_{id}$ [$mV$]')
 plt.ylim(0,1.2)
 plt.yticks(np.arange(0,1.4,0.2))
 plt.ylabel('$V_{out}$ [V]')
 #plt.legend(loc='best')
 textstr = '\n'.join((
   f'$V_{{DD}} =$ {VDD:.1f} V',
-  f'$V_{{ic}} =$ {Vic:.1f} V',
+  f'$V_{{ic}} =$ {Vic:.3f} V',
   f'$V_{{outq}} =$ {Voutq:.3f} V',
+  f'$V_{{os}} =$ {Vos/1e-3:.3f} $mV$',
   f'$V_{{outmax}} =$ {Voutmax:.3f} V',
   f'$V_{{outmin}} =$ {Voutmin:.3f} V',
   f'$V_{{swing}} =$ {Vswing:.2f} V'))
@@ -2103,7 +2114,7 @@ plt.text(0.65, 0.5, textstr, ha='left', va='center', size=9, transform=plt.gca()
 plt.show()
 ```
 
-We can now zoom into the high gain region in order to extract a more accurate value of the offset voltage and the output swing. The simulation results are presented in @fig-ng_large_signal_zoom.
+From @fig-ng_large_signal, we see that the output swing is about $V_{out,swing} =$ `{python} f'{Vswing/1e-3:.0f}'` $mV$. We can now zoom into the high gain region in order to extract the offset voltage that is needed to bring the output voltage back to $V_{outq} =$ `{python} f'{Voutq:.3f}'` $V$. The simulation results are presented in @fig-ng_large_signal_zoom.
 
 ```{python}
 #| label: fig-ng_large_signal_zoom
@@ -2118,8 +2129,8 @@ simulationData = simulationPath + fileName + ".dat"
 ngspiceDataFile = simulationPath + otaName + version + simtype + "2.dat"
 ngspiceLogFile = simulationPath + otaName + version + simtype + "2.log"
 
-Vidmin=-5.2e-3
-Vidmax=-4.6e-3
+Vidmin=-4.95e-3
+Vidmax=-4.8e-3
 #Vidmin=round(1e5*Vos)/1e5-1e-5
 #Vidmax=Vidmin+2e-5
 Npts=1001
@@ -2169,29 +2180,30 @@ with open(ngspiceLogFile) as f:
 
 Voutq=0.6
 Vswing=Voutmax-Voutmin
+Adiff=Vswing/(Vidmax-Vidmin)
+AdiffdB=20*log(abs(Adiff))
 
-lw=1
-plt.style.use('plt_style_small.mplstyle')
-plt.plot([Vidmin/1e-3,Vos/1e-3],[Vic,Vic],'k--', linewidth=lw)
-plt.plot([Vos/1e-3,Vos/1e-3],[0,Vic],'k--', linewidth=lw)
-plt.plot([Vidmin/1e-3,Vidmax/1e-3],[Voutmax,Voutmax],'k--', linewidth=lw)
-plt.plot([Vidmin/1e-3,Vidmax/1e-3],[Voutmin,Voutmin],'k--', linewidth=lw)
+plt.plot([Vidmin/1e-3,Vos/1e-3],[Voutq,Voutq],'k--', linewidth=lw)
+plt.plot([Vos/1e-3,Vos/1e-3],[0.3,Voutq],'k--', linewidth=lw)
+#plt.plot([Vidmin/1e-3,Vidmax/1e-3],[Voutmax,Voutmax],'k--', linewidth=lw)
+#plt.plot([Vidmin/1e-3,Vidmax/1e-3],[Voutmin,Voutmin],'k--', linewidth=lw)
 plt.plot(Vidsim/1e-3,Voutsim,'r')
 plt.xlim(Vidmin/1e-3,Vidmax/1e-3)
 #plt.xticks(np.arange(54,76,2))
 plt.xlabel('$V_{id}\\;[mV]$')
-plt.ylim(0,1.2)
-#plt.yticks(np.arange(0.4,1.5,0.1))
+plt.ylim(0.3,0.9)
+#plt.yticks(np.arange(0.692,0.708,0.002))
 plt.ylabel('$V_{out}$ [V]')
 #plt.legend(loc='best')
 textstr = '\n'.join((
   f'$V_{{DD}} =$ {VDD:.1f} V',
-  f'$V_{{ic}} =$ {Vic:.1f} V',
   f'$V_{{outq}} =$ {Voutq:.3f} V',
   f'$V_{{os}} =$ {Vos/1e-3:.3f} $mV$',
   f'$V_{{outmax}} =$ {Voutmax:.3f} V',
   f'$V_{{outmin}} =$ {Voutmin:.3f} V',
-  f'$V_{{swing}} =$ {Vswing:.2f} V'))
+  f'$V_{{swing}} =$ {Vswing:.2f} V',
+  f'$A_{{diff}} =$ {Adiff:.3e}',
+  f'$A_{{diff}} =$ {AdiffdB:.2f} dB'))
 plt.text(1.05, 0.5, textstr, ha='left', va='center', size=9, transform=plt.gca().transAxes,
          bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
 #saveFigures(savePath, 'Vout_Vid_zoom')
@@ -2298,8 +2310,8 @@ axs[0].semilogx(fsim,AclmagdBsim,'b',label='Closed-loop gain (Simulation)')
 axs[0].semilogx(fsim,AolmagdBsim,'r',label='Open-loop gain (Simulation)')
 #axs[0].semilogx(fsim,AolmagdBng,'m--',label='Open-loop gain (ngspice)')
 axs[0].semilogx(fthe,AmagdBthe,'r--',label='Open-loop gain (Theory)')
-axs[0].set(xlim=(fmin,fmax), ylim=(-60,100), ylabel='$|A_{vd}|$ [dB]')
-axs[0].set_yticks([-60,-40,-20,0,20,40,60,80,100])
+axs[0].set(xlim=(fmin,fmax), ylim=(-60,80), ylabel='$|A_{vd}|$ [dB]')
+axs[0].set_yticks([-60,-40,-20,0,20,40,60,80])
 axs[0].legend(loc='lower left')
 textstr1 = '\n'.join((
   f'$A_{{dc}} =$ {AdcdBthe:.1f} dB (theory)',
@@ -2406,8 +2418,8 @@ axs[0].semilogx([fmin,GBWsim],[0,0],'k--', linewidth=lw)
 axs[0].semilogx([GBWsim,GBWsim],[0,-60],'k--', linewidth=lw)
 axs[0].semilogx(fsim,AmagdBsim,'r',label='Simulation')
 axs[0].semilogx(fthe,AmagdBthe,'r--',label='Theory')
-axs[0].set(xlim=(fmin,fmax), ylim=(-60,100), ylabel='$|A_{vd}|$ [dB]')
-axs[0].set_yticks([-60,-40,-20,0,20,40,60,80,100])
+axs[0].set(xlim=(fmin,fmax), ylim=(-60,80), ylabel='$|A_{vd}|$ [dB]')
+axs[0].set_yticks([-60,-40,-20,0,20,40,60,80])
 axs[0].legend(loc='upper right')
 textstr1 = '\n'.join((
   f'$A_{{dc}} =$ {AdcdBthe:.1f} dB (theory)',

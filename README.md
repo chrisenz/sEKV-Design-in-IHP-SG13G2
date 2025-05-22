@@ -10,5 +10,7 @@ The sEKV design methodology is illustrated with several simple examples you can 
 * [Five transistors simple OTA](/Circuit%20Examples/Simple%20OTA/Simple_OTA.pdf).
 * [Symmetrical OTA](/Circuit%20Examples/Symmetrical%20OTA/Symmetrical_OTA.pdf).
 * [Miller OTA](/Circuit%20Examples/Miller%20OTA/Miller_OTA.pdf).
+* [Telescopic OTA](/Circuit%20Examples/Telescopic%20OTA/Telescopic_OTA.pdf).
+* [Folded cascode OTA](/Circuit%20Examples/Folded%20cascode%20OTA/Folded_cascode_OTA.pdf).
 
 The theoretical predictions are validated using ngspice and the models provided by the IHP PDK for the PSP compact model. In order to run the example in the Jupyter or Quarto Notebooks you need to install ngspice according to the instruction given in the [ngspice installation file](ngspice_installation.md).

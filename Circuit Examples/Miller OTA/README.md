@@ -1,6 +1,6 @@
 # Design of the Miller OTA
 
-![Miller OTA schematic.](/img/Miller_ota_schematic.png)
+![Miller OTA schematic.](/img/Miller_OTA_schematic.png)
 
 This example presents the analysis, design and simulation of the two-stage OTA or Miller OTA using the inversion coefficient approach and the sEKV model. The design is performed for the IHP SG13G2 BiCMOS process. We have chosen this process because IHP offers an open source PDK. The simulations are performed with the ngspice simulator using the PSP compact model and the parameters provided by the open source PDK.
 

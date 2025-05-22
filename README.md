@@ -8,7 +8,7 @@ The sEKV design methodology is illustrated with several simple examples you can 
 * [Common-source gain stage optimization](/Circuit%20Examples/CS%20Optimization/) for minimum current consumption.
 * [Cascode Gain Stage with Bias](/Circuit%20Examples/Cascode%20Gain%20Stage%20with%20Bias/).
 * [Five transistors simple OTA](/Circuit%20Examples/Simple%20OTA/).
-* [Symmetrical OTA](/Circuit%20Examples/Symmetrical%20OTA/).
+* [Symmetrical Cascode OTA](/Circuit%20Examples/Symmetrical%20OTA/).
 * [Miller OTA](/Circuit%20Examples/Miller%20OTA/).
 * [Telescopic OTA](/Circuit%20Examples/Telescopic%20OTA/).
 * [Folded cascode OTA](/Circuit%20Examples/Folded%20Cascode%20OTA/).

@@ -1,6 +1,6 @@
 # Design of the Telescopic OTA
 
-![Telescopic OTA schematic.](/img/Telescopic_OTA_schematic.png)
+![Telescopic OTA schematic.](/img/Telescopic_ota_schematic.png)
 
 This example presents the analysis, design and simulation of the telescopic OTA using the inversion coefficient approach and the sEKV model. The design is performed for the IHP SG13G2 130nm BiCMOS process. We have chosen this process because IHP offers an open source PDK. The simulations are performed with the ngspice simulator using the PSP compact model and the parameters provided by the open source PDK.
 

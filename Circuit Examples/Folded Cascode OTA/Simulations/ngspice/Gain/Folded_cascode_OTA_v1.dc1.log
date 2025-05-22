@@ -1,0 +1,24 @@
+Using SPARSE 1.3 as Direct Linear Solver
+Note: Starting dynamic gmin stepping
+Note: Dynamic gmin stepping completed
+Using SPARSE 1.3 as Direct Linear Solver
+Note: Starting dynamic gmin stepping
+Note: Dynamic gmin stepping completed
+
+Note: No compatibility mode selected!
+
+
+Circuit: simulation of the folded cascode ota designed with the sekv model
+
+Doing analysis at TEMP = 27.000000 and TNOM = 27.000000
+
+
+No. of Data Rows : 1
+Doing analysis at TEMP = 27.000000 and TNOM = 27.000000
+
+
+No. of Data Rows : 1001
+vos                 =  3.271347e-05
+voutmax             =  1.132949e+00 at=  5.000000e-02
+voutmin             =  6.719156e-02 at=  -5.000000e-02
+Note: Simulation executed from .control section 

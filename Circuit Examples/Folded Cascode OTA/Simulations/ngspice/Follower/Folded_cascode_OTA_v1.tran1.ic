@@ -1,0 +1,16 @@
+* Intermediate Transient Solution
+* Circuit: simulation of the folded cascode ota designed with the sekv model
+* Recorded at simulation time: 0
+.ic v(4) = 0.823593
+.ic v(inp) = 0.6
+.ic v(1) = 0.421639
+.ic v(5) = 0.823792
+.ic v(out) = 0.59998
+.ic v(2) = 0.607732
+.ic v(vdd) = 1.2
+.ic v(6) = 0.352813
+.ic v(3) = 0.516649
+.ic v(7) = 0.355559
+.ic v(vb2) = 0.45
+.ic v(vb1) = 0.55
+.ic v(8) = 0.487271

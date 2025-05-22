@@ -1,4 +1,4 @@
-# Design of the Symmetrical OTA
+# Design of the Symmetrical Cascode OTA
 
 ![Symmetrical cascode OTA schematic.](/img/Symmetrical_OTA_schematic.png)
 

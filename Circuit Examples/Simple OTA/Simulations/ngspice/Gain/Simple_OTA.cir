@@ -1,0 +1,39 @@
+Simulation of the simple OTA designed with the EKV 2.6 model
+
+.include ekv018va.par ; model file for EKV2.6
+.include size_bias.par ; Size and bias values
+.include simulation.par ; Parameter for the DC simulation
+.include Simple_OTA.net ; Circuit netlist
+.control
+ op
+ dc Vid $&Vidmin $&Vidmax $&dVid
+ let Vout = V(out)
+ meas dc Vosext WHEN V(out)=0.9
+ meas dc Voutmax max Vout
+ meas dc Voutmin min Vout
+ set wr_singlescale
+ set wr_vecnames
+ wrdata $inputdir/Simple_OTA.dc.dat Vout
+ alterparam Vos=vosext
+ .endc
+ .control
+ op
+ ac dec 41 10 100MEG
+ let AmagdB=vdb(out)
+ let Aphdeg=180/PI*vp(out)
+ meas ac Adc max AmagdB
+ meas ac GBW when AmagdB=0
+ meas ac PGBW find Aphdeg at=GBW
+ set wr_singlescale
+ set wr_vecnames
+ wrdata $inputdir/Simple_OTA.ac.dat AmagdB Aphdeg
+  .endc
+ .control
+ op
+ noise V(out) Vid dec 41 10 100MEG
+ setplot noise1
+ set wr_singlescale
+ set wr_vecnames
+ wrdata $inputdir/Simple_OTA.nz.dat inoise_spectrum onoise_spectrum
+.endc
+.end

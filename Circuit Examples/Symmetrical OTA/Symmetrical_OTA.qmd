@@ -1,6 +1,6 @@
 ---
 title: "Design of the Symmetrical OTA"
-subtitle: "Version 1"
+subtitle: "Version 2"
 author: "Christian Enz"
 affiliation: "EPFL"
 date: today
@@ -44,6 +44,7 @@ import shutil
 import os
 import os.path as op
 import sys
+sys.path.append(".")
 import re
 
 from IPython.display import Markdown
@@ -62,11 +63,6 @@ plt.rcParams['mathtext.rm'] = 'Arial'
 plt.rcParams['mathtext.it'] = 'Arial:italic'
 plt.rcParams['mathtext.bf'] = 'Arial:bold'
 
-sys.path.append(".")
-inkscapePath = r"C:\\Program Files\\Inkscape\\bin\\inkscape.exe"
-#savePath = "./Figures/"
-savePath = "./Plots/"
-
 #plt.rcParams['text.usetex'] = True
 plt.rcParams['svg.fonttype'] = 'none'
 plt.rcParams['pdf.fonttype'] = 42
@@ -79,10 +75,8 @@ plt.rcParams['mathtext.rm'] = 'Arial'
 plt.rcParams['mathtext.it'] = 'Arial:italic'
 plt.rcParams['mathtext.bf'] = 'Arial:bold'
 
-plt.style.use('plt_style_medium.mplstyle')
+plt.style.use('plt_style_small.mplstyle')
 lw=1
-msize=4
-mevery=4
 
 otaName="Symmetrical_OTA"
 version = "_v1" # Allows you to save different versions
@@ -105,12 +99,14 @@ This notebook presents the analysis, design and simulation of the symmetrical ca
 
 We will start with a detailed analysis of the OTA which will allow to derive all the design equations that will be used in the design phase. The OTA is then designed for a given set of specifications for the chosen IHP SG13G2 130nm BiCMOS technology @bib:ihp:2025. We have selected this technology because IHP provides an open source PDK which is then used for the validation of the design by simulation with ngspice @bib:ngspice:2024 using the PSP compact model @bib:psp103.6:2017 provided by the open source PDK @bib:ihp:2025.
 
+We now start with the small-signal analysis.
+
 # Analysis
 ## Small-signal analysis
 
 ![Small-signal schematic of the symmetrical cascode OTA.](Figures/Small-signal_schematics.png){#fig-ssc}
 
-We start with the small-signal analysis. The small-signal schematic of the symmetrical OTA of @fig-symmetrical_ota_schematic is shown in @fig-ssc. The design of the symmetrical cascode OTA is similar to the design of the simple OTA, except that there are now more parasitic poles appearing at the various current mirror nodes. The small-signal output voltage in open-loop is given by
+The small-signal schematic of the symmetrical OTA of @fig-symmetrical_ota_schematic is shown in @fig-ssc. The design of the symmetrical cascode OTA is similar to the design of the simple OTA, except that there are now more parasitic poles appearing at the various current mirror nodes. The small-signal output voltage in open-loop is given by
 \begin{align}
   \Delta V_{out} =& \frac{A_{dc}}{1+s\,\tau_0} \cdot \left[\frac{\Delta V_{in+}}{1+s\,\tau_{p4}} - \frac{\Delta V_{in-}}{(1+s\,\tau_{p2})(1+s\,\tau_{p3})}\right.\\
   &\left.-\frac{\Delta V_{in+}+\Delta V_{in-}}{2(1+s\,\tau_{p1})} \cdot \left(\frac{1}{1+s\,\tau_{p4}} - \frac{1}{(1+s\,\tau_{p2})(1+s\,\tau_{p3}}\right)\right]
@@ -121,16 +117,17 @@ where
   G_m &= A_3 \cdot G_{m1},\\
   G_o &= \frac{G_{ds3b}\,G_{ds7}}{G_{ms7}} + \frac{G_{ds2d}\,G_{ds4}}{G_{ms4}},\\
   \tau_0 &= \frac{C_{out}}{G_o},\\
-  C_{out} &= C_o + C_L,\\
+  C_{out} &= C_L + C_o,\\
   \tau_{p1} &= \frac{C_1}{2 G_{m1}},\\
   \tau_{p2} &= \frac{C_2}{G_{m2}},\\
   \tau_{p3} &= \frac{C_3}{G_{m3}},\\
   \tau_{p4} &= \frac{C_4}{G_{m2}}.
 \end{align}
+$C_1$, $C_2$ and $C_3$ are the total parasitic capacitances at the current mirrors nodes 1, 2 and 3.
 
 The unity-gain frequency or gain-bandwidth product is defined as $\omega_u = 1/\tau_u \triangleq A_{dc}/\tau_0 = G_m/C_{out}$. In most practical cases, we usually have $\tau_0 \gg \tau_{p2}, \tau_{p3}, \tau_{p4} > \tau_{p1}$.
 
-For a differential input voltage $\Delta V_{id}=\Delta V_{in+}-\Delta V_{in-}$ with a constant common-mode voltage $V_{ic}$ and hence $\Delta V_{ic} = (\Delta V_{in+} + \Delta V_{in-})/2=0$, $\Delta V_{in+} = \Delta V_{in-} = \Delta V_{id}/2$, the differential mode small-signal open-loop gain reduces to
+For a differential input voltage $\Delta V_{id}=\Delta V_{in+}-\Delta V_{in-}$ with a constant common-mode voltage $V_{ic}$ and hence $\Delta V_{ic} = (\Delta V_{in+} + \Delta V_{in-})/2=0$, $\Delta V_{in+} = -\Delta V_{in-} = \Delta V_{id}/2$, the differential mode small-signal open-loop gain reduces to
 \begin{equation}
   A_{dm}(s) \triangleq \frac{\Delta V_{out}}{\Delta V_{id}} = \frac{1}{2} \cdot \frac{A_{dc}}{1+s\,\tau_0} \cdot \left[\frac{1}{1+s\,\tau_{p4}} - \frac{1}{(1+s\,\tau_{p2})(1+s\,\tau_{p3})}\right].
 \end{equation}
@@ -223,9 +220,10 @@ The input-referred thermal noise resistance is given by
   R_{nth} = \frac{2 \gamma_{n1}}{G_{m1}} \cdot (1 + \eta_{th})
 \end{equation}
 where
-\begin{equation}
-  \eta_{th} = \frac{\gamma_{n2}}{\gamma_{n1}}\,\frac{G_{m2}}{G_{m1}} + \frac{1}{2 A_1^2}\,\left(\frac{\gamma_{n2c}}{\gamma_{n1}}\,\frac{G_{m2c}}{G_{m1}} +\frac{\gamma_{n3a}}{\gamma_{n1}}\,\frac{G_{m3a}}{G_{m1}}\right) +\frac{1}{2 A_3^2}\,\left(\frac{\gamma_{n2d}}{\gamma_{n1}}\,\frac{G_{m2d}}{G_{m1}} +\frac{\gamma_{n3b}}{\gamma_{n1}}\,\frac{G_{m3b}}{G_{m1}}\right)
-\end{equation}
+\begin{align}
+  \eta_{th} &= \frac{\gamma_{n2}}{\gamma_{n1}}\,\frac{G_{m2}}{G_{m1}} + \frac{1}{2 A_1^2}\,\left(\frac{\gamma_{n2c}}{\gamma_{n1}}\,\frac{G_{m2c}}{G_{m1}} + \frac{\gamma_{n3a}}{\gamma_{n1}}\,\frac{G_{m3a}}{G_{m1}}\right)\\
+  &+\frac{1}{2 A_3^2}\,\left(\frac{\gamma_{n2d}}{\gamma_{n1}}\,\frac{G_{m2d}}{G_{m1}} +\frac{\gamma_{n3b}}{\gamma_{n1}}\,\frac{G_{m3b}}{G_{m1}}\right)
+\end{align}
 represents the contributions to the input-referred thermal noise of the current mirrors relative to that of the differential pair. Now $G_{m2c}=A_1 \cdot G_{m2a}=A_1 \cdot G_{m2}$, $G_{m3b}=A_2 \cdot G_{m3a}=A_2 \cdot G_{m3}$ and $G_{m2d}=A_3 \cdot G_{m2b} = A_3 \cdot G_{m2}$, and assuming that $\gamma_{n2a}=\gamma_{n2b}\cong\gamma_{n2c}\cong\gamma_{n2d}=\gamma_{n2}$ and $\gamma_{n3a}\cong\gamma_{n3b}=\gamma_{n3}$, then $\eta_{th}$ reduces to
 \begin{equation}
   \eta_{th} = \frac{\gamma_{n2}}{2\gamma_{n1}}\,\frac{G_{m2}}{G_{m1}} \left(2+\frac{1}{A_1}+\frac{1}{A_3}\right) +\frac{1}{2 A_1^2}\,\frac{\gamma_{n3}}{\gamma_{n1}}\,\frac{G_{m3}}{G_{m1}} \left(1+\frac{1}{A_2}\right)
@@ -328,7 +326,7 @@ Having done the small-signal, noise and offset analysis, we can now proceed with
 The OTA specifications are given in @tbl-ota_specs.
 
 ::: {.callout-warning}
-An important limitation of the IHP SC13G2 BiCMOS technology @bib:ihp:2025 is the high output conductance and hence limited intrinsic gain of nMOS transistors. Because of this, the specification on the DC gain, that was initially set to 80 dB, has been downgraded to 70 dB.
+An important limitation of the IHP SC13G2 BiCMOS technology @bib:ihp:2025 is the high output conductance and hence the limited intrinsic gain of nMOS transistors. Because of this, the specification on the DC gain, that was initially set to 80 dB, has been downgraded to 70 dB.
 :::
 
 ::: {.callout-note}
@@ -465,15 +463,7 @@ A2=1
 A3=A1*A2
 ```
 
-We need to start with choosing the curent gain $A_3$. We have seen that having a current gain $A_3 > 1$ improves the transconductance but at the cost of a higher thermal noise excess factor $\gamma_{ota}$. We therefore will set to
-
-$A_1 =$ `{python} f'{A1:.0f}'`,
-
-$A_2 =$ `{python} f'{A2:.0f}'`,
-
-$A_3 =$ `{python} f'{A3:.0f}'`.
-
-Since $A_1 = A_2 = A_3 = 1$, transistors M~2a~, M~2b~, M~2c~ and M~2d~ are all identical and so are M~3a~ and M~3b~. We therefore have the following variables:
+We need to start with choosing the curent gain $A_3$. We have seen that having a current gain $A_3 > 1$ improves the transconductance but at the cost of a higher thermal noise excess factor $\gamma_{ota}$. We therefore will set to $A_1 =$ `{python} f'{A1:.0f}'`, $A_2 =$ `{python} f'{A2:.0f}'` and $A_3 =$ `{python} f'{A3:.0f}'`. Since $A_1 = A_2 = A_3 = 1$, transistors M~2a~, M~2b~, M~2c~ and M~2d~ are all identical and so are M~3a~ and M~3b~. We therefore have the following variables:
 
 * M~1a~-M~1b~: $W_1$, $L_1$ and $I_b$. Note that the current $I_b$ is set by $G_{m1}$ because M~1a~-M~1b~ are biased in weak inversion,
 * M~2a~-M~2c~ and M~2b~-M~2d~: $IC_2$, $W_2$ and $L_2$ since the current is already set,
@@ -506,17 +496,17 @@ In this example there is no specification on the input-referred white noise. The
 \end{equation}
 where $G_{m1}$ is the gate transconductance of M~1a~ and M~1b~ and $C_{out}$ the total output capacitance
 \begin{equation}
-  C_{out} = C_o + C_L
+  C_{out} = C_L + C_o
 \end{equation}
-with $C_o$ the parasitic capacitance at the output node and $C_L$ the specified load capacitance.
+with $C_L$ the specified load capacitance and $C_o$ the parasitic capacitance at the output node.
 
 In order to minimize the input-referred noise and offset, the input differential pair should be biased in weak inversion. The transconductance $G_{m1}$ in deep weak inversion is then given by
 \begin{equation}
-  G_{m1} = \frac{I_b}{n U_T}.
+  G_{m1} = \frac{I_b}{n\,U_T}.
 \end{equation}
-The bias current $I_b$ is the current flowing in each transistor M~1a~ and M~1b~ when the input differential voltage is zero. The bias current provided by M~5b~ is therefore $2 I_b$. The bias current must satisfy the following inequality:
+The bias current $I_b$ is the current flowing in each transistor M~1a~ and M~1b~ when the input differential voltage is zero. The bias current provided by M~5b~ is therefore $2 I_b$. The bias current must satisfy the following inequality
 \begin{equation}
-  I_b \geq  2\pi n_{0n} U_T C_{out} GBW_{min}.
+  I_b \geq  2\pi\,n_{0n}\,U_T\,C_L\,GBW_{min}.
 \end{equation}
 which for the given specifications gives $I_{b,min}=$ `{python} f'{Ibmin/1e-9:.0f}'` $nA$. The corresponding slew-rate is then equal to $SR_{min} =$ `{python} f'{SRmin/1e3:.0f} '` $mV/\mu s$ which we will consider as sufficient. 
 
@@ -524,11 +514,7 @@ which for the given specifications gives $I_{b,min}=$ `{python} f'{Ibmin/1e-9:.0
 If the slew-rate is not sufficient, the bias current $I_b$ should be increased resulting in a higher current and power consumption. Other options include the use of a class AB OTA @bib:krummenacher:el:17:13:1981 or a dynamic/adaptive biasing OTA @bib:degrauwe:jssc:17:3:june:1982.
 :::
 
-As we will see below, the cascode transistors M~4~ and M~7~ will be biased in weak inversion to save voltage headroom at the output and preserve the output voltage swing of the symmetrical OTA. They will therefore be rather large transistors. Since they are connected to the output, they will increase the parasitic capacitance at the output $C_o$ due mostly to the junction capacitances. To have sufficient margin, we set $I_b =$ `{python} f'{Ib/1e-9:.0f}'` $nA$ and the inversion coefficient to $IC_1=$ `{python} f'{IC1:.1f}'`. The transconductance can be calculated from the $G_m/I_D$ function as $G_{m1} =$ `{python} f'{Gm1/1e-6:.3f}'` $\mu A/V$. This leads to a gain-bandwidth product
-
-$GBW = \frac{G_{m1}}{2\pi\,C_L} =$ `{python} f'{GBW/1e6:.1f}'` $MHz$,
-
-which is slightly higher than the target specification offering some margin. Knowing the drain current $I_{D1}$ and the inversion coefficient, we can calculate the $W/L$ aspect ratio for M~1a~-M~1b~ as $W_1/L_1 =$ `{python} f'{WoverL1:.1f}'`.
+As we will see below, the cascode transistors M~4~ and M~7~ will be biased in weak inversion to save voltage headroom at the output and preserve the output voltage swing of the symmetrical OTA. They will therefore be rather large transistors. Since they are connected to the output, they will increase the parasitic capacitance at the output $C_o$ due mostly to the junction capacitances. To have sufficient margin, we set $I_b =$ `{python} f'{Ib/1e-9:.0f}'` $nA$ and the inversion coefficient to $IC_1=$ `{python} f'{IC1:.1f}'`. The transconductance can be calculated from the $G_m/I_D$ function as $G_{m1} =$ `{python} f'{Gm1/1e-6:.3f}'` $\mu A/V$. Neglecting $C-o$, this leads to a gain-bandwidth product $GBW =$ `{python} f'{GBW/1e6:.1f}'` $MHz$, which is slightly higher than the target specification offering some margin to account for the additionnal parasitic capacitance $C_o$. Knowing the drain current $I_{D1}$ and the inversion coefficient, we can calculate the aspect ratio $W_1/L_1 =$ `{python} f'{WoverL1:.1f}'`.
 
 Before finalizing the sizing of the differential pair, we first will size the current mirrors.
 
@@ -542,9 +528,9 @@ VSG2=VDD-Vicmax+VGS1-VDSsat1
 IC2=ic_vps((VSG2-VT0p)/(n0p*UT))
 ```
 
-The gate voltage of M~2a~-M~2b~ should be set as low as possible for a given maximum common mode input voltage $V_{ic,max}$ still keeping M~1a~-M~1b~ in saturation. The source-to-gate voltage of M~2a~-M~2b~ $V_{SG2}$ is given by
+The gate voltage of M~2a~-M~2c~ and M~2a~-M~2b~ hould be set as low as possible for a given maximum common mode input voltage $V_{ic,max}$ still keeping M~1a~-M~1b~ in saturation. The source-to-gate voltage of M~2a~-M~2b~ $V_{SG2}$ is given by
 \begin{equation}
-  V_{SG2} = V_{DD} - V_{icmax} + V_{GS1} - V_{DSsat1}.
+  V_{SG2} = V_{DD} - V_{ic,max} + V_{GS1} - V_{DSsat1}.
 \end{equation}
 The gate-to-source voltage $V_{GS1}$ and the saturation voltage $V_{DSsat1}$ of M~1a~-M~1b~ are given by $V_{GS1} =$ `{python} f'{VGS1/1e-3:.0f}'` $mV$ and $V_{DSsat1}  =$ `{python} f'{VDSsat1/1e-3:.0f}'` $mV$. For a maximum input common-mode voltage $V_{ic,max} =$ `{python} f'{Vicmax:.1f}'` $V$, the minimum source-to-gate voltage is given by $V_{SG2} =$ `{python} f'{VSG2/1e-3:.0f}'` $mV$, corresponding to an inversion coefficient $IC_2 =$ `{python} f'{IC2:.3f}'`.
 
@@ -557,7 +543,7 @@ Gm2=Ispec2/(n0p*UT)*gms_ic(IC2)
 WoverL2=Ispec2/Ispecsqp
 ```
 
-We can set $V_{SG2}$ to $V_{SG2} = V_{DD}/2 =$ `{python} f'{VSG2/1e-3:.0f}'` $mV$ which corresponds to an inversion coefficient $IC_2 =$ `{python} f'{IC2:.3f}'` and a saturation voltage $V_{DSsat2}  =$ `{python} f'{VDSsat2/1e-3:.0f}'` $mV$. The specific current $I_{spec}$, transconductance $G_m$ and $W/L$ are then given by $I_{spec2} =$ `{python} f'{Ispec2/1e-9:.2f}'` $nA$, $G_{m2}  =$ `{python} f'{Gm2/1e-6:.3f}'` $\mu A/V$ and $W_2/L_2 =$ `{python} f'{WoverL2:.3f}'`.
+We can set $V_{SG2}$ to $V_{DD}/2 =$ `{python} f'{VSG2/1e-3:.0f}'` $mV$ which corresponds to an inversion coefficient $IC_2 =$ `{python} f'{IC2:.3f}'` and a saturation voltage $V_{DSsat2}  =$ `{python} f'{VDSsat2/1e-3:.0f}'` $mV$. The specific current $I_{spec}$, aspect ratio and transconductance are then given by $I_{spec2} =$ `{python} f'{Ispec2/1e-9:.2f}'` $nA$, $W_2/L_2 =$ `{python} f'{WoverL2:.3f}'` and $G_{m2}  =$ `{python} f'{Gm2/1e-6:.3f}'` $\mu A/V$.
 
 ```{python}
 fp2GBW=10
@@ -585,13 +571,13 @@ Assuming M~2a~-M~2b~ are in saturation, the gate-to-source capacitance $C_{GS2}$
 \begin{equation}
   C_{GS2} \cong W_2\,L_2\,C_{ox} \cdot c_{gsi} + (C_{GSop} + C_{GSfp}) \cdot W_2,
 \end{equation}
-where $c_{gsi}$ is the intrinsic gate-to-source capacitance normalized to the total gate area $W\,L\,C_{ox}$, which is typically equal to $2/3$ in strong inversion and is proportionnal to $IC$ in weak inversion.
+where $C_{GSop}$ and $C_{GSfp}$ are the gate-to-source overlap and fringing capacitances per unit width for pMOS transistors. $c_{gsi}$ is the intrinsic gate-to-source capacitance normalized to the total gate area $W\,L\,C_{ox}$, which is typically equal to $2/3$ in strong inversion and is proportionnal to $IC$ in weak inversion.
 
 The gate-to-bulk capacitance $C_{GB2}$ is given by
 \begin{equation}
   C_{GB2} \cong \,W_2\,L_2\,C_{ox} \cdot c_{gbi} + C_{GBop} \cdot W_2,
 \end{equation}
-where $c_{gbi}$ is the gate-to-bulk intrinsic capacitance normalized to the total gate area $W\,L\,C_{ox}$ and given by
+where $C_{GBop}$ is the gate-to-bulk overlap capacitance per unit width and $c_{gbi}$ is the gate-to-bulk intrinsic capacitance normalized to the total gate area $W\,L\,C_{ox}$ and given by
 \begin{equation}
   c_{gbi} = \frac{n-1}{n} \cdot c_{gsi}.
 \end{equation}
@@ -619,10 +605,7 @@ Since $A_1=A_3=1$, M~2a~, M~2b~, M~2c~ and M~2d~ are all identical and hence $W_
 We next size the nMOS current mirror M~3a~ and M~3b~.
 
 ### Sizing the nMOS current mirror M~3a~ and M~3b~
-To size M~3a~ and M~3b~ we need to
-
-* consider the output swing and
-* make sure that M~2c~ remains in saturation for the chosen overdrive voltage chosen for M~3a~.
+To size M~3a~ and M~3b~ we need to consider the output swing and make sure that M~2c~ remains in saturation for the chosen overdrive voltage chosen for M~3a~.
 
 ```{python}
 Vosw=0.4
@@ -725,8 +708,6 @@ for k in range(0,Npts):
     W[k]=(-CW*WoverL+sqrt(WoverL)*sqrt(4*C3*CWL+CW**2*WoverL))/(2*CWL)
     L[k]=W[k]/WoverL
 
-lw=1
-plt.style.use('plt_style_small.mplstyle')
 plt.loglog([ICmin,IC3],[Wmin/1e-9,Wmin/1e-9], 'k--', linewidth=lw)
 plt.loglog([IC3,IC3],[1e-7,Wmin/1e-9], 'k--', linewidth=lw)
 plt.loglog(IC, W/1e-9, 'r-', label='$W_3$')
@@ -775,11 +756,16 @@ The cascode transistors are sized according to the desired DC gain given by
 \begin{equation}
   A_{dc} = \frac{A_3 \cdot G_{m1}}{G_o}
 \end{equation}
-with
+where
 \begin{equation}
-  G_o = \frac{G_{ds3b} \cdot G_{ds7}}{G_{ms7}} + \frac{G_{ds2d} \cdot G_{ds4}}{G_{ms4}}
+  G_o = G_{on} + G_{op}
 \end{equation}
-The minimum DC gain specification is given by $A_{dc} =$ `{python} f'{Adc:.1e}'` or $A_{dc} =$ `{python} f'{AdcdB:.0f}'` dB. Since the transconductance $G_{m1}$ is already set by the $GBW$, the output conductance at the output node $G_o$ is then given by $G_o = G_{m1}/A_{dc} =$  `{python} f'{Go/1e-9:.3f}'` $nA/V$. We will split the output conductance equally between the nMOS and pMOS cascodes. We already have set the inversion coefficient of M~7~ to $IC_7 =$ `{python} f'{IC7:.1f}'`. Knowing the current, we can deduce the specific current $I_{spec7} =$ `{python} f'{Ispec7/1e-6:.1f}'` $\mu A$ and the aspect ratio $W_7/L_7 =$ `{python} f'{WoverL7:.1f}'`. Knowing the current and $IC_7$ we can get $G_{ms7} =$ `{python} f'{Gms7/1e-6:.3f}'` $\mu A/V$.
+with
+\begin{align}
+  G_{on} &= \frac{G_{ds3b} \cdot G_{ds7}}{G_{ms7}}\\
+  G_{op} &= \frac{G_{ds2d} \cdot G_{ds4}}{G_{ms4}}
+\end{align}
+the output conductance of of the nMOS and pMOS cascode stages, respectively. The minimum DC gain specification is given by $A_{dc} =$ `{python} f'{Adc:.1e}'` or $A_{dc} =$ `{python} f'{AdcdB:.0f}'` dB. Since the transconductance $G_{m1}$ is already set by the $GBW$, the output conductance at the output node $G_o$ is then given by $G_o = G_{m1}/A_{dc} =$  `{python} f'{Go/1e-9:.3f}'` $nA/V$. We will split the output conductance equally between the nMOS and pMOS cascodes. We already have set the inversion coefficient of M~7~ to $IC_7 =$ `{python} f'{IC7:.1f}'`. Knowing the current, we can deduce the specific current $I_{spec7} =$ `{python} f'{Ispec7/1e-6:.1f}'` $\mu A$ and the aspect ratio $W_7/L_7 =$ `{python} f'{WoverL7:.1f}'`. Knowing the current and $IC_7$ we can get $G_{ms7} =$ `{python} f'{Gms7/1e-6:.3f}'` $\mu A/V$.
 
 We already have chosen the length of M~3a~-M~3b~ $L_3 =$ `{python} f'{L3/1e-6:.2f}'` $\mu m$. The output conductance of M~3b~ can then be estimated to $G_{ds3} =$ `{python} f'{Gds3/1e-9:.3f}'` $nA/V$. We can then deduce the output conductance of M~7~ as $G_{ds7} =$ `{python} f'{Gds7/1e-9:.3f}'` $nA/V$ from which we deduce its length $L_7 =$ `{python} f'{L7/1e-6:.2f}'` $\mu m$.
 
@@ -811,7 +797,7 @@ W4=WoverL4*L4
 W4=round(1E8*W4)/1E8
 ```
 
-For M~4~ we set the same inversion coefficient as M~7~ $IC_4 = IC_7 =$ `{python} f'{IC4:.1f}'`, from which we get its saturation voltage $V_{DSsat4} =$ `{python} f'{VDSsat4/1e-3:.0f}'` $mV$. Knowing the current and the $IC$ we can deduce $I_{spec4} =$ `{python} f'{Ispec4/1e-6:.1f}'` $\mu A$ and $W_4/L_4 =$ `{python} f'{WoverL4:.1f}'`. The source transconductance of M~4~ is then given by $G_{ms4} =$ `{python} f'{Gms4/1e-6:.3f}'` $\mu A/V$. The output conductance of M~2d~ can be estimated as $G_{ds2} =$ `{python} f'{Gds2/1e-9:.3f}'` $nA/V$. We can then deduce the output conductance of M~4~ $G_{ds4} =$ `{python} f'{Gds4/1e-9:.3f}'` $nA/V$, from which we can calculate the length $L_4 =$ `{python} f'{L4/1e-9:.0f}'` $nm$, which is smaller than the minimum length.
+For M~4~ we set the same inversion coefficient as M~7~ $IC_4 = IC_7 =$ `{python} f'{IC4:.1f}'`, from which we get its saturation voltage $V_{DSsat4} =$ `{python} f'{VDSsat4/1e-3:.0f}'` $mV$. Knowing the current and the $IC$ we can deduce $I_{spec4} =$ `{python} f'{Ispec4/1e-6:.1f}'` $\mu A$ and $W_4/L_4 =$ `{python} f'{WoverL4:.1f}'`. The source transconductance of M~4~ is then given by $G_{ms4} =$ `{python} f'{Gms4/1e-6:.3f}'` $\mu A/V$. The output conductance of M~2d~ can be estimated as $G_{ds2} =$ `{python} f'{Gds2/1e-9:.3f}'` $nA/V$. We can then deduce the output conductance of M~4~ as $G_{ds4} =$ `{python} f'{Gds4/1e-9:.3f}'` $nA/V$, from which we can calculate the length $L_4 =$ `{python} f'{L4/1e-9:.0f}'` $nm$, which is smaller than the minimum length.
 
 ```{python}
 L4=250e-9
@@ -852,7 +838,7 @@ Adcest=Gm1/Go
 AdcdBest=20*log(Adcest)
 ```
 
-We can now check the resulting DC gain. The output conductance of the nMOS and pMOS cascodes are $G_{on} =$ `{python} f'{Gon/1e-12:.3f}'` $pA/V$ and $G_{op} =$ `{python} f'{Gop/1e-12:.3f}'` $pA/V$, respectively. This results in a total output conductance $G_o =$ `{python} f'{Go/1e-12:.3f}'` $pA/V$ and a DC gain $A_{dc} =$ `{python} f'{Adcest:.0e}'` or $A_{dc} =$ `{python} f'{AdcdBest:.1f}'` dB, which is 10 dB higher than the specifications.
+We can now check the resulting DC gain. The output conductance of the nMOS and pMOS cascodes are $G_{on} =$ `{python} f'{Gon/1e-12:.3f}'` $pA/V$ and $G_{op} =$ `{python} f'{Gop/1e-12:.3f}'` $pA/V$, respectively. This results in a total output conductance $G_o =$ `{python} f'{Go/1e-12:.3f}'` $pA/V$ and a DC gain $A_{dc} =$ `{python} f'{Adcest:.0e}'` or $A_{dc} =$ `{python} f'{AdcdBest:.1f}'` dB, which is `{python} f'{AdcdBest-AdcdB:.1f}'` dB higher than the specifications.
 
 ### Sizing the nMOS current mirror M~5a~-M~5b~
 
@@ -913,21 +899,7 @@ Since we already have $W_1/L_1$ we can deduce $W_1 =$ `{python} f'{W1/1e-6:.2f}'
 
 The relative contribution to the input-referred flicker noise of the pMOS current mirrors M~2a~ to M~2d~ is `{python} f'{flickerpMOSCM:.3f}'`, whereas that of the nMOS current mirror M~3a~ and M~3b~ is `{python} f'{flickernMOSCM:.3f}'`. This leads to $\eta_{fl} =$ `{python} f'{etafl:.3f}'`, which is close to the desired $\eta_{fl} \cong 1$.
 
-We now have finalized the design. We can still check the thermal noise. The OTA thermal noise excess factor $\gamma_{ota}$ and the input-referred white noise PSD are given by
-
-$\eta_{th} =$ `{python} f'{etath:.3f}'`,
-
-$\gamma_{ota} =$ `{python} f'{gammaota:.1f}'`,
-
-$R_{ninth} =$ `{python} f'{Rninth/1e3:.1f}'` $k\Omega$,
-
-$S_{ninth} =$ `{python} f'{Sninth:.1e}'` $\frac{V^2}{Hz}$,
-
-$\sqrt{S_{ninth}} =$ `{python} f'{sqrt(Sninth)/1e-9:.1f}'` $\frac{nV}{\sqrt{Hz}}$,
-
-$10 \cdot \log(S_{ninth}) =$ `{python} f'{SninthdBv:.1f}'` $\frac{dBv}{\sqrt{Hz}}$.
-
-This sets the corner frequency to $f_k =$ `{python} f'{fk/1e3:.1f}'` $kHz$.
+We now have finalized the design. We can still check the thermal noise. The contribtuions of the current mirrors to the input-referred white noise relative to that of the differential pair is $\eta_{th} =$ `{python} f'{etath:.3f}'`. This results in an OTA thermal noise excess factor $\gamma_{ota} =$ `{python} f'{gammaota:.1f}'`. The input-referred white noise resistance is $R_{ninth} =$ `{python} f'{Rninth/1e3:.1f}'` $k\Omega$, corresponding to a PSD $S_{ninth} =$ `{python} f'{Sninth:.1e}'` $V^2/Hz$ or $\sqrt{S_{ninth}} =$ `{python} f'{sqrt(Sninth)/1e-9:.1f}'` $nV/\sqrt{Hz}$ or $10 \cdot \log(S_{ninth}) =$ `{python} f'{SninthdBv:.1f}'` $dBv/\sqrt{Hz}$. This sets the corner frequency to $f_k =$ `{python} f'{fk/1e3:.1f}'` $kHz$.
 
 The design is now finalized and is summarized in the section.
 
@@ -1284,12 +1256,10 @@ Aphidegthe=np.unwrap(Aphiradthe)*180/pi
 PGBWthe=np.angle(Adm(1j*2*pi*GBWthe,Adc,tau0,taup2,taup3,taup4),deg=True)
 PMthe=180+PGBWthe
 
-plt.style.use('plt_style_small.mplstyle')
 params = {'figure.figsize': (5,5)}
 plt.rcParams.update(params)
 
 fig, axs = plt.subplots(2, sharex=True)
-lw=1
 
 axs[0].semilogx([fmin,GBWthe],[0,0],'k--', linewidth=lw)
 axs[0].semilogx([GBWthe,GBWthe],[0,-60],'k--', linewidth=lw)
@@ -1424,11 +1394,11 @@ def Sntot(f,S0,fk):
     return(S0*(1+fk/f))
 
 Npts=101
-logfmin=1
-logfmax=8
-fmin=pow(10,logfmin)
-fmax=pow(10,logfmax)
-fthe=np.logspace(logfmin,logfmax,Npts,endpoint=True,base=10.0)
+logfminnz=0
+logfmaxnz=8
+fminnz=pow(10,logfminnz)
+fmaxnz=pow(10,logfmaxnz)
+fthenz=np.logspace(logfminnz,logfmaxnz,Npts,endpoint=True,base=10.0)
 
 S0=4*kT*Rninththe
 S0dBvthe=10*log(S0)
@@ -1442,21 +1412,21 @@ SnindBvthe=np.zeros(Npts)
 
 for k in range(0,Npts):
     Sninththe[k]=S0
-    Sninflthe[k]=Snflicker(fthe[k],S0,fkthe)
-    Sninthe[k]=Sntot(fthe[k],S0,fkthe)
+    Sninflthe[k]=Snflicker(fthenz[k],S0,fkthe)
+    Sninthe[k]=Sntot(fthenz[k],S0,fkthe)
     SninthdBvthe[k]=10*log(Sninththe[k])
     SninfldBvthe[k]=10*log(Sninflthe[k])
     SnindBvthe[k]=10*log(Sninthe[k])
 
 plt.style.use('plt_style_small.mplstyle')
-plt.semilogx(fthe,SninthdBvthe,'b--',label='Thermal')
-plt.semilogx(fthe,SninfldBvthe,'g--',label='Flicker')
-plt.semilogx(fthe,SnindBvthe,'r',label='Total')
-plt.xlim(fmin,fmax)
-plt.xticks([1e1,1e2,1e3,1e4,1e5,1e6,1e7,1e8])
+plt.semilogx(fthenz,SninthdBvthe,'b--',label='Thermal')
+plt.semilogx(fthenz,SninfldBvthe,'g--',label='Flicker')
+plt.semilogx(fthenz,SnindBvthe,'r',label='Total')
+plt.xlim(fminnz,fmaxnz)
+plt.xticks([1e0,1e1,1e2,1e3,1e4,1e5,1e6,1e7,1e8])
 plt.xlabel('Frequency [Hz]')
-plt.ylim(-150,-100)
-plt.yticks(np.arange(-150,-90,10))
+plt.ylim(-150,-90)
+plt.yticks(np.arange(-150,-80,10))
 plt.ylabel('Input Noise PSD $[dBv/\\sqrt{Hz}]$')
 plt.legend(loc='center right', fontsize=9)
 textstr = '\n'.join((
@@ -1464,7 +1434,6 @@ textstr = '\n'.join((
     f'$f_k =$ {fkthe/1e3:.1f} kHz'))
 plt.text(0.5, 0.95, textstr, ha='left', va='top', size=9, transform=plt.gca().transAxes,
          bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
-# saveFigures(savePath, 'Input_referred_noise')
 plt.show()
 ```
 
@@ -1572,7 +1541,6 @@ $I_{tot} = 4 I_b =$ `{python} f'{Itot/1e-6:.2f}'` $\mu A$ which is `{python} f'{
 
 The above design will now be checked against simulations.
 
-
 # Simulation results from ngspice
 The theoretical results can be validated with the results obtained from simulations performed with ngspice. In order to run the simulations you need to have ngspice correctly installed. Please refer to the installation instructions.
 
@@ -1670,7 +1638,7 @@ for k in range(0,Nnodes):
       if match:
         v_df.at[nodeName, 'Voltage']=float(match.group(1))
 
-Voutq=v_df.loc['out','Voltage']
+Voutq0=v_df.loc['out','Voltage']
 #pd.set_option('display.float_format', '{:.2f}'.format)
 #v_df
 
@@ -1684,12 +1652,12 @@ Markdown(
 ))
 ```
 
-From the node voltages shown in @tbl-ng_openloop_voltages1, we see that the output voltage $V_{outq} =$ `{python} f'{Voutq/1e-3:.0f}'` $mV$ is too low and is pushing M~7~ and M~3b~ out of saturation. This is due to the current mismatch in M~2c~ and M~2d~ and between M~3a~ and M~3b~ due to different drain voltages and finite output conductances leading to a different current flowing in M~2d~ and M~4~ compared to that flowing in M~3b~ and M~7~. Even if the current difference is very small, it results in a large voltage debiasing at the output because of the high output resistance provided by the cascode stages.
+From the node voltages shown in @tbl-ng_openloop_voltages1, we see that the output voltage $V_{outq} =$ `{python} f'{Voutq0/1e-3:.0f}'` $mV$ is too low and is pushing M~7~ and M~3b~ out of saturation. This is due to the current mismatch in M~2c~ and M~2d~ and between M~3a~ and M~3b~ due to different drain voltages and finite output conductances leading to a different current flowing in M~2d~ and M~4~ compared to that flowing in M~3b~ and M~7~. Even if the current difference is very small, it results in a large voltage debiasing at the output because of the high output resistance provided by the cascode stages.
 
 Therefore simulating the open-loop gain for high gain amplifiers is not easy to perform without closing the loop. There are basically two approaches to simulate the open-loop gain for high-gain amplifiers:
 
-1) Imposing a DC offset voltage to the amplifier in open-loop configuration that brings the output voltage back to normal (for example equal to the input common-mode voltage) or
-2) Simulating the closed-loop gain (for example in voltage follower mode with a feedback gain of 1) and extracting the open-loop gain from the closed loop gain according to
+1) Imposing a DC offset voltage to the amplifier in open-loop configuration that brings the output voltage back to the high gain region (for example equal to the input common-mode voltage) or
+2) Simulating the closed-loop gain (for example in voltage follower mode with a feedback gain of 1 and extracting the open-loop gain from the closed loop gain according to
 
 \begin{equation}
   A_{open\textsf{-}loop}(\omega)= \frac{A_{closed\textsf{-}loop}(\omega)}{1 - A_{closed\textsf{-}loop}(\omega)},
@@ -1765,7 +1733,7 @@ Markdown(
 ))
 ```
 
-From the node voltages of the OTA in voltage follower configuration shown in @tbl-ng_closedloop_voltages, we see that now the ouput voltage $V_{outq} =$ `{python} f'{Voutq/1e-3:.0f}'` $mV$ is very close to the input voltage that has been set to $V_{ic} =$ `{python} f'{Vic/1e-3:.0f}'` $mV$. We can then extract the corresponding offset voltage $V_{os} \cong V_{in} - V_{out} =$ `{python} f'{Vos/1e-6:.3f}'` $\mu V$.
+From the node voltages of the OTA in voltage follower configuration shown in @tbl-ng_closedloop_voltages, we see that now the quiescent ouput voltage $V_{outq} =$ `{python} f'{Voutq/1e-3:.0f}'` $mV$ is very close to the input voltage that has been set to $V_{ic} =$ `{python} f'{Vic/1e-3:.0f}'` $mV$. We can then extract the corresponding offset voltage $V_{os} \cong V_{in} - V_{out} =$ `{python} f'{Vos/1e-6:.3f}'` $\mu V$.
 
 We can now apply this offset voltage to the open-loop operating point point simulation.
 
@@ -1833,7 +1801,7 @@ Markdown(
 ))
 ```
 
-From the node voltages of the OTA in open-loop configuration shown in @tbl-ng_openloop_voltages2 after adding the offset voltage at the input, we see that now the ouput voltage $V_{outq} =$ `{python} f'{Voutq/1e-3:.0f}'` $mV$ of the open-loop circuit is sufficiently close to the common-mode input voltage $V_{ic} =$ `{python} f'{Vic/1e-3:.0f}'` $mV$.
+From the node voltages of the OTA in open-loop configuration shown in @tbl-ng_openloop_voltages2 after adding the offset voltage at the input, we see that now the quiescent ouput voltage $V_{outq} =$ `{python} f'{Voutq/1e-3:.0f}'` $mV$ of the open-loop circuit is sufficiently close to the common-mode input voltage $V_{ic} =$ `{python} f'{Vic/1e-3:.0f}'` $mV$.
 
 The operating point information for all transistors are extracted from the ngspice .op file. The data is split into the large-signal operating informations in @tbl-ng_op1, the small-signal operating point informations in @tbl-ng_op2 and the noise operating point informations in @tbl-ng_op3.
 
@@ -1862,6 +1830,13 @@ df_mos.set_index('Transistor', inplace=True)
 df_mos.rename_axis(index=None, inplace=True)
 pd.set_option('display.float_format', '{:.2E}'.format)
 #df_mos
+
+VDSsat2d=df_mos.loc['M2d','VDsat']
+VDSsat4=df_mos.loc['M4','VDsat']
+VDSsat3b=df_mos.loc['M3b','VDsat']
+VDSsat7=df_mos.loc['M7','VDsat']
+VDsat=VDSsat2d+VDSsat4+VDSsat3b+VDSsat7
+Voutswing=VDD-VDsat
 
 feature_list=["ID","VGS","VDS","VSB","VG-VT","VDsat"]
 
@@ -1953,7 +1928,7 @@ Markdown(tabulate(
 
 ```{python}
 #| label: tbl-ng_op4
-#| tbl-cap: sEKV parameters calculated from the values extracted from the simulation.
+#| tbl-cap: sEKV parameters calculated from the values extracted from the simulation to compare with @tbl-transistor_info1.
 
 transistor_info={
     "Type": ["n","n","p","p","p","p","n","n","p","n","n","n"]
@@ -2006,7 +1981,7 @@ Markdown(tabulate(
 
 ```{python}
 #| label: tbl-ng_op5
-#| tbl-cap: sEKV small-signal parameters calculated from the values extracted from the simulation.
+#| tbl-cap: sEKV small-signal parameters calculated from the values extracted from the simulation to compare with @tbl-transistor_info2.
 
 feature_list=["Gspec","n","Gm","Gms","Gds"]
 
@@ -2036,7 +2011,7 @@ Markdown(tabulate(
 
 ```{python}
 #| label: tbl-ng_op6
-#| tbl-cap: sEKV noise parameters calculated from the values extracted from the simulation.
+#| tbl-cap: sEKV noise parameters calculated from the values extracted from the simulation to compare with @tbl-thermal.
 
 feature_list=["Vninth","Rninth","gamman","Vninfl at 1 Hz"]
 
@@ -2209,6 +2184,8 @@ Markdown(tabulate(
 ))
 ```
 
+From @tbl-ng_op1, we see that all transistors have a sufficiently large $V_{DS}$ voltage and are therefore biased in saturation.  Additionnally we see that all the saturation voltages in the output current branch M~2d~, M~4~, M~7~ and M~3b~ are summing up to `{python} f'{VDsat/1e-3:.0f}'` $mV$ leaving an output voltage swing about equal to $V_{out,swing} \cong$ `{python} f'{Voutswing/1e-3:.0f}'` $mV$. This output voltage swing could be increased by about 250 $mV$ by biasing M~2d~ and M~3b~ in weak inversion. This would be at the cost of larger transistors and a less current matching in the current mirrors.
+
 From @tbl-ng_bias, we see that all transistors are biased in saturation. The operating points look fine. We can now proceed with the simulation of the open-loop large-signal transfer characteristic.
 
 ## Large-signal differential transfer characteristic
@@ -2227,9 +2204,10 @@ simulationData = simulationPath + fileName + ".dat"
 ngspiceDataFile = simulationPath + otaName + version + simtype + "1.dat"
 ngspiceLogFile = simulationPath + otaName + version + simtype + "1.log"
 
-Vidmin=-0.6
-Vidmax=0.6
-dVid=2e-3
+Vidmin=-0.4e-3
+Vidmax=0.4e-3
+Npts=1001
+dVid=(Vidmax-Vidmin)/(Npts-1)
 
 if newSim:
   simpar = '\n'.join((
@@ -2266,36 +2244,46 @@ with open(ngspiceLogFile) as f:
     if match:
       Voutmin=float(match.group(1))
 
+regexp = re.compile(r'vos' + refloat)
+with open(ngspiceLogFile) as f:
+  for line in f:
+    match = re.search(regexp, line)
+    if match:
+      Vos=float(match.group(1))
+
+Voutmax=0.8
+Voutmin=0.4
 Vswing=Voutmax-Voutmin
 
-lw=1
-plt.style.use('plt_style_small.mplstyle')
-plt.plot([Vidmin/1e-3,0],[Voutq,Voutq],'k--', linewidth=lw)
-plt.plot([0,0],[0,Voutq],'k--', linewidth=lw)
+plt.plot([Vidmin/1e-6,0],[Voutq0,Voutq0],'k--', linewidth=lw)
+plt.plot([0,0],[0.2,Voutq0],'k--', linewidth=lw)
+plt.plot([Vidmin/1e-3,Vos/1e-3],[Voutq,Voutq],'k--', linewidth=lw)
+plt.plot([Vos/1e-3,Vos/1e-3],[0,Voutq],'k--', linewidth=lw)
 plt.plot([Vidmin/1e-3,Vidmax/1e-3],[Voutmax,Voutmax],'k--', linewidth=lw)
 plt.plot([Vidmin/1e-3,Vidmax/1e-3],[Voutmin,Voutmin],'k--', linewidth=lw)
-plt.plot(Vidsim,Voutsim,'r')
-plt.xlim(Vidmin,Vidmax)
-#plt.xticks(np.arange(-0.6,0,0.3))
-plt.xlabel('$V_{id}$ [$V$]')
-plt.ylim(0,1.2)
-plt.yticks(np.arange(0,1.4,0.2))
+plt.plot(Vidsim/1e-3,Voutsim,'r')
+plt.xlim(Vidmin/1e-3,Vidmax/1e-3)
+plt.xticks(np.arange(-0.4,0.5,0.1))
+plt.xlabel('$V_{id}$ [$mV$]')
+plt.ylim(0.2,1)
+#plt.yticks(np.arange(0,1.4,0.2))
 plt.ylabel('$V_{out}$ [V]')
 #plt.legend(loc='best')
 textstr = '\n'.join((
   f'$V_{{DD}} =$ {VDD:.1f} V',
   f'$V_{{ic}} =$ {Vic:.1f} V',
+  f'$V_{{out0}} =$ {Voutq0:.3f} V',
   f'$V_{{outq}} =$ {Voutq:.3f} V',
-  f'$V_{{outmax}} =$ {Voutmax:.3f} V',
-  f'$V_{{outmin}} =$ {Voutmin:.3f} V',
-  f'$V_{{swing}} =$ {Vswing:.2f} V'))
-plt.text(0.65, 0.5, textstr, ha='left', va='center', size=9, transform=plt.gca().transAxes,
+  f'$V_{{os}} =$ {Vos/1e-6:.3f} $\\mu\\,V$',
+  f'$V_{{outmax}} \cong$ {Voutmax:.3f} V',
+  f'$V_{{outmin}} \cong$ {Voutmin:.3f} V',
+  f'$V_{{swing}} \cong$ {Vswing:.2f} V'))
+plt.text(1.05, 0.5, textstr, ha='left', va='center', size=9, transform=plt.gca().transAxes,
          bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
-#saveFigures(savePath, 'Vout_Vid')
 plt.show()
 ```
 
-We can now zoom into the high gain region in order to extract a more accurate value of the offset voltage and the output swing. The simulation results are presented in @fig-ng_large_signal_zoom.
+From @fig-ng_large_signal, we see that the output swing is about $V_{out,swing} \cong$ `{python} f'{Vswing/1e-3:.0f}'` $mV$, which is slightly less than the above estimation. We can now zoom into the high gain region in order to extract the offset voltage that is needed to bring the output voltage back to $V_{outq} =$ `{python} f'{Voutq:.3f}'` $V$. The simulation results are presented in @fig-ng_large_signal_zoom.
 
 ```{python}
 #| label: fig-ng_large_signal_zoom
@@ -2358,13 +2346,12 @@ with open(ngspiceLogFile) as f:
     if match:
       Vos=float(match.group(1))
 
-Voutq=0.6
 Vswing=Voutmax-Voutmin
+Adiff=Vswing/(Vidmax-Vidmin)
+AdiffdB=20*log(abs(Adiff))
 
-lw=1
-plt.style.use('plt_style_small.mplstyle')
 plt.plot([Vidmin/1e-6,Vos/1e-6],[Vic,Vic],'k--', linewidth=lw)
-plt.plot([Vos/1e-6,Vos/1e-6],[0.4,Vic],'k--', linewidth=lw)
+plt.plot([Vos/1e-6,Vos/1e-6],[0.58,Vic],'k--', linewidth=lw)
 plt.plot([Vidmin/1e-3,Vidmax/1e-3],[Voutmax,Voutmax],'k--', linewidth=lw)
 plt.plot([Vidmin/1e-3,Vidmax/1e-3],[Voutmin,Voutmin],'k--', linewidth=lw)
 plt.plot(Vidsim/1e-6,Voutsim,'r')
@@ -2377,15 +2364,16 @@ plt.ylabel('$V_{out}$ [V]')
 #plt.legend(loc='best')
 textstr = '\n'.join((
   f'$V_{{DD}} =$ {VDD:.1f} V',
-  f'$V_{{ic}} =$ {Vic:.1f} V',
+  f'$V_{{out0}} =$ {Voutq0:.3f} V',
   f'$V_{{outq}} =$ {Voutq:.3f} V',
   f'$V_{{os}} =$ {Vos/1e-6:.3f} $\\mu\\,V$',
   f'$V_{{outmax}} =$ {Voutmax:.3f} V',
   f'$V_{{outmin}} =$ {Voutmin:.3f} V',
-  f'$V_{{swing}} =$ {Vswing:.2f} V'))
-plt.text(0.65, 0.05, textstr, ha='left', va='bottom', size=9, transform=plt.gca().transAxes,
+  f'$V_{{swing}} =$ {Vswing:.2f} V',
+  f'$A_{{diff}} =$ {Adiff:.3e}',
+  f'$A_{{diff}} =$ {AdiffdB:.2f} dB'))
+plt.text(1.05, 0.5, textstr, ha='left', va='center', size=9, transform=plt.gca().transAxes,
          bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
-#saveFigures(savePath, 'Vout_Vid_zoom')
 plt.show()
 
 paramstr = '\n'.join((
@@ -2472,12 +2460,10 @@ GBWsim=fsim[idx][0]
 PGBWsim=Aolphidegsim[idx][0]
 PMsim=180+PGBWsim
 
-plt.style.use('plt_style_small.mplstyle')
 params = {'figure.figsize': (5,5)}
 plt.rcParams.update(params)
     
 fig, axs = plt.subplots(2, sharex=True)
-lw=1
 
 axs[0].semilogx([fmin,GBWsim],[0,0],'k--', linewidth=lw)
 axs[0].semilogx([GBWsim,GBWsim],[0,-60],'k--', linewidth=lw)
@@ -2514,7 +2500,6 @@ arrow = mpatches.FancyArrowPatch((GBWsim, PGBWsim), (GBWsim, -180),
 axs[1].add_patch(arrow)
 axs[1].annotate(f'Phase margin = {PMsim:.0f}$^{{\\circ}}$ ', (0, 0.5), xycoords=arrow, ha='right', va='center', size=9)
 plt.subplots_adjust(hspace=0.1)
-#saveFigures(savePath, 'open_loop_gain_response')
 plt.show()
 ```
 
@@ -2580,12 +2565,10 @@ with open(ngspiceLogFile) as f:
 
 PMsim=180+PGBWsim
 
-plt.style.use('plt_style_small.mplstyle')
 params = {'figure.figsize': (5,5)}
 plt.rcParams.update(params)
     
 fig, axs = plt.subplots(2, sharex=True)
-lw=1
 
 axs[0].semilogx([fmin,GBWsim],[0,0],'k--', linewidth=lw)
 axs[0].semilogx([GBWsim,GBWsim],[0,-60],'k--', linewidth=lw)
@@ -2620,7 +2603,6 @@ arrow = mpatches.FancyArrowPatch((GBWsim, PGBWsim), (GBWsim, -180),
 axs[1].add_patch(arrow)
 axs[1].annotate(f'Phase margin = {PMsim:.0f}$^{{\\circ}}$ ', (0, 0.5), xycoords=arrow, ha='right', va='center', size=9)
 plt.subplots_adjust(hspace=0.1)
-#saveFigures(savePath, 'open_loop_gain_response')
 plt.show()
 ```
 
@@ -2668,13 +2650,13 @@ fmax=fsim[Npts-1]
 plt.style.use('plt_style_small.mplstyle')
 plt.semilogx([fkthe,fkthe],[-150,S0dBvthe],'k--',linewidth=lw)
 plt.semilogx(fsim,SnindBvsim,'r-', markevery=25, label='Total (sim.)')
-plt.semilogx(fthe,SninthdBvthe,'b--', label='Thermal (theory)')
-plt.semilogx(fthe,SninfldBvthe,'g--', label='Flicker (theory)')
-plt.semilogx(fthe,SnindBvthe,'r--', label='Total (theory)')
+plt.semilogx(fthenz,SninthdBvthe,'b--', label='Thermal (theory)')
+plt.semilogx(fthenz,SninfldBvthe,'g--', label='Flicker (theory)')
+plt.semilogx(fthenz,SnindBvthe,'r--', label='Total (theory)')
 plt.xlim(fmin,fmax)
 plt.xticks([1e1,1e2,1e3,1e4,1e5,1e6,1e7,1e8])
 plt.xlabel('Frequency [Hz]')
-plt.ylim(-150,-100)
+plt.ylim(-150,-90)
 plt.ylabel(r'Input Noise PSD $[dBv/\sqrt{Hz}]$')
 #plt.legend(loc='best')
 plt.legend(loc='center left', fontsize=9, bbox_to_anchor=(1, 0.5))
@@ -2685,11 +2667,12 @@ textstr = '\n'.join((
 #    f'$f_k =$ {fksim/1e3:.1f} kHz (sim.)'))
 plt.text(0.35, 0.95, textstr, ha='left', va='top', size=9, transform=plt.gca().transAxes,
          bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
-#saveFigures(savePath, 'Input_referred_noise_PSD')
 plt.show()
 ```
 
 From @fig-ng_noise, we see that the simulated input-referred noise PSD is larger than the theoretical estimation for both flicker and white noise. We can have a closer look at the contributions of the various transistors to the input-referred white noise PSD.
+
+The contributions of M~1a~-M~1b~, M~2a~-M~2b~-M~2c~-M~2d~, M~3a~-M~3b~ and the cascode transistors M~4~ and M~7~ to the input-referred white noise PSD are detailed in @fig-ng_white_noise_contributions and compared to the theoretical white noise. 
 
 ```{python}
 #| label: fig-ng_white_noise_contributions
@@ -2747,9 +2730,12 @@ SnoutM2w=np.zeros(Npts)
 SnoutM3=np.zeros(Npts)
 SnoutM3f=np.zeros(Npts)
 SnoutM3w=np.zeros(Npts)
-SnoutM4M7=np.zeros(Npts)
-SnoutM4M7f=np.zeros(Npts)
-SnoutM4M7w=np.zeros(Npts)
+SnoutM4=np.zeros(Npts)
+SnoutM4f=np.zeros(Npts)
+SnoutM4w=np.zeros(Npts)
+SnoutM7=np.zeros(Npts)
+SnoutM7f=np.zeros(Npts)
+SnoutM7w=np.zeros(Npts)
 SninM1=np.zeros(Npts)
 SninM1f=np.zeros(Npts)
 SninM1w=np.zeros(Npts)
@@ -2768,12 +2754,18 @@ SninM3w=np.zeros(Npts)
 SninM3dBv=np.zeros(Npts)
 SninM3fdBv=np.zeros(Npts)
 SninM3wdBv=np.zeros(Npts)
-SninM4M7=np.zeros(Npts)
-SninM4M7f=np.zeros(Npts)
-SninM4M7w=np.zeros(Npts)
-SninM4M7dBv=np.zeros(Npts)
-SninM4M7fdBv=np.zeros(Npts)
-SninM4M7wdBv=np.zeros(Npts)
+SninM4=np.zeros(Npts)
+SninM4f=np.zeros(Npts)
+SninM4w=np.zeros(Npts)
+SninM4dBv=np.zeros(Npts)
+SninM4fdBv=np.zeros(Npts)
+SninM4wdBv=np.zeros(Npts)
+SninM7=np.zeros(Npts)
+SninM7f=np.zeros(Npts)
+SninM7w=np.zeros(Npts)
+SninM7dBv=np.zeros(Npts)
+SninM7fdBv=np.zeros(Npts)
+SninM7wdBv=np.zeros(Npts)
 SnoutdBv=np.zeros(Npts)
 Snin=np.zeros(Npts)
 SnindBv=np.zeros(Npts)
@@ -2808,18 +2800,19 @@ for k in range(0,Npts):
   Vnout[k]=df_noise.iloc[Nvar*k+22,0]
   SnoutM1[k]=VnoutM1a[k]**2+VnoutM1b[k]**2
   SnoutM1f[k]=VnoutM1af[k]**2+VnoutM1bf[k]**2
-  SnoutM1w[k]=SnoutM1[k]- SnoutM1f[k]
+  SnoutM1w[k]=SnoutM1[k]-SnoutM1f[k]
   SnoutM2[k]=VnoutM2a[k]**2+VnoutM2b[k]**2+VnoutM2c[k]**2+VnoutM2d[k]**2
   SnoutM2f[k]=VnoutM2af[k]**2+VnoutM2bf[k]**2+VnoutM2cf[k]**2+VnoutM2df[k]**2
-  SnoutM2w[k]=SnoutM2[k]- SnoutM2f[k]
-  if SnoutM2w[k] < 0:
-    SnoutM2w[k] = np.nan
+  SnoutM2w[k]=SnoutM2[k]-SnoutM2f[k]
   SnoutM3[k]=VnoutM3a[k]**2+VnoutM3b[k]**2
   SnoutM3f[k]=VnoutM3af[k]**2+VnoutM3bf[k]**2
   SnoutM3w[k]=SnoutM3[k]- SnoutM3f[k]
-  SnoutM4M7[k]=VnoutM4[k]**2+VnoutM7[k]**2
-  SnoutM4M7f[k]=VnoutM4f[k]**2+VnoutM7f[k]**2
-  SnoutM4M7w[k]=SnoutM4M7[k]- SnoutM4M7f[k]
+  SnoutM4[k]=VnoutM4[k]**2
+  SnoutM4f[k]=VnoutM4f[k]**2
+  SnoutM4w[k]=SnoutM4[k]-SnoutM4f[k]
+  SnoutM7[k]=VnoutM7[k]**2
+  SnoutM7f[k]=VnoutM7f[k]**2
+  SnoutM7w[k]=SnoutM7[k]-SnoutM7f[k]
   A[k]=Vnout[k]/Vnin[k]
   Snin[k]=Vnin[k]**2
   SnindBv[k]=10*log(Snin[k])
@@ -2834,20 +2827,29 @@ for k in range(0,Npts):
   SninM2w[k]=SnoutM2w[k]/A[k]**2
   SninM2dBv[k]=10*log(SninM2[k])
   SninM2fdBv[k]=10*log(SninM2f[k])
-  SninM2wdBv[k]=10*log(SninM2w[k])
+  if SninM2w[k] > 0:
+    SninM2wdBv[k]=10*log(SninM2w[k])
+  else:
+    SninM2wdBv[k]=np.nan
   SninM3[k]=SnoutM3[k]/A[k]**2
   SninM3f[k]=SnoutM3f[k]/A[k]**2
   SninM3w[k]=SnoutM3w[k]/A[k]**2
   SninM3dBv[k]=10*log(SninM3[k])
   SninM3fdBv[k]=10*log(SninM3f[k])
   SninM3wdBv[k]=10*log(SninM3w[k])
-  SninM4M7[k]=SnoutM4M7[k]/A[k]**2
-  SninM4M7f[k]=SnoutM4M7f[k]/A[k]**2
-  SninM4M7w[k]=SnoutM4M7w[k]/A[k]**2
-  SninM4M7dBv[k]=10*log(SninM4M7[k])
-  SninM4M7fdBv[k]=10*log(SninM4M7f[k])
-  SninM4M7wdBv[k]=10*log(SninM4M7w[k])
-  Sninf[k]=SninM1f[k]+SninM2f[k]+SninM3f[k]+SninM4M7f[k]
+  SninM4[k]=SnoutM4[k]/A[k]**2
+  SninM4f[k]=SnoutM4f[k]/A[k]**2
+  SninM4w[k]=SnoutM4w[k]/A[k]**2
+  SninM4dBv[k]=10*log(SninM4[k])
+  SninM4fdBv[k]=10*log(SninM4f[k])
+  SninM4wdBv[k]=10*log(SninM4w[k])
+  SninM7[k]=SnoutM7[k]/A[k]**2
+  SninM7f[k]=SnoutM7f[k]/A[k]**2
+  SninM7w[k]=SnoutM7w[k]/A[k]**2
+  SninM7dBv[k]=10*log(SninM7[k])
+  SninM7fdBv[k]=10*log(SninM7f[k])
+  SninM7wdBv[k]=10*log(SninM7w[k])
+  Sninf[k]=SninM1f[k]+SninM2f[k]+SninM3f[k]+SninM4f[k]+SninM7f[k]
   Sninw[k]=Snin[k]-Sninf[k]
   SninfdBv[k]=10*log(Sninf[k])
   SninwdBv[k]=10*log(Sninw[k])
@@ -2856,18 +2858,33 @@ S0sim=Sninw[0]
 Rninthsim=S0sim/(4*kT)
 gammanotasim=df_mos.at["M1a","Gm"]*Rninthsim
 
+Sninw1ksim=Sninw[np.where(freq > 1000)[0][0]]
+Sninw1kdBvsim=10*log(abs(Sninw1ksim))
+Sninw1kthe=Sninththe[np.where(fthenz > 1000)[0][0]]
+Sninw1kdBvthe=10*log(abs(Sninw1kthe))
+SninM1w1ksim=SninM1w[np.where(freq > 1000)[0][0]]
+SninM2w1ksim=SninM2w[np.where(freq > 1000)[0][0]]
+SninM3w1ksim=SninM2w[np.where(freq > 1000)[0][0]]
+SninM4w1ksim=SninM4w[np.where(freq > 1000)[0][0]]
+SninM7w1ksim=SninM7w[np.where(freq > 1000)[0][0]]
+etathsim=(SninM2w1ksim+SninM3w1ksim+SninM4w1ksim+SninM7w1ksim)/SninM1w1ksim
+etathdBsim=10*log(abs(etathsim))
+Rninthsim=Sninw1ksim/(4*kT)
+gammanotasim=df_mos.at["M1a","Gm"]*Rninthsim
+gamman2sim=df_mos_sekv.at["M2a","gamman"]
+
 fmin=freq[0]
 fmax=freq[Npts-1]
 
-plt.style.use('plt_style_small.mplstyle')
 plt.semilogx(freq,SninM1wdBv,'b-', label='M1a-M1b')
 plt.semilogx(freq,SninM2wdBv,'g-', label='M2a-M2b-M2c-M2d')
 plt.semilogx(freq,SninM3wdBv,'m-', label='M3a-M3b')
-plt.semilogx(freq,SninM4M7wdBv,'c-', label='M4-M7')
+plt.semilogx(freq,SninM4wdBv,'c-', label='M4')
+plt.semilogx(freq,SninM7wdBv,'y-', label='M7')
 plt.semilogx(freq,SninwdBv,'r-', label='Total (sim.)')
-plt.semilogx(fthe,SninthdBvthe,'r--', label='Total (theory)')
+plt.semilogx(fthenz,SninthdBvthe,'r--', label='Total (theory)')
 plt.xlim(fmin,fmax)
-plt.xticks([1e1,1e2,1e3,1e4,1e5,1e6,1e7,1e8])
+plt.xticks([1e0,1e1,1e2,1e3,1e4,1e5,1e6,1e7,1e8])
 plt.xlabel('Frequency [Hz]')
 plt.ylim(-200,-130)
 #plt.yticks(range(-150,-100,10))
@@ -2881,11 +2898,12 @@ plt.legend(loc='center left', fontsize=9, bbox_to_anchor=(1, 0.5))
 #    f'$f_k =$ {fksim/1e3:.1f} kHz (sim.)'))
 #plt.text(0.35, 0.95, textstr, ha='left', va='top', size=9, transform=plt.gca().transAxes,
 #         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
-#saveFigures(savePath, 'Input_referred_noise_PSD')
 plt.show()
 ```
 
-The contributions of M~1a~-M~1b~, M~2a~-M~2b~-M~2c~-M~2d~, M~3a~-M~3b~ and the cascode transistors M~4~ and M~7~ to the input-referred white noise PSD are detailed in @fig-ng_white_noise_contributions and compared to the theoretical white noise. We can observe that the white noise is dominated by the differential pair M~1a~-M~1b~ while the contribution of  M~2a~-M~2b~-M~2c~-M~2d~ and M~3a~-M~3b~ are lower. We also see that the contribution of the cascode transistors is more than 50 dB lower and can therefore be neglected. The total simulated white noise is slightly higher than the theoretical estimation, which is acceptable. This results in an OTA thermal noise excess factor $\gamma_{n,ota} =$  `{python} f'{gammanotasim:.3f}'` that is slightly larger than the predicted value $\gamma_{n,ota} =$  `{python} f'{gammanotathe:.3f}'`.
+We can observe that the total simulated white noise is about `{python} f'{10*log(Sninw1ksim/Sninw1kthe):.3f}'` dB higher than the theoretical estimation, which is acceptable. This is probably due to the higher values of the thermal noise excess factors of pMOS transistors as shown in @tbl-ng_op6 compared to the theroretical values given in @tbl-thermal. The white noise is dominated by the differential pair M~1a~-M~1b~ which is $1+\eta_{th} =$ `{python} f'{1+etathsim:.3f}'` times (or `{python} f'{10*log(abs(1+etathsim)):.3f}'` dB) lower than the total white noise. The contribution of M~2a~-M~2b~ is about $\eta_{th} =$ `{python} f'{etathsim:.3f}'` times (or  `{python} f'{-etathdBsim:.3f}'` dB) lower than the contribution of M~1a~-M~1b~. The simulated value of $\eta_{th} =$ `{python} f'{etathsim:.3f}'` is about `{python} f'{etathsim/etath:.3f}'` larger than the theoretical estimation. This comes from the noise excess factor of M~2a~-M~2b~ $\gamma_{n2} =$ `{python} f'{gamman2sim:.3f}'` which is `{python} f'{gamman2sim/gamman2:.3f}'` larger than the theoretical value $\gamma_{n2} =$ `{python} f'{gamman2:.3f}'`.  This results in an OTA thermal noise excess factor $\gamma_{n,ota} =$  `{python} f'{gammanotasim:.3f}'` that is slightly larger than the predicted value $\gamma_{n,ota} =$  `{python} f'{gammanotathe:.3f}'`.
+
+We can observe that the contribution of the cascode transistors M~4~ and M~7~ are `{python} f'{10*log(SninM4w1ksim/Sninw1ksim):.3f}'` dB and `{python} f'{10*log(SninM7w1ksim/Sninw1ksim):.3f}'` dB lower than the total white noise. The noise of the cascode transistors M~4~ and M~7~ can be totally neglected.
 
 @fig-ng_flicker_noise_contributions presents the breakdown of the contributions of the various transistors to the input-referred flicker noise. As expected from the design, M~2a~-M~2b~-M~2c~-M~2d~ contribute about the same than M~1a~-M~1b~.
 
@@ -2895,18 +2913,18 @@ The breakdown of the contributions of the various transistors to the total input
 #| label: fig-ng_flicker_noise_contributions
 #| fig-cap: "Breakdown of the contributions to the simulated input-referred flicker noise PSD."
 
-plt.style.use('plt_style_small.mplstyle')
 plt.semilogx(freq,SninM1fdBv,'b-', label='M1a-M1b')
 plt.semilogx(freq,SninM2fdBv,'g-', label='M2a-M2b-M2c-M2d')
 plt.semilogx(freq,SninM3fdBv,'m-', label='M3a-M3b')
-plt.semilogx(freq,SninM4M7fdBv,'c-', label='M4-M7')
+plt.semilogx(freq,SninM4fdBv,'c-', label='M4')
+plt.semilogx(freq,SninM7fdBv,'y-', label='M7')
 plt.semilogx(freq,SninfdBv,'r', label='Total (sim.)')
-plt.semilogx(fthe,SninfldBvthe,'r--', label='Total (theory)')
+plt.semilogx(fthenz,SninfldBvthe,'r--', label='Total (theory)')
 plt.xlim(fmin,1e5)
 #plt.xticks([1e1,1e2,1e3,1e4,1e5,1e6,1e7,1e8])
 plt.xlabel('Frequency [Hz]')
-plt.ylim(-170,-100)
-plt.yticks(range(-170,-90,10))
+plt.ylim(-170,-90)
+plt.yticks(range(-170,-80,10))
 plt.ylabel('Input Noise PSD $[dBv/\\sqrt{Hz}]$')
 #plt.legend(loc='lower left')
 plt.legend(loc='center left', fontsize=9, bbox_to_anchor=(1, 0.5))
@@ -2917,7 +2935,6 @@ plt.legend(loc='center left', fontsize=9, bbox_to_anchor=(1, 0.5))
 #    f'$f_k =$ {fksim/1e3:.1f} kHz (sim.)'))
 #plt.text(0.35, 0.95, textstr, ha='left', va='top', size=9, transform=plt.gca().transAxes,
 #         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
-#saveFigures(savePath, 'Input_referred_noise_PSD')
 plt.show()
 ```
 
@@ -2925,7 +2942,6 @@ plt.show()
 #| label: fig-ng_noise_contributions
 #| fig-cap: "Breakdown of the contributions to the simulated input-referred noise PSD."
 
-plt.style.use('plt_style_small.mplstyle')
 plt.semilogx(freq,SninM1dBv,'b-', label='M1a-M1b (total)')
 #plt.semilogx(freq,SninM1fdBv,'b-.', label='M1a-M1b (flicker)')
 #plt.semilogx(freq,SninM1wdBv,'b--', label='M1a-M1b (white)')
@@ -2933,18 +2949,19 @@ plt.semilogx(freq,SninM2dBv,'g-', label='M2a-M2b-M2c-M2d (total)')
 #plt.semilogx(freq,SninM2fdBv,'g-.', label='M2a-M2b-M2c-M2d (flicker)')
 #plt.semilogx(freq,SninM2wdBv,'g--', label='M2a-M2b-M2c-M2d (white)')
 plt.semilogx(freq,SninM3dBv,'m-', label='M3a-M3b')
-plt.semilogx(freq,SninM4M7dBv,'c-', label='M4-M7')
+plt.semilogx(freq,SninM4dBv,'c-', label='M4')
+plt.semilogx(freq,SninM7dBv,'y-', label='M7')
 #plt.semilogx(freq,SninfdBv,'r--', label='Total (flicker)')
 #plt.semilogx(freq,SninwdBv,'r-.', label='Total (white)')
 plt.semilogx(freq,SnindBv,'r-', label='Total')
 #plt.semilogx(fthe,SninthdBvthe,'k--', label='Thermal (theory)')
 #plt.semilogx(fthe,SninfldBvthe,'k--', label='Flicker (theory)')
-plt.semilogx(fthe,SnindBvthe,'r--', label='Total (theory)')
+plt.semilogx(fthenz,SnindBvthe,'r--', label='Total (theory)')
 plt.xlim(fmin,fmax)
-plt.xticks([1e1,1e2,1e3,1e4,1e5,1e6,1e7,1e8])
+plt.xticks([1e0,1e1,1e2,1e3,1e4,1e5,1e6,1e7,1e8])
 plt.xlabel('Frequency [Hz]')
-plt.ylim(-190,-100)
-plt.yticks(range(-190,-90,10))
+plt.ylim(-200,-90)
+plt.yticks(range(-200,-80,10))
 plt.ylabel('Input Noise PSD $[dBv/\\sqrt{Hz}]$')
 #plt.legend(loc='lower left')
 plt.legend(loc='center left', fontsize=9, bbox_to_anchor=(1, 0.5))
@@ -2955,7 +2972,6 @@ plt.legend(loc='center left', fontsize=9, bbox_to_anchor=(1, 0.5))
 #    f'$f_k =$ {fksim/1e3:.1f} kHz (sim.)'))
 #plt.text(0.35, 0.95, textstr, ha='left', va='top', size=9, transform=plt.gca().transAxes,
 #         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
-#saveFigures(savePath, 'Input_referred_noise_PSD')
 plt.show()
 ```
 
@@ -2999,10 +3015,8 @@ df_sim=pd.read_table(ngspiceDataFile, sep=' +', engine='python')
 
 Vinsim=df_sim['v-sweep'].to_numpy()
 Voutsim=df_sim['Vout'].to_numpy()
-plt.plot([0,0.8],[0,0.8],'k--', linewidth=lw)
-#plt.plot([0,0],[0,Voutq],'k--', linewidth=lw)
-#plt.plot([Vinmin,Vinmax/1e-3],[Voutmax,Voutmax],'k--', linewidth=lw)
-#plt.plot([Vidmin/1e-3,Vidmax/1e-3],[Voutmin,Voutmin],'k--', linewidth=lw)
+plt.plot([0,1],[0,1],'k--', linewidth=lw)
+plt.plot([0.9,0.9],[0,0.9],'k--', linewidth=lw)
 plt.plot(Vinsim,Voutsim,'r')
 plt.xlim(Vinmin,Vinmax)
 #plt.xticks(np.arange(-0.9,1,0.3))
@@ -3020,20 +3034,19 @@ plt.ylabel('$V_{out}$ [V]')
 #  f'$V_{{swing}} =$ {Vswing:.2f} V'))
 #plt.text(0.65, 0.5, textstr, ha='left', va='center', size=9, transform=plt.gca().transAxes,
 #         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
-#saveFigures(savePath, 'Vout_Vid')
 plt.show()
 ```
 
 ## Step-response
 ```{python}
-Vic=0.3
+Vic=0.6
 DVin=10e-3
 ```
 
 In this section we will check the step response of the OTA operating as a voltage follower (output connected to the negative input) with the same load capacitance $C_L =$ `{python} f'{CL/1e-12:.0f}'` $pF$. According to the input common-mode voltage range established above, we will set the input common-mode voltage to  $V_{ic} =$ `{python} f'{Vic:.1f}'` $V$ to leave enough room for the large step.
 
 ### Small-step
-We start by imposing a small step $\Delta V_{in} =$ `{python} f'{DVin/1e-3:.0f}'` $mV$ on top of a common mode voltage $V_{ic} =$ `{python} f'{Vic:.1f}'` $V$. The simulation results are shown in @fig-ng_step_small where $\Delta V_{in}(t) \triangleq V_{in+}(t) - V_{ic}$ and $\Delta V_{out}(t) \triangleq V_{out}(t) - V_{outq}$ with $V_{outq} \cong V_{ic}$ is the quiescent output voltage. $\Delta V_{in}$ and $\Delta V_{out}$ are compared to the response of a single pole circuit having a cut-off frequency equal to the $GBW$. The difference between the simulation an the first-order model is due to the larger estimated value of the $GBW$ and the additional poles introduced by the current mirrors.
+We start by imposing a small step $\Delta V_{in} =$ `{python} f'{DVin/1e-3:.0f}'` $mV$ on top of a common mode voltage $V_{ic} =$ `{python} f'{Vic:.1f}'` $V$. The simulation results are shown in @fig-ng_step_small where $\Delta V_{in}(t) \triangleq V_{in+}(t) - V_{ic}$ and $\Delta V_{out}(t) \triangleq V_{out}(t) - V_{outq}$ with $V_{outq}$ the quiescent output voltage at the operating point before the step is applied. $\Delta V_{in}$ and $\Delta V_{out}$ are compared to the response of a single pole circuit having a cut-off frequency equal to the $GBW$. The difference between the simulation an the first-order model is due to the larger estimated value of the $GBW$ and the additional poles introduced by the current mirrors.
 
 ```{python}
 #| label: fig-ng_step_small
@@ -3099,7 +3112,7 @@ with open(ngspiceNodeVoltageFile) as f:
   for line in f:
     match = re.search(regexp, line)
     if match:
-      Voutq=float(match.group(1))
+      Voutqsim=float(match.group(1))
 
 df_sim=pd.read_table(ngspiceDataFile, sep=' +', engine='python')
 
@@ -3107,7 +3120,7 @@ tsim=df_sim['time'].to_numpy()
 Vinsim=df_sim['v(inp)'].to_numpy()
 Voutsim=df_sim['v(out)'].to_numpy()
 DVinsim=Vinsim-Vic
-DVoutsim=Voutsim-Voutq
+DVoutsim=Voutsim-Voutqsim
 
 Npts=len(tsim)
 tmin=tsim[0]
@@ -3125,8 +3138,6 @@ for k in range(0,Npts):
 Adcsim=pow(10,AdcdBsim/20)
 Voutfin=DVin*(1-1/Adcsim)
 
-lw=1
-plt.style.use('plt_style_small.mplstyle')
 plt.plot([td/1e-6,(td+1/(2*pi*GBWthe))/1e-6],[0,DVin/1e-3], 'k--', linewidth=lw)
 plt.plot([0,tmax/1e-6],[Voutfin/1e-3,Voutfin/1e-3], 'k--', linewidth=lw)
 plt.plot(tsim/1e-6,DVinsim/1e-3,'b-', label='Input')
@@ -3139,16 +3150,22 @@ plt.ylim(0,12)
 plt.ylabel('$\\Delta V_{in}$, $\\Delta V_{out}$ [mV]')
 plt.legend(loc='lower right')
 #plt.legend(loc='center left', fontsize=9, bbox_to_anchor=(1, 0.5))
-#saveFigures(savePath, 'Input_referred_noise_PSD')
+textstr = '\n'.join((
+  f'$V_{{ic}} =$ {Vic:.3f} V',
+  f'$V_{{outq}} =$ {Voutqsim:.3f} V',
+  f'$\\Delta V_{{in}} =$ {DVin/1e-3:.0f} mV'))
+plt.text(0.65, 0.5, textstr, ha='left', va='center', size=9, transform=plt.gca().transAxes,
+         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
 plt.show()
 ```
 
 ### Large step
 ```{python}
+Vic=0.4
 DVin=0.3
 ```
 
-We now impose a larger step $\Delta V_{in} =$ `{python} f'{DVin/1e-3:.0f}'` $mV$ on top of a common mode voltage $V_{ic} =$ `{python} f'{Vic/1e-3:.0f}'` $mV$. The simulation results are shown in @fig-ng_step_large where $\Delta V_{in}(t) \triangleq V_{in+}(t) - V_{ic}$ and $\Delta V_{out}(t) \triangleq V_{out}(t) - V_{outq}$ with $V_{outq} \cong V_{ic}$ is the quiescent output voltage. $\Delta V_{in}$ and $\Delta V_{out}$ are compared to the response of a single pole circuit having a cut-off frequency equal to the $GBW$. We now observe the effect of slew-rate which increases the settling time.
+We now impose a larger step $\Delta V_{in} =$ `{python} f'{DVin/1e-3:.0f}'` $mV$ on top of a common mode voltage $V_{ic} =$ `{python} f'{Vic/1e-3:.0f}'` $mV$. The simulation results are shown in @fig-ng_step_large where $\Delta V_{in}(t) \triangleq V_{in+}(t) - V_{ic}$ and $\Delta V_{out}(t) \triangleq V_{out}(t) - V_{outq}$ with $V_{outq} \cong V_{ic}$ the quiescent output voltage at the operating point before the step is applied. $\Delta V_{in}$ and $\Delta V_{out}$ are compared to the response of a single pole circuit having a cut-off frequency equal to the $GBW$. We now observe the effect of slew-rate which increases the settling time.
 
 ```{python}
 #| label: fig-ng_step_large
@@ -3174,6 +3191,18 @@ per=1
 nper=0
 
 if newSim:
+  paramstr = '\n'.join((
+  f'.param VDD={VDD:.1f} Vic={Vic:.1f} Vos={Vos/1e-6:.3f}u Vb1={Vb1:.1f} Vb2={Vb2:.1f} Ib={Ib/1e-9:.0f}n',
+  f'.param CL={CL/1e-12:.0f}p',
+  f'.param W1={W1/1e-6:.2f}u L1={L1/1e-6:.2f}u AS1={AS1:.3e} PS1={PS1:.3e} AD1={AD1:.3e} PD1={PD1:.3e}',
+  f'.param W2={W2/1e-6:.2f}u L2={L2/1e-6:.2f}u AS2={AS2:.3e} PS2={PS2:.3e} AD2={AD2:.3e} PD2={PD2:.3e}',
+  f'.param W3={W3/1e-6:.2f}u L3={L3/1e-6:.2f}u AS3={AS3:.3e} PS3={PS3:.3e} AD3={AD3:.3e} PD3={PD3:.3e}',
+  f'.param W4={W4/1e-6:.2f}u L4={L4/1e-6:.2f}u AS4={AS4:.3e} PS4={PS4:.3e} AD4={AD4:.3e} PD4={PD4:.3e}',
+  f'.param W5={W5/1e-6:.2f}u L5={L5/1e-6:.2f}u AS5={AS5:.3e} PS5={PS5:.3e} AD5={AD5:.3e} PD5={PD5:.3e}',
+  f'.param W7={W7/1e-6:.2f}u L7={L7/1e-6:.2f}u AS7={AS7:.3e} PS7={PS7:.3e} AD7={AD7:.3e} PD7={PD7:.3e}'
+  ))
+  with open(simulationPath+'size_bias.par', 'w') as f:
+    f.write(paramstr)
   pulsestr = f'.param V1={V1:.3f} V2={V2:.3f} td={td:.3e} tr={tr:.3e} tf={tf:.3e} pw={pw:.3e} per={per:.3e} np={nper:.0f}'
   with open(simulationPath+'pulse.par', 'w') as f:
     f.write(pulsestr)
@@ -3201,7 +3230,7 @@ with open(ngspiceNodeVoltageFile) as f:
   for line in f:
     match = re.search(regexp, line)
     if match:
-      Voutq=float(match.group(1))
+      Voutqsim=float(match.group(1))
 
 df_sim=pd.read_table(ngspiceDataFile, sep=' +', engine='python')
 
@@ -3209,7 +3238,7 @@ tsim=df_sim['time'].to_numpy()
 Vinsim=df_sim['v(inp)'].to_numpy()
 Voutsim=df_sim['v(out)'].to_numpy()
 DVinsim=Vinsim-Vic
-DVoutsim=Voutsim-Voutq
+DVoutsim=Voutsim-Voutqsim
 
 Npts=len(tsim)
 tmin=tsim[0]
@@ -3226,8 +3255,6 @@ for k in range(0,Npts):
 Adcsim=pow(10,AdcdBsim/20)
 Voutfin=DVin*(1-1/Adcsim)
 
-lw=1
-plt.style.use('plt_style_small.mplstyle')
 plt.plot([td/1e-6,(td+1/(2*pi*GBWthe))/1e-6],[0,DVin/1e-3], 'k--', linewidth=lw)
 plt.plot([0,tmax/1e-6],[Voutfin/1e-3,Voutfin/1e-3], 'k--', linewidth=lw)
 plt.plot(tsim/1e-6,DVinsim/1e-3,'b-', label='Input')
@@ -3240,7 +3267,12 @@ plt.ylim(0,350)
 plt.ylabel('$\\Delta V_{in}$, $\\Delta V_{out}$ [mV]')
 plt.legend(loc='lower right')
 #plt.legend(loc='center left', fontsize=9, bbox_to_anchor=(1, 0.5))
-#saveFigures(savePath, 'Input_referred_noise_PSD')
+textstr = '\n'.join((
+  f'$V_{{ic}} =$ {Vic:.3f} V',
+  f'$V_{{outq}} =$ {Voutqsim:.3f} V',
+  f'$\\Delta V_{{in}} =$ {DVin/1e-3:.0f} mV'))
+plt.text(0.65, 0.5, textstr, ha='left', va='center', size=9, transform=plt.gca().transAxes,
+         bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
 plt.show()
 ```
 
@@ -3252,9 +3284,21 @@ Itele=500e-9
 Ptele=Itele*VDD
 ```
 
-The total current consumption (without accounting for the current in M~5a~) is given by $I_{tot} =$ `{python} f'{Itot/1e-6:.3f}'` $\mu A$, resulting in a total power consumption given by $P =$ `{python} f'{P/1e-6:.3f}'` $\mu W$. We can compare the current and power consumption of the Miller OTA to the telescopic OTA $I_{tot,telescopic} \cong$ `{python} f'{Itele/1e-6:.1f}'` $\mu A$. The current and power consumption of the symmetrical cascode OTA is `{python} f'{Itot/Itele:.3f}'` times larger than that of the telescopic OTA for the same specifications and performance.
+The total current consumption (without accounting for the current in M~5a~) is given by $I_{tot} =$ `{python} f'{Itot/1e-6:.3f}'` $\mu A$, resulting in a total power consumption given by $P =$ `{python} f'{P/1e-6:.3f}'` $\mu W$. We can compare the current and power consumption of the Miller OTA to the telescopic OTA $I_{tot,telescopic} \cong$ `{python} f'{Itele/1e-6:.1f}'` $\mu A$. The current and power consumption of the symmetrical cascode OTA is `{python} f'{Itot/Itele:.3f}'` times larger than that of the telescopic OTA for similar specifications and performance.
 
 # Conclusion
-This notebook presented the detailed analysis, design and verification by simulation of the symmetrical OTA @bib:krummenacher:el:1:4:1981. The analysis allowed to derive the design equations to achieve the target specifications. The OTA has been designed for specifications on the gain-bandwidth product and DC gain in the IHP SG13G2 130nm BiCMOS technology @bib:ihp:2025 using the inversion coefficient approach with the sEKV model and parameters @bib:enz:book:2006 @bib:enz:sscmag:autumn:2017 @bib:enz:sscmag:winter:2017. The design has been validated by simulations with the ngspice simulator @bib:ngspice:2024 using the PSP compact model @bib:psp103.6:2017 and the parameters provided by the open source IHP @bib:ihp:2025. The simulations have shown that the gain-bandwidth and DC gain specifications are achieved despite the limited intrinsic gain of nMOS transistors of this technology.
+This notebook presented the analysis, design and verification of the symmetrical cascode OTA @bib:krummenacher:el:1:4:1981 for the IHP 130nm SG13G2 open source PDK @bib:ihp:2025. The detailed analysis provided all the equations that were then used in the design phase to reach the target specifications. The design was then performed using the inversion coefficient approach with the sEKV transistor model  @bib:enz:book:2006 @bib:enz:sscmag:autumn:2017 @bib:enz:sscmag:winter:2017. The theoretical performance resulting from the design were then evaluated.
+
+The design was then verified by simulation using ngspice with the PSP compact model @bib:psp103.6:2017 and the parameters provided by the IHP 130nm SG13G2 open source PDK @bib:ihp:2025. Because of the high output resistance and the structural mismatch in the current mirrors due to the output conductances, the open-loop quiescent output voltage was too low, pushing some transistors out of saturation. The OTA was then simulated in closed-loop as a voltage follower in order to extract the offset voltage required to bring the quiescent output voltage in open-loop back to the high gain region. After carefully checking the operating point, the large-signal transfer characteristic was simulated. Then the small-signal transfer function of the OTA connected as a voltage follower was simulated. The open-loop transfer function was then simulated making sure the OTA was biased in the high gain region. The transfer function was then compared to the that extracted from the closed-loop simulation showing a reasonable correspondance below the unity gain frequency. The simulations have shown that the gain-bandwidth product $GBW$ is right on target. The DC gain is also achieved despite the high output conductances of nMOS transistors.
+
+The input-referred noise was then simulated and compared to the theoretical estimation which is reasonably close. The contributions of the various transistors to the input-referred white noise were then extracted from the noise simulation and compared to the theoretical estimation. It was shown that the total white noise was slightly above the theoretical estimation. This is probably due to the high noise excess factor of pMOS transistors which are almost two times larger than the value obtained from the sEKV model. It was shown that the flicker noise of the current mirrors is about equal to that of the differential pair. Finally, the simulations have confirmed that the noise contributions of the cascode transistors are perfectly negligible.
+
+The input common-mode voltage range was then simulated with the OTA connected as a voltage follower.The input voltage is limited to $0.9\,V$.
+
+Finally, the small-signal step response was simulated and succesfully compared to the response of single-pole system. The step-response with a large input step highlighted the effect of slew-rate.
+
+This design has highlighted an important drawback of this technology, namely the high output conductance of nMOS transistors and even for long-channel.
+
+Despite the compact model that was used for the simulation is not the EKV compact model but the PSP model, the simulation results are reasonably close to the theoretical estimations made with the sEKV model. Of course this required to extract the sEKV parameters for the IPHP SG13G2 technology.
 
 # References

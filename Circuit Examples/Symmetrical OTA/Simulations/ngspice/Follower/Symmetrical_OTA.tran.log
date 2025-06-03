@@ -1,0 +1,47 @@
+Using SPARSE 1.3 as Direct Linear Solver
+Note: Starting dynamic gmin stepping
+Note: Dynamic gmin stepping completed
+Using SPARSE 1.3 as Direct Linear Solver
+Note: Starting dynamic gmin stepping
+Note: Dynamic gmin stepping completed
+
+Note: No compatibility mode selected!
+
+
+Circuit: simulation of the symmetrical ota designed with the sekv model
+
+Doing analysis at TEMP = 27.000000 and TNOM = 27.000000
+
+
+No. of Data Rows : 1
+
+Node data saved to file ./Simulations/ngspice/Follower/symmetrical_ota.tran.ic
+ASCII raw file "./Simulations/ngspice/Follower/Symmetrical_OTA.tran.op"
+Doing analysis at TEMP = 27.000000 and TNOM = 27.000000
+
+
+Initial Transient Solution
+--------------------------
+
+Node                                   Voltage
+----                                   -------
+2                                      0.62716
+out                                    0.39993
+1                                     0.198612
+4                                     0.626937
+inp                                        0.4
+vdd                                        1.2
+3                                     0.458293
+6                                     0.882307
+5                                     0.356275
+vb1                                        0.5
+8                                     0.452642
+vb2                                        0.6
+vin#branch                        -1.30035e-14
+vdd#branch                          -1.592e-06
+vb2#branch                        -1.90792e-13
+vb1#branch                         4.82947e-13
+
+
+No. of Data Rows : 1022
+Note: Simulation executed from .control section 

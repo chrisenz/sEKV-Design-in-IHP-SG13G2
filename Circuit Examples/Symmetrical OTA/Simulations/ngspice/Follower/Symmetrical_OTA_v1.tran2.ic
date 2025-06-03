@@ -1,0 +1,15 @@
+* Intermediate Transient Solution
+* Circuit: simulation of the symmetrical ota designed with the sekv model
+* Recorded at simulation time: 0
+.ic v(2) = 0.62716
+.ic v(out) = 0.39993
+.ic v(1) = 0.198612
+.ic v(4) = 0.626937
+.ic v(inp) = 0.4
+.ic v(vdd) = 1.2
+.ic v(3) = 0.458293
+.ic v(6) = 0.882307
+.ic v(5) = 0.356275
+.ic v(vb1) = 0.5
+.ic v(8) = 0.452642
+.ic v(vb2) = 0.6

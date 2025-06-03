@@ -1,0 +1,19 @@
+Simulation of the symmetrical OTA designed with the sEKV model
+
+.lib /Simulations/models/cornerMOSlv.lib mos_tt ; model file for PSP
+.include size_bias.par ; Size and bias values
+.include simulation.tran.par ; Parameter for the TRAN simulation
+.include pulse.par ; Parameters for the PULSE parameters used in the netlist
+.include Symmetrical_OTA.net ; Circuit netlist
+
+.control
+ op
+ wrnodev $inputdir/Symmetrical_OTA.tran.ic
+ save v(inp) v(out)
+ write $inputdir/Symmetrical_OTA.tran.op
+ tran $&tstep $&tstop $&tstart
+ set wr_singlescale
+ set wr_vecnames
+ wrdata $inputdir/Symmetrical_OTA.tran.dat v(inp) v(out)
+.endc
+.end

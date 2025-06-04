@@ -1,0 +1,3 @@
+.csparam tstep=1.100e-09
+.csparam tstop=1.100e-06
+.csparam tstart=0

@@ -1,0 +1,17 @@
+X1a 3 inp 1 0 sg13_lv_nmos W={W1} L={L1} AS={AS1} PS={PS1} AD={AD1} PD={PD1}
+X1b 4 out 1 0 sg13_lv_nmos W={W1} L={L1} AS={AS1} PS={PS1} AD={AD1} PD={PD1}
+X2a 5 2 VDD VDD sg13_lv_pmos W={W2} L={L2} AS={AS2} PS={PS2} AD={AD2} PD={PD2}
+X2b 6 2 VDD VDD sg13_lv_pmos W={W2} L={L2} AS={AS2} PS={PS2} AD={AD2} PD={PD2}
+X3a 2 vb1 3 0 sg13_lv_nmos W={W3} L={L3} AS={AS3} PS={PS3} AD={AD3} PD={PD3}
+X3b out vb1 4 0 sg13_lv_nmos W={W3} L={L3} AS={AS3} PS={PS3} AD={AD3} PD={PD3}
+X4a 2 vb2 5 VDD sg13_lv_pmos W={W4} L={L4} AS={AS4} PS={PS4} AD={AD4} PD={PD4}
+X4b out vb2 6 VDD sg13_lv_pmos W={W4} L={L4} AS={AS4} PS={PS4} AD={AD4} PD={PD4}
+X5a 8 7 0 0 sg13_lv_nmos W={W5} L={L5} AS={AS5} PS={PS5} AD={AD5} PD={PD5}
+X5b 1 7 0 0 sg13_lv_nmos W={W5} L={L5} AS={AS5} PS={PS5} AD={AD5} PD={PD5}
+Rb 7 8 {Rb}
+CL out 0 {CL}
+Ib VDD 7 {2*Ib}
+VDD VDD 0 {VDD}
+Vb1 vb1 0 {Vb1}
+Vb2 vb2 0 {Vb2}
+Vin inp 0 DC {Vic} AC 1 PULSE ({V1} {V2} {td} {tr} {tf} {pw} {per} {np})

@@ -1,6 +1,6 @@
 ---
 title: "Design of the Telescopic OTA"
-subtitle: "Version 1"
+subtitle: "Version 2"
 author: "Christian Enz"
 affiliation: "EPFL"
 date: today
@@ -44,6 +44,7 @@ import shutil
 import os
 import os.path as op
 import sys
+sys.path.append(".")
 import re
 
 from IPython.display import Markdown
@@ -62,11 +63,6 @@ plt.rcParams['mathtext.rm'] = 'Arial'
 plt.rcParams['mathtext.it'] = 'Arial:italic'
 plt.rcParams['mathtext.bf'] = 'Arial:bold'
 
-sys.path.append(".")
-inkscapePath = r"C:\\Program Files\\Inkscape\\bin\\inkscape.exe"
-#savePath = "./Figures/"
-savePath = "./Plots/"
-
 #plt.rcParams['text.usetex'] = True
 plt.rcParams['svg.fonttype'] = 'none'
 plt.rcParams['pdf.fonttype'] = 42
@@ -79,10 +75,8 @@ plt.rcParams['mathtext.rm'] = 'Arial'
 plt.rcParams['mathtext.it'] = 'Arial:italic'
 plt.rcParams['mathtext.bf'] = 'Arial:bold'
 
-plt.style.use('plt_style_medium.mplstyle')
+plt.style.use('plt_style_small.mplstyle')
 lw=1
-msize=4
-mevery=4
 
 otaName="Telescopic_OTA"
 version = "_v1" # Allows you to save different versions
@@ -324,7 +318,6 @@ Markdown(tabulate(
 ))
 ```
 
-
 ## Process
 We will design the cascode gain stage for the open source IHP 13G2 BiCMOS process @bib:ihp:2025. The physical parameters are given in @tbl-physics_param, the global process parameters in @tbl-process_param and finally the MOSFET parameters in @tbl-mos_param. 
 
@@ -444,7 +437,7 @@ $G_{m1}$ is the gate transconductance of M~1a~ and M~1b~ which in deep weak inve
 \end{equation}
 The bias current $I_b$ is the current flowing in each transistor M~1a~ and M~1b~ when the input differential voltage is zero. The bias current provided by M~3b~ is therefore $2 I_b$. The bias current must satisfy the following inequality
 \begin{equation}
-  I_b \geq  2\pi n_{0n} U_T C_L GBW_{min}.
+  I_b \geq  2\pi\,n_{0n}\,U_T\,C_L\,GBW_{min}.
 \end{equation}
 which for the given specifications gives $I_{b,min}=$ `{python} f'{Ibmin/1e-9:.0f}'` $nA$. The corresponding slew-rate is given by $SR_{min} =$ `{python} f'{SRmin/1e3:.0f} '` $mV/\mu s$, which we will consider as sufficient.
 
@@ -526,15 +519,17 @@ where $C_2$ is given by
 \begin{equation}
  C_2 = 2(C_{GS2} + C_{GB2})
 \end{equation}
-Assuming M~2a~-M~2b~ are biased in saturation, we have
+Assuming M~2a~-M~2b~ are biased in saturation, the gate-to-source capacitance $C_{GS2}$ is given by
 \begin{equation}
-  C_{GS2} \cong W_2\,L_2\,C_{ox} \cdot c_{gsi} + (C_{GSop} + C_{GSfp}) \cdot W_2
+  C_{GS2} \cong W_2\,L_2\,C_{ox} \cdot c_{gsi} + (C_{GSop} + C_{GSfp}) \cdot W_2,
 \end{equation}
-where $c_{gsi}$ is the normalized intrinsic gate-to-source capacitance which is typically equal to $2/3$ in strong inversion and is proportionnal to $IC$ in weak inversion. The gate-to-bulk capacitance $C_{GB2}$ is given by
+where $C_{GSop}$ and $C_{GSfp}$ are the gate-to-source overlap and fringing capacitances per unit width for pMOS transistors. $c_{gsi}$ is the intrinsic gate-to-source capacitance normalized to the total gate area $W\,L\,C_{ox}$, which is typically equal to $2/3$ in strong inversion and is proportionnal to $IC$ in weak inversion.
+
+The gate-to-bulk capacitance $C_{GB2}$ is given by
 \begin{equation}
   C_{GB2} \cong \,W_2\,L_2\,C_{ox} \cdot c_{gbi} + C_{GBop} \cdot W_2,
 \end{equation}
-where $c_{gbi}$ is the normalized gate-to-bulk intrinsic capacitance given by
+where $C_{GBop}$ is the gate-to-bulk overlap capacitance per unit width and $c_{gbi}$ is the gate-to-bulk intrinsic capacitance normalized to the total gate area $W\,L\,C_{ox}$ and given by
 \begin{equation}
   c_{gbi} = \frac{n-1}{n} \cdot c_{gsi}.
 \end{equation}
@@ -1093,7 +1088,7 @@ lw=1
 axs[0].semilogx([fmin,GBWthe],[0,0],'k--', linewidth=lw)
 axs[0].semilogx([GBWthe,GBWthe],[0,-60],'k--', linewidth=lw)
 axs[0].semilogx(fthe,AmagdBthe,'r',label='Theory')
-axs[0].set(xlim=(fmin,fmax), ylim=(-60,100), ylabel='$|A_{vd}|$ [dB]')
+axs[0].set(xlim=(fmin,fmax), ylim=(-60,80), ylabel='$|A_{vd}|$ [dB]')
 axs[0].set_yticks([-60,-40,-20,0,20,40,60,80,100])
 #axs[0].legend(loc='best')
 textstr1 = '\n'.join((
@@ -1455,7 +1450,7 @@ for k in range(0,Nnodes):
       if match:
         v_df.at[nodeName, 'Voltage']=float(match.group(1))
 
-Voutqsim=v_df.loc['out','Voltage']
+Voutq0=v_df.loc['out','Voltage']
 #pd.set_option('display.float_format', '{:.2f}'.format)
 #v_df
 
@@ -1470,7 +1465,7 @@ Markdown(
 ))
 ```
 
-We can extract the OTA quiescent node voltages from the ngspice .ic file. They are presented in @tbl-ng_openloop_voltages. We see that the simulated quiescent output voltage $V_{outq} =$ `{python} f'{Voutqsim/1e-3:.0f}'` $mV$ is close to the desired value set at $V_{outq} =$ `{python} f'{Voutq/1e-3:.0f}'` $mV$. This means that the OTA is biased in the high gain region and we actually don't need to extract any offset voltage at this point and can proceed with the simulation of the large-signal characteristic.
+We can extract the OTA quiescent node voltages from the ngspice .ic file. They are presented in @tbl-ng_openloop_voltages. We see that the simulated quiescent output voltage $V_{outq} =$ `{python} f'{Voutq0/1e-3:.0f}'` $mV$ is close to the desired value set at $V_{outq} =$ `{python} f'{Voutq/1e-3:.0f}'` $mV$. This means that the OTA is biased in the high gain region and we actually don't need to extract any offset voltage at this point and can proceed with the simulation of the large-signal characteristic.
 
 The operating point information for all transistors are extracted from the ngspice .op file. The data is split into the large-signal operating informations in @tbl-ng_op1, the small-signal operating point informations in @tbl-ng_op2 and the noise operating point informations in @tbl-ng_op3.
 
@@ -1834,11 +1829,11 @@ Markdown(tabulate(
 ))
 ```
 
-From @tbl-ng_openloop_voltages, we see that all transistors have a $V_{DS}$ voltage between $200\,mV$ and $250\,mV$ and are therefore biased in saturation. Additionnally we see that all the saturation voltages are summing up to `{python} f'{VDsat/1e-3:.0f}'` $mV$ leaving an output voltage swing equal to $V_{out,swing} =$ `{python} f'{Voutswing:.3f}'` $V$.
+From @tbl-ng_op1 and @tbl-ng_bias, we see that all transistors have a $V_{DS}$ voltage larger than $200\,mV$ and are biased in saturation. Additionnally we see that all the saturation voltages are summing up to `{python} f'{VDsat/1e-3:.0f}'` $mV$ leaving a maximum output voltage swing equal to $V_{out,swing} =$ `{python} f'{Voutswing:.3f}'` $V$.
 
 The data extracted from the operating point simulation can be translated into sEKV parameters. @tbl-ng_op4 presents the effective width and length, the specific current and the resulting inversion coefficient which can be compared to the values resulting from the design given in @tbl-transistor_info1. We observe that the values are close.
 
-@tbl-ng_op5 presents the sEKV parameters including the specific conductance $G_{spec}$, slope factor $n$, gate transconductance $G_m$, source transconductance $G_{ms}$ and output conductance $G_{ds}$. They can be compared to the results of the design presented in @tbl-transistor_info2. Again, we see that the simulated values of the transconductances are close to the theoretical estimation. However, the simulated values of the output conductances are much larger thamn the estimated values, explaining why the estimated DC gain is much larger than the simulated value.
+@tbl-ng_op5 presents the sEKV parameters including the specific conductance $G_{spec}$, slope factor $n$, gate transconductance $G_m$, source transconductance $G_{ms}$ and output conductance $G_{ds}$. They can be compared to the results of the design presented in @tbl-transistor_info2. Again, we see that the simulated values of the transconductances are close to the theoretical estimation. However, the simulated values of the output conductances are much larger than the estimated values, explaining why the estimated DC gain is much larger than the simulated value.
 
 @tbl-ng_op6 presents the sEKV noise parameters. We can observe that the thermal noise excess factors of pMOS transistors are larger than the estimated values shown in @tbl-thermal.
 
@@ -1860,9 +1855,10 @@ simulationData = simulationPath + fileName + ".dat"
 ngspiceDataFile = simulationPath + otaName + version + simtype + "1.dat"
 ngspiceLogFile = simulationPath + otaName + version + simtype + "1.log"
 
-Vidmin=-0.6
-Vidmax=0.6
-dVid=2e-3
+Vidmin=-0.4e-3
+Vidmax=0.4e-3
+Npts=1001
+dVid=(Vidmax-Vidmin)/(Npts-1)
 
 if newSim:
   simpar = '\n'.join((
@@ -1899,36 +1895,47 @@ with open(ngspiceLogFile) as f:
     if match:
       Voutmin=float(match.group(1))
 
+regexp = re.compile(r'vos' + refloat)
+with open(ngspiceLogFile) as f:
+  for line in f:
+    match = re.search(regexp, line)
+    if match:
+      Vos=float(match.group(1))
+
+Voutmax=0.9
+Voutmin=0.6
 Vswing=Voutmax-Voutmin
 
-lw=1
-plt.style.use('plt_style_small.mplstyle')
-plt.plot([Vidmin/1e-3,0],[Voutq,Voutq],'k--', linewidth=lw)
-plt.plot([0,0],[0,Voutq],'k--', linewidth=lw)
+plt.plot([Vidmin/1e-6,0],[Voutq0,Voutq0],'k--', linewidth=lw)
+plt.plot([0,0],[0.2,Voutq0],'k--', linewidth=lw)
+plt.plot([Vidmin/1e-3,Vos/1e-3],[Voutq,Voutq],'k--', linewidth=lw)
+plt.plot([Vos/1e-3,Vos/1e-3],[0,Voutq],'k--', linewidth=lw)
 plt.plot([Vidmin/1e-3,Vidmax/1e-3],[Voutmax,Voutmax],'k--', linewidth=lw)
 plt.plot([Vidmin/1e-3,Vidmax/1e-3],[Voutmin,Voutmin],'k--', linewidth=lw)
-plt.plot(Vidsim,Voutsim,'r')
-plt.xlim(Vidmin,Vidmax)
-#plt.xticks(np.arange(-0.6,0,0.3))
-plt.xlabel('$V_{id}$ [$V$]')
-plt.ylim(0,1.2)
-plt.yticks(np.arange(0,1.4,0.2))
+plt.plot(Vidsim/1e-3,Voutsim,'r')
+plt.xlim(Vidmin/1e-3,Vidmax/1e-3)
+plt.xticks(np.arange(-0.4,0.5,0.1))
+plt.xlabel('$V_{id}$ [$mV$]')
+plt.ylim(0.5,1)
+#plt.yticks(np.arange(0,1.4,0.2))
 plt.ylabel('$V_{out}$ [V]')
 #plt.legend(loc='best')
 textstr = '\n'.join((
   f'$V_{{DD}} =$ {VDD:.1f} V',
-  f'$V_{{ic}} =$ {Vic:.3f} V',
+  f'$V_{{ic}} =$ {Vic:.1f} V',
+  f'$V_{{out0}} =$ {Voutq0:.3f} V',
   f'$V_{{outq}} =$ {Voutq:.3f} V',
-  f'$V_{{outmax}} =$ {Voutmax:.3f} V',
-  f'$V_{{outmin}} =$ {Voutmin:.3f} V',
-  f'$V_{{swing}} =$ {Vswing:.2f} V'))
-plt.text(0.65, 0.5, textstr, ha='left', va='center', size=9, transform=plt.gca().transAxes,
+  f'$V_{{os}} =$ {Vos/1e-6:.3f} $\\mu\\,V$',
+  f'$V_{{outmax}} \\cong$ {Voutmax:.3f} V',
+  f'$V_{{outmin}} \\cong$ {Voutmin:.3f} V',
+  f'$V_{{swing}} \\cong$ {Vswing:.2f} V'))
+plt.text(1.05, 0.5, textstr, ha='left', va='center', size=9, transform=plt.gca().transAxes,
          bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
 #saveFigures(savePath, 'Vout_Vid')
 plt.show()
 ```
 
-We can now zoom into the high gain region in order to extract the offset voltage that is needed to bring the output voltage back to $V_{outq} =$ `{python} f'{Voutq:.3f}'` $V$. The simulation results are presented in @fig-ng_large_signal_zoom.
+From @fig-ng_large_signal, we see that the output swing is about $V_{out,swing} \cong$ `{python} f'{Vswing/1e-3:.0f}'` $mV$, which is even less than the above estimation. We can now zoom into the high gain region in order to extract the offset voltage that is needed to bring the output voltage back to $V_{outq} =$ `{python} f'{Voutq:.3f}'` $V$. The simulation results are presented in @fig-ng_large_signal_zoom.
 
 ```{python}
 #| label: fig-ng_large_signal_zoom
@@ -1997,12 +2004,10 @@ Vswing=Voutmax-Voutmin
 Adiff=Vswing/(Vidmax-Vidmin)
 AdiffdB=20*log(abs(Adiff))
 
-lw=1
-plt.style.use('plt_style_small.mplstyle')
+plt.plot([Vidmin/1e-6,0],[Voutq0,Voutq0],'k--', linewidth=lw)
+plt.plot([0,0],[0.692,Voutq0],'k--', linewidth=lw)
 plt.plot([Vidmin/1e-6,Vos/1e-6],[Voutq,Voutq],'k--', linewidth=lw)
-plt.plot([Vos/1e-6,Vos/1e-6],[0.69,Voutq],'k--', linewidth=lw)
-#plt.plot([Vidmin/1e-3,Vidmax/1e-3],[Voutmax,Voutmax],'k--', linewidth=lw)
-#plt.plot([Vidmin/1e-3,Vidmax/1e-3],[Voutmin,Voutmin],'k--', linewidth=lw)
+plt.plot([Vos/1e-6,Vos/1e-6],[0.692,Voutq],'k--', linewidth=lw)
 plt.plot(Vidsim/1e-6,Voutsim,'r')
 plt.xlim(Vidmin/1e-6,Vidmax/1e-6)
 #plt.xticks(np.arange(54,76,2))
@@ -2013,7 +2018,7 @@ plt.ylabel('$V_{out}$ [V]')
 #plt.legend(loc='best')
 textstr = '\n'.join((
   f'$V_{{DD}} =$ {VDD:.1f} V',
-  f'$V_{{ic}} =$ {Vic:.3f} V',
+  f'$V_{{out0}} =$ {Voutq0:.3f} V',
   f'$V_{{outq}} =$ {Voutq:.3f} V',
   f'$V_{{os}} =$ {Vos/1e-6:.3f} $\\mu\\,V$',
   f'$V_{{outmax}} =$ {Voutmax:.3f} V',
@@ -2196,7 +2201,7 @@ plt.subplots_adjust(hspace=0.1)
 plt.show()
 ```
 
-From @fig-ng_open_loop_gain, we see that the $GBW$ is right on target, but the DC gain is way lower than the estimated DC gain and slihtly lower than the specifications. It is actually very hard to achieve a high DC gain for the telescopic OTA with this technology, despite the cascode stages and despite the longer transistor length we have chosen for the nMOS transistors. This is obviously due to the poor output conductance of the nMOS transistors and the low voltage constraint.
+From @fig-ng_open_loop_gain, we see that the $GBW$ is right on target, but the DC gain is way lower than the estimated DC gain and slightly lower than the specifications. It is actually very hard to achieve a high DC gain for the telescopic OTA with this technology, despite the cascode stages and despite the longer transistor length we have chosen for the nMOS transistors. This is obviously due to the poor output conductance of the nMOS transistors and the low voltage constraint.
 
 ## Input-referred noise
 The simulated input-referred noise PSD is presented in @fig-ng_noise and compared to the theoretical estimation.
@@ -2570,10 +2575,12 @@ if newSim:
 
 df_sim=pd.read_table(ngspiceDataFile, sep=' +', engine='python')
 
+Vcmmax=0.8
+
 Vinsim=df_sim['v-sweep'].to_numpy()
 Voutsim=df_sim['Vout'].to_numpy()
-plt.plot([0,0.8],[0,0.8],'k--', linewidth=lw)
-#plt.plot([0,0],[0,Voutq],'k--', linewidth=lw)
+plt.plot([0,1],[0,1],'k--', linewidth=lw)
+plt.plot([Vcmmax,Vcmmax],[0,Vcmmax],'k--', linewidth=lw)
 #plt.plot([Vinmin,Vinmax/1e-3],[Voutmax,Voutmax],'k--', linewidth=lw)
 #plt.plot([Vidmin/1e-3,Vidmax/1e-3],[Voutmin,Voutmin],'k--', linewidth=lw)
 plt.plot(Vinsim,Voutsim,'r')

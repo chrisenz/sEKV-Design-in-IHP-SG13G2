@@ -1,5 +1,7 @@
 # Design of a Cascode Gain Stage with Bias
 
+![Cascode gain stage.](/img/Cascode_schematic.png)
+
 This examples shows how to design a simple cascode gain stage for specifications on the gain-bandwidth product and on the DC gain. It illustrates all the benefits of the cascode stage such as:
 * A DC voltage gain equivalent to a two-stage circuit and
 * A high output resistance 

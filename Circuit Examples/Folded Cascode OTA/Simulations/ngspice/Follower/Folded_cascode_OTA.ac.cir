@@ -1,0 +1,21 @@
+Simulation of the folded cascode OTA designed with the EKV 2.6 model
+
+.include ekv018va.par ; model file for EKV2.6
+.include size_bias.par ; Size and bias values
+.include pulse.par ; Parameters for the PULSE parameters used in the netlist
+.include Folded_cascode_OTA.net ; Circuit netlist
+
+.control
+ op
+ save v(out)
+ write $inputdir/Folded_cascode_OTA.ac.op
+* reset all
+ ac dec 41 100m 100MEG
+ let Aphdeg=180/PI*vp(out)
+ meas ac fc when Aphdeg=-45
+ set wr_singlescale
+ set wr_vecnames
+* wrdata $inputdir/Folded_cascode_OTA.ac.dat AmagdB Aphdeg
+ wrdata $inputdir/Folded_cascode_OTA.ac.dat vr(out) vi(out)
+.endc
+.end

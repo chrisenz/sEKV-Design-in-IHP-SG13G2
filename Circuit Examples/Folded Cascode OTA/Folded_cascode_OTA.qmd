@@ -1,6 +1,6 @@
 ---
 title: "Design of the Folded Cascode OTA"
-subtitle: "Version 1"
+subtitle: "Version 2"
 author: "Christian Enz"
 affiliation: "EPFL"
 date: today
@@ -44,6 +44,7 @@ import shutil
 import os
 import os.path as op
 import sys
+sys.path.append(".")
 import re
 
 from IPython.display import Markdown
@@ -62,11 +63,6 @@ plt.rcParams['mathtext.rm'] = 'Arial'
 plt.rcParams['mathtext.it'] = 'Arial:italic'
 plt.rcParams['mathtext.bf'] = 'Arial:bold'
 
-sys.path.append(".")
-inkscapePath = r"C:\\Program Files\\Inkscape\\bin\\inkscape.exe"
-#savePath = "./Figures/"
-savePath = "./Plots/"
-
 #plt.rcParams['text.usetex'] = True
 plt.rcParams['svg.fonttype'] = 'none'
 plt.rcParams['pdf.fonttype'] = 42
@@ -81,8 +77,6 @@ plt.rcParams['mathtext.bf'] = 'Arial:bold'
 
 plt.style.use('plt_style_small.mplstyle')
 lw=1
-msize=4
-mevery=4
 
 otaName="Folded_cascode_OTA"
 version = "_v1" # Allows you to save different versions
@@ -601,8 +595,6 @@ for k in range(0,Npts):
     W[k]=(-CW*WoverL+sqrt(WoverL)*sqrt(4*C3*CWL+CW**2*WoverL))/(2*CWL)
     L[k]=W[k]/WoverL
 
-lw=1
-plt.style.use('plt_style_small.mplstyle')
 plt.loglog([ICmin,IC3],[Wmin/1e-9,Wmin/1e-9], 'k--', linewidth=lw)
 plt.loglog([IC3,IC3],[1e-7,Wmin/1e-9], 'k--', linewidth=lw)
 plt.loglog(IC, W/1e-9, 'r-', label='$W_3$')
@@ -868,8 +860,8 @@ So the bias voltages $V_{b1}$ and $V_{b2}$ shuld satisfy the following inequalit
 `{python} f'{Vb2min:.3f}'` $V$ $\leq V_{b2} \leq$ `{python} f'{Vb2max:.3f}'` $V$
 
 ```{python}
-Vb1=0.55
-Vb2=0.45
+Vb1=0.53
+Vb2=0.58
 ```
 
 We finally choose $V_{b1}  =$ `{python} f'{Vb1:.3f}'` $V$ and $V_{b2}  =$ `{python} f'{Vb2:.3f}'` $V$.
@@ -1235,7 +1227,6 @@ Aphidegthe=np.unwrap(Aphiradthe)*180/pi
 PGBWthe=np.angle(Adm2(1j*2*pi*GBWthe,Adcthe,w0,wp,wz,wp4),deg=True)
 PMthe=180+PGBWthe
 
-plt.style.use('plt_style_small.mplstyle')
 params = {'figure.figsize': (5,5)}
 plt.rcParams.update(params)
 
@@ -1630,7 +1621,7 @@ for k in range(0,Nnodes):
       if match:
         v_df.at[nodeName, 'Voltage']=float(match.group(1))
 
-Voutqsim=v_df.loc['out','Voltage']
+Voutq0=v_df.loc['out','Voltage']
 #pd.set_option('display.float_format', '{:.2f}'.format)
 #v_df
 
@@ -1644,7 +1635,7 @@ Markdown(
 ))
 ```
 
-We can extract the OTA quiescent node voltages from the ngspice .ic file. They are presented in @tbl-ng_openloop_voltages. We see that the simulated quiescent output voltage is $V_{outq} =$ `{python} f'{Voutqsim/1e-3:.0f}'` $mV$. This is fine and the OTA is biased in the high gain region. Similarly to the telescopic OTA, the quiescent output voltage is actually set by the $V_{GS}$ voltage of M~3a~. Indeed, if perfect matching is assumed (which is the case in the simulation), since M~5a~-M~5b~ have the same drain current and share the same gate voltage, they have the same $V_{GS}$ voltage and also have the same drain voltage. We therefore don't need to extract any offset voltage at this point and can proceed with the simulation of the large-signal characteristic.
+We can extract the OTA quiescent node voltages from the ngspice .ic file. They are presented in @tbl-ng_openloop_voltages. We see that the simulated quiescent output voltage is $V_{outq} =$ `{python} f'{Voutq0/1e-3:.0f}'` $mV$. This is fine and the OTA is biased in the high gain region. Similarly to the telescopic OTA, the quiescent output voltage is actually set by the $V_{GS}$ voltage of M~3a~. Indeed, if perfect matching is assumed (which is the case in the simulation), since M~5a~-M~5b~ have the same drain current and share the same gate voltage, they have the same $V_{GS}$ voltage and also have the same drain voltage. We therefore don't need to extract any offset voltage at this point and can proceed with the simulation of the large-signal characteristic.
 
 The operating point information for all transistors are extracted from the ngspice .op file. The data is split into the large-signal operating informations in @tbl-ng_op1, the small-signal operating point informations in @tbl-ng_op2 and the noise operating point informations in @tbl-ng_op3.
 
@@ -2055,8 +2046,8 @@ simulationData = simulationPath + fileName + ".dat"
 ngspiceDataFile = simulationPath + otaName + version + simtype + "1.dat"
 ngspiceLogFile = simulationPath + otaName + version + simtype + "1.log"
 
-Vidmin=-0.05
-Vidmax=0.05
+Vidmin=-0.2e-3
+Vidmax=0.2e-3
 Npts=1001
 dVid=(Vidmax-Vidmin)/(Npts-1)
 
@@ -2095,38 +2086,47 @@ with open(ngspiceLogFile) as f:
     if match:
       Voutmin=float(match.group(1))
 
+regexp = re.compile(r'vos' + refloat)
+with open(ngspiceLogFile) as f:
+  for line in f:
+    match = re.search(regexp, line)
+    if match:
+      Vos=float(match.group(1))
+
 Voutmax=0.8
-Voutmin=0.35
+Voutmin=0.42
 Vswing=Voutmax-Voutmin
 
-lw=1
-plt.style.use('plt_style_small.mplstyle')
-plt.plot([Vidmin/1e-3,0],[Voutq,Voutq],'k--', linewidth=lw)
-plt.plot([0,0],[0,Voutq],'k--', linewidth=lw)
+plt.plot([Vidmin/1e-3,0],[Voutq0,Voutq0],'k--', linewidth=lw)
+plt.plot([0,0],[0.2,Voutq0],'k--', linewidth=lw)
+plt.plot([Vidmin/1e-3,Vos/1e-3],[Voutq,Voutq],'k--', linewidth=lw)
+plt.plot([Vos/1e-3,Vos/1e-3],[0,Voutq],'k--', linewidth=lw)
 plt.plot([Vidmin/1e-3,Vidmax/1e-3],[Voutmax,Voutmax],'k--', linewidth=lw)
 plt.plot([Vidmin/1e-3,Vidmax/1e-3],[Voutmin,Voutmin],'k--', linewidth=lw)
 plt.plot(Vidsim/1e-3,Voutsim,'r')
 plt.xlim(Vidmin/1e-3,Vidmax/1e-3)
-plt.xticks(np.arange(-50,60,10))
+#plt.xticks(np.arange(-50,60,10))
 plt.xlabel('$V_{id}$ [$mV$]')
-plt.ylim(0,1.2)
-plt.yticks(np.arange(0,1.4,0.2))
+plt.ylim(0.3,0.9)
+#plt.yticks(np.arange(0,1.4,0.2))
 plt.ylabel('$V_{out}$ [V]')
 #plt.legend(loc='best')
 textstr = '\n'.join((
   f'$V_{{DD}} =$ {VDD:.1f} V',
-  f'$V_{{ic}} =$ {Vic:.3f} V',
+  f'$V_{{ic}} =$ {Vic:.1f} V',
+  f'$V_{{out0}} =$ {Voutq0:.3f} V',
   f'$V_{{outq}} =$ {Voutq:.3f} V',
-  f'$V_{{outmax}} =$ {Voutmax:.3f} V',
-  f'$V_{{outmin}} =$ {Voutmin:.3f} V',
-  f'$V_{{swing}} =$ {Vswing:.2f} V'))
-plt.text(0.65, 0.5, textstr, ha='left', va='center', size=9, transform=plt.gca().transAxes,
+  f'$V_{{os}} =$ {Vos/1e-6:.3f} $\\mu\\,V$',
+  f'$V_{{outmax}} \\cong$ {Voutmax:.3f} V',
+  f'$V_{{outmin}} \\cong$ {Voutmin:.3f} V',
+  f'$V_{{swing}} \\cong$ {Vswing:.2f} V'))
+plt.text(1.05, 0.5, textstr, ha='left', va='center', size=9, transform=plt.gca().transAxes,
          bbox={'facecolor':'w', 'alpha':1.0, 'pad':5})
 #saveFigures(savePath, 'Vout_Vid')
 plt.show()
 ```
 
-From @fig-ng_large_signal, we see that the output swing is about $V_{out,swing} =$ `{python} f'{Vswing/1e-3:.0f}'` $mV$, which corresponds to the above estimation. We can now zoom into the high gain region in order to extract the offset voltage that is needed to bring the output voltage back to $V_{outq} =$ `{python} f'{Voutq:.3f}'` $V$. The simulation results are presented in @fig-ng_large_signal_zoom.
+From @fig-ng_large_signal, we see that the output swing is about $V_{out,swing} =$ `{python} f'{Vswing/1e-3:.0f}'` $mV$, which is even smaller than the above estimation. We can now zoom into the high gain region in order to extract the offset voltage that is needed to bring the output voltage back to $V_{outq} =$ `{python} f'{Voutq:.3f}'` $V$. The simulation results are presented in @fig-ng_large_signal_zoom.
 
 ```{python}
 #| label: fig-ng_large_signal_zoom
@@ -2143,8 +2143,6 @@ ngspiceLogFile = simulationPath + otaName + version + simtype + "2.log"
 
 Vidmin=-20e-6
 Vidmax=40e-6
-#Vidmin=round(1e5*Vos)/1e5-1e-5
-#Vidmax=Vidmin+2e-5
 Npts=1001
 dVid=(Vidmax-Vidmin)/(Npts-1)
 
@@ -2195,25 +2193,23 @@ Vswing=Voutmax-Voutmin
 Adiff=Vswing/(Vidmax-Vidmin)
 AdiffdB=20*log(abs(Adiff))
 
-lw=1
-plt.style.use('plt_style_small.mplstyle')
-plt.plot([Vidmin/1e-6,0],[Voutqsim,Voutqsim],'k--', linewidth=lw)
-plt.plot([0,0],[0.45,Voutqsim],'k--', linewidth=lw)
+plt.plot([Vidmin/1e-6,0],[Voutq0,Voutq0],'k--', linewidth=lw)
+plt.plot([0,0],[0.45,Voutq0],'k--', linewidth=lw)
 plt.plot([Vidmin/1e-6,Vos/1e-6],[Voutq,Voutq],'k--', linewidth=lw)
 plt.plot([Vos/1e-6,Vos/1e-6],[0.45,Voutq],'k--', linewidth=lw)
 #plt.plot([Vidmin/1e-3,Vidmax/1e-3],[Voutmax,Voutmax],'k--', linewidth=lw)
 #plt.plot([Vidmin/1e-3,Vidmax/1e-3],[Voutmin,Voutmin],'k--', linewidth=lw)
 plt.plot(Vidsim/1e-6,Voutsim,'r')
 plt.xlim(Vidmin/1e-6,Vidmax/1e-6)
-#plt.xticks(np.arange(54,76,2))
+plt.xticks(np.arange(-20,50,10))
 plt.xlabel('$V_{id}\\;[\\mu V]$')
-plt.ylim(0.45,0.65)
+plt.ylim(0.45,0.7)
 #plt.yticks(np.arange(0.692,0.708,0.002))
 plt.ylabel('$V_{out}$ [V]')
 #plt.legend(loc='best')
 textstr = '\n'.join((
   f'$V_{{DD}} =$ {VDD:.1f} V',
-  f'$V_{{out0}} =$ {Voutqsim:.3f} V',
+  f'$V_{{out0}} =$ {Voutq0:.3f} V',
   f'$V_{{outq}} =$ {Voutq:.3f} V',
   f'$V_{{os}} =$ {Vos/1e-6:.3f} $\\mu\\,V$',
   f'$V_{{outmax}} =$ {Voutmax:.3f} V',
@@ -2304,7 +2300,6 @@ with open(ngspiceLogFile) as f:
 
 PMsim=180+PGBWsim
 
-plt.style.use('plt_style_small.mplstyle')
 params = {'figure.figsize': (5,5)}
 plt.rcParams.update(params)
     
@@ -2602,7 +2597,6 @@ gammanotasim=df_mos.at["M1a","Gm"]*Rninthsim
 fmin=freq[0]
 fmax=freq[Npts-1]
 
-plt.style.use('plt_style_small.mplstyle')
 plt.semilogx(freq,SninM1wdBv,'b-', label='M1a-M1b')
 plt.semilogx(freq,SninM2wdBv,'g-', label='M2b-M2c')
 #plt.semilogx(freq,SninM3wdBv,'m-', label='M3a-M3b')
@@ -2651,7 +2645,6 @@ The breakdown of the contributions of the various transistors to the total input
 #| label: fig-ng_flicker_noise_contributions
 #| fig-cap: "Breakdown of the contributions to the simulated input-referred flicker noise PSD."
 
-plt.style.use('plt_style_small.mplstyle')
 plt.semilogx(freq,SninM1fdBv,'b-', label='M1a-M1b')
 plt.semilogx(freq,SninM2fdBv,'g-', label='M2a-M2b')
 plt.semilogx(freq,SninM3fdBv,'m-', label='M3a-M3b')
@@ -2682,7 +2675,6 @@ plt.show()
 #| label: fig-ng_noise_contributions
 #| fig-cap: "Breakdown of the contributions to the simulated input-referred noise PSD."
 
-plt.style.use('plt_style_small.mplstyle')
 plt.semilogx(freq,SninM1dBv,'b-', label='M1a-M1b (total)')
 #plt.semilogx(freq,SninM1fdBv,'b-.', label='M1a-M1b (flicker)')
 #plt.semilogx(freq,SninM1wdBv,'b--', label='M1a-M1b (white)')
@@ -2898,8 +2890,6 @@ for k in range(0,Npts):
 Adcsim=pow(10,AdcdBsim/20)
 Voutfin=DVin*(1-1/Adcsim)
 
-lw=1
-plt.style.use('plt_style_small.mplstyle')
 plt.plot([td/1e-6,(td+1/(2*pi*GBWthe))/1e-6],[0,DVin/1e-3], 'k--', linewidth=lw)
 plt.plot([0,tmax/1e-6],[Voutfin/1e-3,Voutfin/1e-3], 'k--', linewidth=lw)
 plt.plot(tsim/1e-6,DVinsim/1e-3,'b-', label='Input')
@@ -3019,8 +3009,6 @@ for k in range(0,Npts):
 Adcsim=pow(10,AdcdBsim/20)
 Voutfin=DVin*(1-1/Adcsim)
 
-lw=1
-plt.style.use('plt_style_small.mplstyle')
 plt.plot([td/1e-6,(td+1/(2*pi*GBWthe))/1e-6],[0,DVin/1e-3], 'k--', linewidth=lw)
 plt.plot([0,tmax/1e-6],[Voutfin/1e-3,Voutfin/1e-3], 'k--', linewidth=lw)
 plt.plot(tsim/1e-6,DVinsim/1e-3,'b-', label='Input')

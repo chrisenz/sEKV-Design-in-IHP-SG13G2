@@ -1,0 +1,43 @@
+Simulation of the Folded Cascode OTA designed with the EKV 2.6 model
+
+.include ekv018va.par ; model file for EKV2.6
+.include size_bias.par ; Size and bias values
+.include pulse.par ; Parameters for the PULSE parameters used in the netlist
+.include Folded_cascode_OTA.net ; Circuit netlist
+
+.control
+ save @N1a[Id] @N1a[Ispec] @N1a[IC] @N1a[n0] @N1a[gm] @N1a[gms] @N1a[gds] @N1a[gmbs] @N1a[Rn] @N1a[Vnth] @N1a[gamman] @N1a[Vnfl] @N1a[Vdsat]
+ save @N1b[Id] @N1b[Ispec] @N1b[IC] @N1b[n0] @N1b[gm] @N1b[gms] @N1b[gds] @N1b[gmbs] @N1b[Rn] @N1b[Vnth] @N1b[gamman] @N1b[Vnfl] @N1b[Vdsat]
+ save @N2a[Id] @N2a[Ispec] @N2a[IC] @N2a[n0] @N2a[gm] @N2a[gms] @N2a[gds] @N2a[gmbs] @N2a[Rn] @N2a[Vnth] @N2a[gamman] @N2a[Vnfl] @N2a[Vdsat]
+ save @N2b[Id] @N2b[Ispec] @N2b[IC] @N2b[n0] @N2b[gm] @N2b[gms] @N2b[gds] @N2b[gmbs] @N2b[Rn] @N2b[Vnth] @N2b[gamman] @N2b[Vnfl] @N2b[Vdsat]
+ save @N2c[Id] @N2c[Ispec] @N2c[IC] @N2c[n0] @N2c[gm] @N2c[gms] @N2c[gds] @N2c[gmbs] @N2c[Rn] @N2c[Vnth] @N2c[gamman] @N2c[Vnfl] @N2c[Vdsat]
+ save @N3a[Id] @N3a[Ispec] @N3a[IC] @N3a[n0] @N3a[gm] @N3a[gms] @N3a[gds] @N3a[gmbs] @N3a[Rn] @N3a[Vnth] @N3a[gamman] @N3a[Vnfl] @N3a[Vdsat]
+ save @N3b[Id] @N3b[Ispec] @N3b[IC] @N3b[n0] @N3b[gm] @N3b[gms] @N3b[gds] @N3b[gmbs] @N3b[Rn] @N3b[Vnth] @N3b[gamman] @N3b[Vnfl] @N3b[Vdsat]
+ save @N4a[Id] @N4a[Ispec] @N4a[IC] @N4a[n0] @N4a[gm] @N4a[gms] @N4a[gds] @N4a[gmbs] @N4a[Rn] @N4a[Vnth] @N4a[gamman] @N4a[Vnfl] @N4a[Vdsat]
+ save @N4b[Id] @N4b[Ispec] @N4b[IC] @N4b[n0] @N4b[gm] @N4b[gms] @N4b[gds] @N4b[gmbs] @N4b[Rn] @N4b[Vnth] @N4b[gamman] @N4b[Vnfl] @N4b[Vdsat]
+ save @N5a[Id] @N5a[Ispec] @N5a[IC] @N5a[n0] @N5a[gm] @N5a[gms] @N5a[gds] @N5a[gmbs] @N5a[Rn] @N5a[Vnth] @N5a[gamman] @N5a[Vnfl] @N5a[Vdsat]
+ save @N5b[Id] @N5b[Ispec] @N5b[IC] @N5b[n0] @N5b[gm] @N5b[gms] @N5b[gds] @N5b[gmbs] @N5b[Rn] @N5b[Vnth] @N5b[gamman] @N5b[Vnfl] @N5b[Vdsat]
+ save @N7a[Id] @N7a[Ispec] @N7a[IC] @N7a[n0] @N7a[gm] @N7a[gms] @N7a[gds] @N7a[gmbs] @N7a[Rn] @N7a[Vnth] @N7a[gamman] @N7a[Vnfl] @N7a[Vdsat]
+ save @N7b[Id] @N7b[Ispec] @N7b[IC] @N7b[n0] @N7b[gm] @N7b[gms] @N7b[gds] @N7b[gmbs] @N7b[Rn] @N7b[Vnth] @N7b[gamman] @N7b[Vnfl] @N7b[Vdsat]
+
+ op
+ wrnodev $inputdir/Folded_cascode_OTA.op.ic
+ set wr_singlescale
+ set wr_vecnames
+ wrdata $inputdir/Folded_cascode_OTA.op.dat
+ wrdata $inputdir/Folded_cascode_OTA.op.dat @N1a[Id] @N1a[Ispec] @N1a[IC] @N1a[Vdsat] @N1a[n0] @N1a[gm] @N1a[gms] @N1a[gds] @N1a[gmbs] @N1a[Rn] @N1a[Vnth] @N1a[gamman] @N1a[Vnfl]
+ set appendwrite
+ wrdata $inputdir/Folded_cascode_OTA.op.dat @N1b[Id] @N1b[Ispec] @N1b[IC] @N1b[Vdsat] @N1b[n0] @N1b[gm] @N1b[gms] @N1b[gds] @N1b[gmbs] @N1b[Rn] @N1b[Vnth] @N1b[gamman] @N1b[Vnfl]
+ wrdata $inputdir/Folded_cascode_OTA.op.dat @N2a[Id] @N2a[Ispec] @N2a[IC] @N2a[Vdsat] @N2a[n0] @N2a[gm] @N2a[gms] @N2a[gds] @N2a[gmbs] @N2a[Rn] @N2a[Vnth] @N2a[gamman] @N2a[Vnfl]
+ wrdata $inputdir/Folded_cascode_OTA.op.dat @N2b[Id] @N2b[Ispec] @N2b[IC] @N2b[Vdsat] @N2b[n0] @N2b[gm] @N2b[gms] @N2b[gds] @N2b[gmbs] @N2b[Rn] @N2b[Vnth] @N2b[gamman] @N2b[Vnfl]
+ wrdata $inputdir/Folded_cascode_OTA.op.dat @N2c[Id] @N2c[Ispec] @N2c[IC] @N2c[Vdsat] @N2c[n0] @N2c[gm] @N2c[gms] @N2c[gds] @N2c[gmbs] @N2c[Rn] @N2c[Vnth] @N2c[gamman] @N2c[Vnfl]
+ wrdata $inputdir/Folded_cascode_OTA.op.dat @N3a[Id] @N3a[Ispec] @N3a[IC] @N3a[Vdsat] @N3a[n0] @N3a[gm] @N3a[gms] @N3a[gds] @N3a[gmbs] @N3a[Rn] @N3a[Vnth] @N3a[gamman] @N3a[Vnfl]
+ wrdata $inputdir/Folded_cascode_OTA.op.dat @N3b[Id] @N3b[Ispec] @N3b[IC] @N3b[Vdsat] @N3b[n0] @N3b[gm] @N3b[gms] @N3b[gds] @N3b[gmbs] @N3b[Rn] @N3b[Vnth] @N3b[gamman] @N3b[Vnfl]
+ wrdata $inputdir/Folded_cascode_OTA.op.dat @N4a[Id] @N4a[Ispec] @N4a[IC] @N4a[Vdsat] @N4a[n0] @N4a[gm] @N4a[gms] @N4a[gds] @N4a[gmbs] @N4a[Rn] @N4a[Vnth] @N4a[gamman] @N4a[Vnfl]
+ wrdata $inputdir/Folded_cascode_OTA.op.dat @N4b[Id] @N4b[Ispec] @N4b[IC] @N4b[Vdsat] @N4b[n0] @N4b[gm] @N4b[gms] @N4b[gds] @N4b[gmbs] @N4b[Rn] @N4b[Vnth] @N4b[gamman] @N4b[Vnfl]
+ wrdata $inputdir/Folded_cascode_OTA.op.dat @N5a[Id] @N5a[Ispec] @N5a[IC] @N5a[Vdsat] @N5a[n0] @N5a[gm] @N5a[gms] @N5a[gds] @N5a[gmbs] @N5a[Rn] @N5a[Vnth] @N5a[gamman] @N5a[Vnfl]
+ wrdata $inputdir/Folded_cascode_OTA.op.dat @N5b[Id] @N5b[Ispec] @N5b[IC] @N5b[Vdsat] @N5b[n0] @N5b[gm] @N5b[gms] @N5b[gds] @N5b[gmbs] @N5b[Rn] @N5b[Vnth] @N5b[gamman] @N5b[Vnfl]
+ wrdata $inputdir/Folded_cascode_OTA.op.dat @N7a[Id] @N7a[Ispec] @N7a[IC] @N7a[Vdsat] @N7a[n0] @N7a[gm] @N7a[gms] @N7a[gds] @N7a[gmbs] @N7a[Rn] @N7a[Vnth] @N7a[gamman] @N7a[Vnfl]
+ wrdata $inputdir/Folded_cascode_OTA.op.dat @N7b[Id] @N7b[Ispec] @N7b[IC] @N7b[Vdsat] @N7b[n0] @N7b[gm] @N7b[gms] @N7b[gds] @N7b[gmbs] @N7b[Rn] @N7b[Vnth] @N7b[gamman] @N7b[Vnfl]
+.endc
+.end

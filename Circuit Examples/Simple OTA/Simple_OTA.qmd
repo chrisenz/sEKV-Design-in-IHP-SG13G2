@@ -2507,7 +2507,9 @@ Vic=0.6
 DVin=10e-3
 ```
 
-In this section we will check the step response of the OTA operating as a voltage follower (output connected to the negative input) with the same load capacitance $C_L =$ `{python} f'{CL/1e-12:.0f}'` $pF$. According to the input common-mode voltage range established above, we will set the input common-mode voltage to  $V_{ic} =$ `{python} f'{Vic:.1f}'` $V$ to leave enough room for the large step.
+![Schematic of the OTA connected as a voltage follower.](Figures/Voltage_follower.png){#fig-voltage_follower}
+
+In this section we will check the step response of the OTA operating as a voltage follower as shown in @fig-voltage_follower with its output connected to the negative input and with the same load capacitance $C_L =$ `{python} f'{CL/1e-12:.0f}'` $pF$. According to the input common-mode voltage range established above, we will set the input common-mode voltage to  $V_{ic} =$ `{python} f'{Vic:.1f}'` $V$ to leave enough room for the large step.
 
 ### Small-step
 We start by imposing a small step $\Delta V_{in} =$ `{python} f'{DVin/1e-3:.0f}'` $mV$ on top of a common mode voltage $V_{ic} =$ `{python} f'{Vic:.1f}'` $V$. The simulation results are shown in @fig-ng_step_small where $\Delta V_{in}(t) \triangleq V_{in+}(t) - V_{ic}$ and $\Delta V_{out}(t) \triangleq V_{out}(t) - V_{outq}$ with $V_{outq}$ the quiescent output voltage at the operating point before the step is applied. $\Delta V_{in}$ and $\Delta V_{out}$ are compared to the response of a single pole circuit having a cut-off frequency equal to the $GBW$. We can observe that the output voltage does not settler to the correct value but slightly below. This is due to the very limited DC gain. The output voltage will settle to
